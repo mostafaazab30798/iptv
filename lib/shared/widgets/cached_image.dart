@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
@@ -53,19 +54,33 @@ class CachedImage extends StatelessWidget {
     final effectiveCacheWidth = memCacheWidth ?? width?.ceil();
     final effectiveCacheHeight = memCacheHeight ?? height?.ceil();
 
+    var finalImageUrl = imageUrl!;
+    if (kIsWeb) {
+      final isLocalhost =
+          Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1';
+      if (!isLocalhost &&
+          (finalImageUrl.startsWith('http://') ||
+              finalImageUrl.startsWith('https://'))) {
+        finalImageUrl =
+            '${Uri.base.origin}/proxy?url=${Uri.encodeComponent(finalImageUrl)}';
+      }
+    }
+
     return ClipRRect(
       borderRadius: radius,
       child: CachedNetworkImage(
-        imageUrl: imageUrl!,
+        imageUrl: finalImageUrl,
         width: width,
         height: height,
         fit: fit,
         memCacheWidth: effectiveCacheWidth,
         memCacheHeight: effectiveCacheHeight,
         httpHeaders: const {
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          if (!kIsWeb)
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept':
+              'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
         },
         placeholder: (context, url) => _buildLoading(radius),
         errorWidget: (context, url, error) => _buildPlaceholder(radius),

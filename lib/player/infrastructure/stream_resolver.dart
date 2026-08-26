@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:iptv/core/constants/api_constants.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/enums/playback_profile.dart';
@@ -35,16 +36,18 @@ class StreamResolver {
       pathSegments: ['live', username, password, '$streamId.$cleanFormat'],
     );
 
-    final streamType = StreamTypeDetector.detect(uri.toString(), hint: cleanFormat);
+    final rawUrl = uri.toString();
+    final streamType = StreamTypeDetector.detect(rawUrl, hint: cleanFormat);
+    final finalUrl = _wrapWebProxy(rawUrl);
 
     final headers = <String, String>{
-      ApiConstants.userAgentHeader: defaultUserAgent,
+      if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
       'Connection': 'keep-alive',
       if (customHeaders != null) ...customHeaders,
     };
 
     return PlayerSource.live(
-      url: uri.toString(),
+      url: finalUrl,
       title: title,
       channelId: streamId,
       categoryId: categoryId,
@@ -78,16 +81,18 @@ class StreamResolver {
       pathSegments: ['movie', username, password, '$streamId.$ext'],
     );
 
-    final streamType = StreamTypeDetector.detect(uri.toString(), hint: ext);
+    final rawUrl = uri.toString();
+    final streamType = StreamTypeDetector.detect(rawUrl, hint: ext);
+    final finalUrl = _wrapWebProxy(rawUrl);
 
     final headers = <String, String>{
-      ApiConstants.userAgentHeader: defaultUserAgent,
+      if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
       'Connection': 'keep-alive',
       if (customHeaders != null) ...customHeaders,
     };
 
     return PlayerSource.vod(
-      url: uri.toString(),
+      url: finalUrl,
       title: title,
       movieId: streamId,
       categoryId: categoryId,
@@ -109,14 +114,16 @@ class StreamResolver {
     Map<String, dynamic>? metadata,
   }) {
     final streamType = StreamTypeDetector.detect(url);
+    final finalUrl = _wrapWebProxy(url);
+
     final headers = <String, String>{
-      ApiConstants.userAgentHeader: defaultUserAgent,
+      if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
       'Connection': 'keep-alive',
       if (customHeaders != null) ...customHeaders,
     };
 
     return PlayerSource(
-      url: url,
+      url: finalUrl,
       title: title,
       profile: profile,
       streamType: streamType,
@@ -124,6 +131,18 @@ class StreamResolver {
       headers: headers,
       metadata: metadata ?? const {},
     );
+  }
+
+  /// Wraps stream URLs with the Cloudflare /proxy endpoint when running on Web HTTPS to bypass Mixed Content & CORS.
+  String _wrapWebProxy(String rawUrl) {
+    if (!kIsWeb) return rawUrl;
+    final isLocalhost =
+        Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1';
+    if (!isLocalhost &&
+        (Uri.base.scheme == 'https' || rawUrl.startsWith('http://'))) {
+      return '${Uri.base.origin}/proxy?url=${Uri.encodeComponent(rawUrl)}';
+    }
+    return rawUrl;
   }
 
   /// Structured URI builder with robust port and path segment handling.

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, kIsWeb;
 import 'package:iptv/core/constants/api_constants.dart';
 import 'package:iptv/core/errors/app_error.dart';
 import 'package:iptv/core/network/api_config.dart';
@@ -30,7 +30,8 @@ class ApiClient {
         responseType: ResponseType.plain,
         headers: {
           'Accept': '*/*',
-          ApiConstants.userAgentHeader: ApiConstants.defaultUserAgent,
+          if (!kIsWeb)
+            ApiConstants.userAgentHeader: ApiConstants.defaultUserAgent,
         },
         followRedirects: true,
         validateStatus: (status) => status != null && status < 500,
