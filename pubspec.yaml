@@ -1,0 +1,80 @@
+name: iptv
+description: "Premium IPTV client for Android, Android TV, Windows, and Web."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Routing
+  go_router: ^14.8.1
+
+  # Database
+  drift: ^2.22.1
+  drift_flutter: ^0.2.4
+  sqlite3_flutter_libs: ^0.5.29
+
+  # Networking
+  dio: ^5.8.0+1
+  connectivity_plus: ^6.1.4
+
+  # Storage
+  flutter_secure_storage: ^10.0.0
+  shared_preferences: ^2.3.5
+  path_provider: ^2.1.5
+
+  # Media / Player (media_kit hardware accelerated cross-platform player subsystem)
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
+
+  # Images
+  cached_network_image: ^3.4.1
+
+  # Fonts & UI
+  google_fonts: ^6.2.1
+
+  # Logging
+  logger: ^2.5.0
+
+  # Utilities
+  intl: ^0.20.2
+  equatable: ^2.0.7
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
+  collection: ^1.19.1
+  google_nav_bar: ^5.0.7
+  hugeicons: ^1.1.7
+  screen_brightness: ^2.1.11
+  flutter_volume_controller: ^2.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.14
+  drift_dev: ^2.22.1
+  riverpod_generator: ^2.6.1
+  riverpod_lint: ^2.6.1
+  custom_lint: ^0.7.5
+  freezed: ^3.0.0
+  json_serializable: ^6.9.3
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/logos/bein/

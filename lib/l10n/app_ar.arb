@@ -1,0 +1,310 @@
+{
+  "@@locale": "ar",
+  "appName": "IPTV",
+
+  "navHome": "الرئيسية",
+  "navLive": "البث المباشر",
+  "navMovies": "أفلام",
+  "navSeries": "مسلسلات",
+  "navGuide": "دليل البرامج",
+  "navSearch": "بحث",
+  "navFavorites": "المفضلة",
+  "navHistory": "سجل المشاهدة",
+  "navSettings": "الإعدادات",
+
+  "actionPlay": "تشغيل",
+  "actionPause": "إيقاف مؤقت",
+  "actionStop": "إيقاف",
+  "actionResume": "استئناف",
+  "actionWatch": "مشاهدة",
+  "actionRetry": "إعادة المحاولة",
+  "actionTryAgain": "حاول مرة أخرى",
+  "actionSignIn": "تسجيل الدخول",
+  "actionSignOut": "تسجيل الخروج",
+  "actionSave": "حفظ",
+  "actionCancel": "إلغاء",
+  "actionContinue": "متابعة",
+  "actionRefresh": "تحديث",
+  "actionClear": "مسح",
+  "actionClearAll": "مسح الكل",
+  "actionDelete": "حذف",
+  "actionClose": "إغلاق",
+  "actionBack": "رجوع",
+  "actionSearch": "بحث",
+  "actionDetails": "التفاصيل",
+  "actionSeeAll": "عرض الكل",
+  "actionSelect": "تحديد",
+  "actionApply": "تطبيق",
+  "actionDone": "تم",
+  "actionReplay": "إعادة التشغيل",
+
+  "labelServerUrl": "رابط الخادم",
+  "labelUsername": "اسم المستخدم",
+  "labelPassword": "كلمة المرور",
+  "labelLoading": "جارٍ التحميل...",
+  "labelNoResults": "لا توجد نتائج",
+  "labelEmpty": "لا يوجد شيء هنا بعد",
+  "labelLive": "مباشر",
+  "labelFavorites": "المفضلة",
+  "labelContinueWatching": "متابعة المشاهدة",
+  "labelLiveNow": "يُعرض الآن",
+  "labelRecentlyWatched": "شاهدت مؤخراً",
+  "labelChannels": "القنوات",
+  "labelMovies": "الأفلام",
+  "labelSeries": "المسلسلات",
+  "labelCategories": "الفئات",
+  "labelAll": "الكل",
+  "labelAllChannels": "جميع القنوات",
+  "labelAllMovies": "جميع الأفلام",
+  "labelAllSeries": "جميع المسلسلات",
+  "labelEpisodes": "الحلقات",
+  "labelSeasons": "المواسم",
+  "labelSeason": "الموسم {number}",
+  "@labelSeason": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "labelEpisode": "الحلقة {number}",
+  "@labelEpisode": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "labelNoDescription": "لا يوجد وصف متاح.",
+  "labelRating": "التقييم",
+  "labelYear": "السنة",
+  "labelDuration": "المدة",
+  "labelDirector": "المخرج",
+  "labelCast": "طاقم العمل",
+  "labelGenre": "النوع",
+  "labelPlot": "القصة",
+  "labelReleaseDate": "تاريخ الإصدار",
+  "labelNowPlaying": "يُعرض حالياً",
+  "labelUpcoming": "القادم",
+  "labelNoEpg": "لا تتوفر بيانات الدليل",
+  "labelChannelCount": "{count, plural, =0{لا توجد قنوات} =1{قناة واحدة} =2{قناتان} few{{count} قنوات} many{{count} قناة} other{{count} قناة}}",
+  "@labelChannelCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "labelMovieCount": "{count, plural, =0{لا توجد أفلام} =1{فيلم واحد} =2{فيلمان} few{{count} أفلام} many{{count} فيلماً} other{{count} فيلم}}",
+  "@labelMovieCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "labelSeriesCount": "{count, plural, =0{لا توجد مسلسلات} =1{مسلسل واحد} =2{مسلسلان} few{{count} مسلسلات} many{{count} مسلسلاً} other{{count} مسلسل}}",
+  "@labelSeriesCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "homeFeaturedMovies": "أفلام مميزة",
+  "homePopularSeries": "مسلسلات شائعة",
+  "homeSportsChannels": "قنوات رياضية",
+  "homeNewsChannels": "أخبار وشؤون جارية",
+  "homeTvGuide": "دليل القنوات",
+  "homeAllMovies": "جميع الأفلام",
+  "homeEmptyPlaylist": "لم يتم العثور على محتوى",
+  "homeEmptyPlaylistSubtitle": "يرجى التحقق من قائمة التشغيل أو إعدادات الخادم.",
+  "homeCheckConnection": "يرجى التحقق من إعدادات الخادم أو الاتصال بالإنترنت.",
+
+  "liveCategoriesHub": "قنوات البث المباشر",
+  "liveSearchHint": "ابحث في القنوات...",
+  "liveNoChannelsFound": "لا توجد قنوات في هذه الفئة.",
+  "liveMiniPreview": "معاينة البث المباشر",
+  "liveNextProgram": "التالي: {title}",
+  "@liveNextProgram": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+
+  "moviesCategoriesHub": "فئات الأفلام",
+  "moviesSearchHint": "ابحث في الأفلام...",
+  "moviesNoMoviesFound": "لا توجد أفلام في هذه الفئة.",
+
+  "seriesCategoriesHub": "فئات المسلسلات",
+  "seriesSearchHint": "ابحث في المسلسلات...",
+  "seriesNoSeriesFound": "لا توجد مسلسلات في هذه الفئة.",
+  "seriesSelectSeason": "اختر الموسم",
+
+  "guideTitle": "دليل البرامج الإلكتروني",
+  "guideNoData": "لا تتوفر بيانات الدليل",
+  "guideNoDataSubtitle": "تعذر تحميل القنوات أو بيانات دليل البرامج.",
+  "guideToday": "اليوم",
+  "guideTomorrow": "غداً",
+  "guideYesterday": "أمس",
+
+  "searchHint": "ابحث في القنوات والأفلام والمسلسلات...",
+  "searchNoResults": "لا توجد نتائج لـ \"{query}\"",
+  "@searchNoResults": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+  "searchNoResultsSubtitle": "تحقق من صحة الكلمات أو جرب كلمات مفتاحية أخرى.",
+  "searchLiveTab": "القنوات المباشرة ({count})",
+  "@searchLiveTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "searchMoviesTab": "الأفلام ({count})",
+  "@searchMoviesTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "searchSeriesTab": "المسلسلات ({count})",
+  "@searchSeriesTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "searchRecentSearches": "عمليات البحث الأخيرة",
+  "searchTypeToFind": "ابحث في كل محتويات مكتبة IPTV الخاصة بك",
+
+  "favoritesTitle": "مفضلاتي",
+  "favoritesEmptyTitle": "لا توجد عناصر مفضلة بعد",
+  "favoritesEmptySubtitle": "أضف القنوات والأفلام والمسلسلات إلى مفضلتك للوصول إليها بسرعة.",
+
+  "historyTitle": "سجل المشاهدة",
+  "historyClearTooltip": "مسح السجل",
+  "historyClearDialogTitle": "مسح سجل المشاهدة",
+  "historyClearDialogContent": "هل أنت متأكد من رغبتك في مسح سجل المشاهدة بالكامل؟ لا يمكن التراجع عن هذا الإجراء.",
+  "historyEmptyTitle": "لا يوجد سجل مشاهدة",
+  "historyEmptySubtitle": "ستظهر هنا القنوات والأفلام والمسلسلات التي تشاهدها.",
+
+  "settingsTitle": "الإعدادات",
+  "settingsConnectedServer": "الخادم المتصل",
+  "settingsUser": "المستخدم",
+  "settingsLanguage": "اللغة",
+  "settingsAccount": "الحساب",
+  "settingsAbout": "حول التطبيق",
+  "settingsVersion": "الإصدار",
+  "settingsEnglish": "English",
+  "settingsArabic": "العربية",
+  "settingsConfirmSignOut": "تسجيل الخروج",
+  "settingsConfirmSignOutMessage": "هل أنت متأكد من رغبتك في تسجيل الخروج من هذا الخادم؟",
+
+  "onboardingTitle": "مرحباً بك في IPTV",
+  "onboardingSubtitle": "أدخل تفاصيل الخادم للبدء.",
+  "onboardingServerGateway": "بوابة الخادم",
+  "onboardingCustomServer": "خادم Xtream مخصص",
+  "onboardingM3uNotice": "✨ تم اكتشاف رابط M3U وتحويله إلى وضع Xtream السريع!",
+  "onboardingFillFields": "يرجى ملء جميع الحقول المطلوبة.",
+  "authConnectServer": "الاتصال بالخادم",
+  "authSignInSubtitle": "سجل الدخول باستخدام بيانات مزود IPTV الخاص بك",
+  "authServerUrl": "رابط الخادم (أو الصق رابط M3U)",
+  "authUsername": "اسم المستخدم",
+  "authPassword": "كلمة المرور",
+  "actionConnectStream": "اتصال وبدء المشاهدة",
+  "onboardingBadge": "محرك البث المتقدم V2",
+  "onboardingHeroTitle": "تجربة تلفزيونية\nبلا حدود.",
+  "onboardingHeroSubtitle": "اتصل بمزود Xtream أو حوّل روابط M3U للاستمتاع ببث سلس وفوري وبجودة عالية مع دليل البرامج التلفزيونية.",
+  "onboardingFeat1Title": "تنقل فوري فائق السرعة",
+  "onboardingFeat1Subtitle": "فك تشفير فوري للقنوات مع تسريع العتاد وبدون تأخير",
+  "onboardingFeat2Title": "محول M3U الذكي إلى Xtream",
+  "onboardingFeat2Subtitle": "تحويل روابط القوائم المباشرة لتقليل التخزين المؤقت وتحسين الاستجابة",
+  "onboardingFeat3Title": "بوابات خوادم متعددة",
+  "onboardingFeat3Subtitle": "تبديل سلس بين الخوادم الأساسية والاحتياطية والمخصصة",
+  "onboardingFeat4Title": "دليل البرامج التلفزيونية EPG",
+  "onboardingFeat4Subtitle": "مزامنة كاملة لجداول البث ومواعيد البرامج مع ميزة الإعادة",
+  "onboardingClientTitle": "مشغل IPTV",
+  "onboardingClientSubtitle": "سجل الدخول للوصول إلى القنوات المباشرة والأفلام والمسلسلات",
+  "onboardingHaveM3u": "هل لديك رابط قائمة M3U؟",
+  "onboardingM3uConvertHint": "تحويل إلى وضع Xtream فائق السرعة بنقرة واحدة",
+  "actionConvert": "تحويل",
+  "onboardingActiveGateway": "بوابة الخادم النشطة",
+  "onboardingGatewaysAvailable": "{count} متاح",
+  "onboardingManual": "يدوي",
+  "onboardingOnline": "متصل",
+  "onboardingCustomConfig": "إعداد رابط الخادم المخصص",
+  "actionChange": "تغيير",
+  "onboardingAutoConfig": "إعداد تلقائي",
+  "onboardingEnterCustomUrl": "أدخل رابط الخادم المخصص يدوياً",
+  "onboardingUrlHint": "http://example.com:8080 أو رابط get.php",
+  "validationUsernameRequired": "اسم المستخدم مطلوب",
+  "validationPasswordRequired": "كلمة المرور مطلوبة",
+  "validationUrlRequired": "رابط الخادم مطلوب",
+  "validationUrlInvalid": "يجب أن يبدأ الرابط بـ http:// أو https://",
+  "gatewayDialogTitle": "اختيار بوابة الخادم",
+  "gatewayDialogSubtitle": "اختر من بين {count} خوادم مهيأة أو أدخل خادماً مخصصاً",
+  "gatewaySearchHint": "البحث عن خادم بالاسم أو العنوان...",
+  "gatewayFilterAll": "جميع البوابات ({count})",
+  "gatewayFilterOfficial": "الرسمية ({count})",
+  "gatewayFilterCustom": "خادم مخصص",
+  "gatewayNoMatches": "لا توجد خوادم مطابقة لبحثك",
+  "m3uConverterTitle": "محول M3U إلى Xtream",
+  "m3uConverterSubtitle": "استخراج بيانات Xtream لتشغيل أسرع وبدون تقطيع",
+  "m3uPasteLabel": "الصق رابط M3U أو رابط البث",
+  "actionPaste": "لصق",
+  "m3uExtractError": "تعذر استخراج بيانات Xtream من هذا الرابط.",
+  "m3uExtractedSuccess": "تم استخراج بيانات Xtream بنجاح",
+  "m3uAdvantageHint": "يوفر وضع Xtream تصنيفاً منظماً للمحتوى ودليلاً للبرامج وسرعة تشغيل فائقة.",
+  "actionApply": "تطبيق",
+  "actionConvertAndConnect": "تحويل والاتصال فوراً",
+
+  "playerConnecting": "جارٍ الاتصال...",
+  "playerReconnecting": "إعادة الاتصال...",
+  "playerBuffering": "جارٍ التخزين المؤقت...",
+  "playerStreamUnavailable": "البث غير متاح",
+  "playerAudioTracks": "المسارات الصوتية",
+  "playerSubtitles": "الترجمة",
+  "playerAspectRatio": "نسبة العرض",
+  "playerQuality": "الجودة",
+  "playerTapToRetry": "انقر لإعادة المحاولة",
+  "playerPreviousChannel": "القناة السابقة",
+  "playerNextChannel": "القناة التالية",
+  "playerReplay10": "إرجاع 10 ثوانٍ",
+  "playerForward10": "تقديم 10 ثوانٍ",
+
+  "historyResumeAt": "استئناف عند {time}",
+  "@historyResumeAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "historyResumePlayback": "استئناف التشغيل",
+  "historyCompleted": "مكتمل",
+  "historyTimeLeftHoursMinutes": "متبقي {hours} س {minutes} د",
+  "@historyTimeLeftHoursMinutes": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "historyTimeLeftMinutes": "متبقي {minutes} دقيقة",
+  "@historyTimeLeftMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "historyWatchedOn": "تمت المشاهدة في {date}",
+  "@historyWatchedOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "historyProgressSubtitle": "{pos}/{dur} دقيقة • تمت المشاهدة في {date}",
+  "@historyProgressSubtitle": {
+    "placeholders": {
+      "pos": { "type": "int" },
+      "dur": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "historyTypeLive": "مباشر",
+  "historyTypeMovie": "فيلم",
+  "historyTypeSeries": "مسلسل",
+
+  "errorNetwork": "خطأ في الشبكة. تحقق من اتصالك.",
+  "errorServer": "خطأ في الخادم. يُرجى المحاولة مرة أخرى.",
+  "errorAuth": "بيانات اعتماد غير صحيحة. تحقق من بياناتك.",
+  "errorPlayback": "البث غير متاح",
+  "errorUnknown": "حدث خطأ ما."
+}

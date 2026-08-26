@@ -1,0 +1,71 @@
+# IPTV Flutter App — Setup & Run Guide
+
+This guide describes how to run and verify the IPTV Flutter application across supported platforms.
+
+---
+
+## Prerequisites
+
+- **Flutter SDK**: 3.10+ / Dart SDK 3.10+
+- **Platform Toolchains**:
+  - **Android / Android TV**: Android SDK, NDK, and Android Studio / Emulator.
+  - **Windows**: Visual Studio 2022 (C++ desktop development workload).
+  - **Web**: Google Chrome or Edge.
+
+---
+
+## Initial Setup
+
+1. Clone or open the project root:
+   ```bash
+   cd d:\PROJECTS\iptv
+   ```
+
+2. Fetch dependencies:
+   ```bash
+   flutter pub get
+   ```
+
+3. Generate localization and database code:
+   ```bash
+   flutter gen-l10n
+   dart run build_runner build --delete-conflicting-outputs
+   ```
+
+---
+
+## Running on Target Platforms
+
+### 1. Windows (Desktop)
+```bash
+flutter run -d windows
+```
+
+### 2. Android Phone / Tablet (Landscape)
+```bash
+flutter run -d <android-device-id>
+```
+*Note: The app will automatically lock to landscape orientation.*
+
+### 3. Android TV / Google TV
+Ensure your Android TV device is connected via ADB over Wi-Fi or USB:
+```bash
+adb connect <tv-ip-address>:5555
+flutter run -d <tv-device-id>
+```
+*Tip: Test navigation using the TV D-pad or keyboard arrow keys.*
+
+### 4. Web
+```bash
+flutter run -d chrome
+```
+
+---
+
+## Code Quality & Verification
+
+Run static analysis and test suite:
+```bash
+flutter analyze
+flutter test
+```

@@ -1,0 +1,330 @@
+{
+  "@@locale": "en",
+  "appName": "IPTV",
+
+  "navHome": "Home",
+  "navLive": "Live TV",
+  "navMovies": "Movies",
+  "navSeries": "Series",
+  "navGuide": "Guide",
+  "navSearch": "Search",
+  "navFavorites": "Favorites",
+  "navHistory": "History",
+  "navSettings": "Settings",
+
+  "actionPlay": "Play",
+  "actionPause": "Pause",
+  "actionStop": "Stop",
+  "actionResume": "Resume",
+  "actionWatch": "Watch",
+  "actionRetry": "Retry",
+  "actionTryAgain": "Try Again",
+  "actionSignIn": "Sign In",
+  "actionSignOut": "Sign Out",
+  "actionSave": "Save",
+  "actionCancel": "Cancel",
+  "actionContinue": "Continue",
+  "actionRefresh": "Refresh",
+  "actionClear": "Clear",
+  "actionClearAll": "Clear All",
+  "actionDelete": "Delete",
+  "actionClose": "Close",
+  "actionBack": "Back",
+  "actionSearch": "Search",
+  "actionDetails": "Details",
+  "actionSeeAll": "See All",
+  "actionSelect": "Select",
+  "actionApply": "Apply",
+  "actionDone": "Done",
+  "actionReplay": "Replay",
+
+  "labelServerUrl": "Server URL",
+  "labelUsername": "Username",
+  "labelPassword": "Password",
+  "labelLoading": "Loading...",
+  "labelNoResults": "No results",
+  "labelEmpty": "Nothing here yet",
+  "labelLive": "LIVE",
+  "labelFavorites": "Favorites",
+  "labelContinueWatching": "Continue Watching",
+  "labelLiveNow": "Live Now",
+  "labelRecentlyWatched": "Recently Watched",
+  "labelChannels": "Channels",
+  "labelMovies": "Movies",
+  "labelSeries": "Series",
+  "labelCategories": "Categories",
+  "labelAll": "All",
+  "labelAllChannels": "All Channels",
+  "labelAllMovies": "All Movies",
+  "labelAllSeries": "All Series",
+  "labelEpisodes": "Episodes",
+  "labelSeasons": "Seasons",
+  "labelSeason": "Season {number}",
+  "@labelSeason": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "labelEpisode": "Episode {number}",
+  "@labelEpisode": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "labelNoDescription": "No description available.",
+  "labelRating": "Rating",
+  "labelYear": "Year",
+  "labelDuration": "Duration",
+  "labelDirector": "Director",
+  "labelCast": "Cast",
+  "labelGenre": "Genre",
+  "labelPlot": "Plot",
+  "labelReleaseDate": "Release Date",
+  "labelNowPlaying": "Now Playing",
+  "labelUpcoming": "Upcoming",
+  "labelNoEpg": "No EPG Available",
+  "labelChannelCount": "{count, plural, =0{No channels} =1{1 Channel} other{{count} Channels}}",
+  "@labelChannelCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "labelMovieCount": "{count, plural, =0{No movies} =1{1 Movie} other{{count} Movies}}",
+  "@labelMovieCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "labelSeriesCount": "{count, plural, =0{No series} =1{1 Series} other{{count} Series}}",
+  "@labelSeriesCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "homeFeaturedMovies": "Featured Movies",
+  "homePopularSeries": "Popular Series",
+  "homeSportsChannels": "Sports Channels",
+  "homeNewsChannels": "News & Current Affairs",
+  "homeTvGuide": "TV Guide",
+  "homeAllMovies": "All Movies",
+  "homeEmptyPlaylist": "No media content found",
+  "homeEmptyPlaylistSubtitle": "Please check your playlist or server configuration.",
+  "homeCheckConnection": "Please check your server settings or network connection.",
+
+  "liveCategoriesHub": "Live Channels",
+  "liveSearchHint": "Search in channels...",
+  "liveNoChannelsFound": "No channels found in this category.",
+  "liveMiniPreview": "Live Preview",
+  "liveNextProgram": "Next: {title}",
+  "@liveNextProgram": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+
+  "moviesCategoriesHub": "Movie Categories",
+  "moviesSearchHint": "Search movies...",
+  "moviesNoMoviesFound": "No movies found in this category.",
+
+  "seriesCategoriesHub": "Series Categories",
+  "seriesSearchHint": "Search series...",
+  "seriesNoSeriesFound": "No series found in this category.",
+  "seriesSelectSeason": "Select Season",
+
+  "guideTitle": "Electronic Program Guide",
+  "guideNoData": "No Guide Data Available",
+  "guideNoDataSubtitle": "Channels or EPG data could not be loaded.",
+  "guideToday": "Today",
+  "guideTomorrow": "Tomorrow",
+  "guideYesterday": "Yesterday",
+
+  "searchHint": "Search channels, movies, series...",
+  "searchNoResults": "No results for \"{query}\"",
+  "@searchNoResults": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+  "searchNoResultsSubtitle": "Try checking the spelling or use different keywords.",
+  "searchLiveTab": "Live Channels ({count})",
+  "@searchLiveTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "searchMoviesTab": "Movies ({count})",
+  "@searchMoviesTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "searchSeriesTab": "Series ({count})",
+  "@searchSeriesTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "searchRecentSearches": "Recent Searches",
+  "searchTypeToFind": "Search anything across your IPTV library",
+
+  "favoritesTitle": "My Favorites",
+  "favoritesEmptyTitle": "No favorites yet",
+  "favoritesEmptySubtitle": "Add channels, movies, or series to your favorites to access them quickly.",
+
+  "historyTitle": "Watch History",
+  "historyClearTooltip": "Clear History",
+  "historyClearDialogTitle": "Clear Watch History",
+  "historyClearDialogContent": "Are you sure you want to clear your entire watch history? This cannot be undone.",
+  "historyEmptyTitle": "No watch history",
+  "historyEmptySubtitle": "Streams, movies, and series you watch will appear here.",
+
+  "settingsTitle": "Settings",
+  "settingsConnectedServer": "Connected Server",
+  "settingsUser": "User",
+  "settingsLanguage": "Language",
+  "settingsAccount": "Account",
+  "settingsAbout": "About",
+  "settingsVersion": "Version",
+  "settingsEnglish": "English",
+  "settingsArabic": "العربية",
+  "settingsConfirmSignOut": "Sign Out",
+  "settingsConfirmSignOutMessage": "Are you sure you want to sign out from this server?",
+
+  "onboardingTitle": "Welcome to IPTV",
+  "onboardingSubtitle": "Enter your server details to get started.",
+  "onboardingServerGateway": "Server Gateway",
+  "onboardingCustomServer": "Custom Xtream Server",
+  "onboardingM3uNotice": "✨ M3U link detected & converted to Xtream Fast Stream mode!",
+  "onboardingFillFields": "Please fill in all fields.",
+  "authConnectServer": "Connect Server",
+  "authSignInSubtitle": "Sign in with your IPTV provider credentials",
+  "authServerUrl": "Server URL (or Paste M3U Link)",
+  "authUsername": "Username",
+  "authPassword": "Password",
+  "actionConnectStream": "Connect & Stream",
+  "onboardingBadge": "STREAMING ENGINE V2",
+  "onboardingHeroTitle": "Experience TV\nWithout Limits.",
+  "onboardingHeroSubtitle": "Connect to your Xtream cluster or convert any M3U link to enjoy zero-buffer streaming, 4K HDR playback, and live electronic program guides.",
+  "onboardingFeat1Title": "Zero-Buffer Fast Zapping",
+  "onboardingFeat1Subtitle": "Instant stream decoding with hardware acceleration",
+  "onboardingFeat2Title": "Smart M3U → Xtream Engine",
+  "onboardingFeat2Subtitle": "Converts raw playlist links to direct APIs for instant buffering",
+  "onboardingFeat3Title": "Modular Gateway Clusters",
+  "onboardingFeat3Subtitle": "Seamlessly switch between primary, backup, and custom servers",
+  "onboardingFeat4Title": "Live EPG & Catch-Up Guide",
+  "onboardingFeat4Subtitle": "Complete schedule synchronization and timeline recall",
+  "onboardingClientTitle": "IPTV CLIENT",
+  "onboardingClientSubtitle": "Sign in to access your live channels & VOD",
+  "onboardingHaveM3u": "Have an M3U Playlist Link?",
+  "onboardingM3uConvertHint": "Convert to zero-buffer Xtream engine in 1-tap",
+  "actionConvert": "Convert",
+  "onboardingActiveGateway": "ACTIVE SERVER GATEWAY",
+  "onboardingGatewaysAvailable": "{count} Available",
+  "@onboardingGatewaysAvailable": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "onboardingManual": "MANUAL",
+  "onboardingOnline": "ONLINE",
+  "onboardingCustomConfig": "Custom server URL configuration",
+  "actionChange": "Change",
+  "onboardingAutoConfig": "AUTO-CONFIG",
+  "onboardingEnterCustomUrl": "Enter custom URL manually",
+  "onboardingUrlHint": "http://example.com:8080 or get.php M3U link",
+  "validationUsernameRequired": "Username is required",
+  "validationPasswordRequired": "Password is required",
+  "validationUrlRequired": "Server URL is required",
+  "validationUrlInvalid": "URL must start with http:// or https://",
+  "gatewayDialogTitle": "Select Server Gateway",
+  "gatewayDialogSubtitle": "Choose from {count} configured clusters or custom endpoint",
+  "@gatewayDialogSubtitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gatewaySearchHint": "Search server by name, location, or URL...",
+  "gatewayFilterAll": "All Gateways ({count})",
+  "@gatewayFilterAll": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gatewayFilterOfficial": "Official ({count})",
+  "@gatewayFilterOfficial": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gatewayFilterCustom": "Custom Endpoint",
+  "gatewayNoMatches": "No server gateways match your search",
+  "m3uConverterTitle": "M3U to Xtream Converter",
+  "m3uConverterSubtitle": "Extracts Xtream credentials for zero buffering",
+  "m3uPasteLabel": "PASTE M3U URL OR STREAM LINK",
+  "actionPaste": "Paste",
+  "m3uExtractError": "Could not extract Xtream credentials from this M3U link.",
+  "m3uExtractedSuccess": "Xtream Credentials Extracted",
+  "m3uAdvantageHint": "Xtream format unlocks category filtering, live EPG, VOD metadata, and zero-buffering hardware streaming.",
+  "actionApply": "Apply",
+  "actionConvertAndConnect": "Convert & Connect",
+
+  "playerConnecting": "Connecting...",
+  "playerReconnecting": "Reconnecting...",
+  "playerBuffering": "Buffering...",
+  "playerStreamUnavailable": "Stream unavailable",
+  "playerAudioTracks": "Audio Tracks",
+  "playerSubtitles": "Subtitles",
+  "playerAspectRatio": "Aspect Ratio",
+  "playerQuality": "Quality",
+  "playerTapToRetry": "Tap to retry",
+  "playerPreviousChannel": "Previous Channel",
+  "playerNextChannel": "Next Channel",
+  "playerReplay10": "Replay 10s",
+  "playerForward10": "Forward 10s",
+
+  "historyResumeAt": "Resume at {time}",
+  "@historyResumeAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "historyResumePlayback": "Resume playback",
+  "historyCompleted": "Completed",
+  "historyTimeLeftHoursMinutes": "{hours} h {minutes} m left",
+  "@historyTimeLeftHoursMinutes": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "historyTimeLeftMinutes": "{minutes} min left",
+  "@historyTimeLeftMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "historyWatchedOn": "Watched on {date}",
+  "@historyWatchedOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "historyProgressSubtitle": "{pos}/{dur} min • Watched on {date}",
+  "@historyProgressSubtitle": {
+    "placeholders": {
+      "pos": { "type": "int" },
+      "dur": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "historyTypeLive": "LIVE",
+  "historyTypeMovie": "MOVIE",
+  "historyTypeSeries": "SERIES",
+
+  "errorNetwork": "Network error. Check your connection.",
+  "errorServer": "Server error. Please try again.",
+  "errorAuth": "Invalid credentials. Please check your details.",
+  "errorPlayback": "Stream unavailable",
+  "errorUnknown": "Something went wrong."
+}
