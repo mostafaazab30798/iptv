@@ -36,9 +36,20 @@ class PlatformService {
     if (_isTv && _platformType == PlatformType.android) {
       _platformType = PlatformType.androidTv;
     }
+    await plat.initPlatformWindow();
   }
 
   PlatformType get platformType => _platformType;
+
+  /// Sets true borderless fullscreen mode on Windows/macOS/Linux, Web, and Android/iOS.
+  Future<void> setFullScreen(bool isFullScreen) async {
+    await plat.setPlatformFullScreen(isFullScreen);
+  }
+
+  /// Checks if true fullscreen mode is currently active.
+  Future<bool> isFullScreen() {
+    return plat.isPlatformFullScreen();
+  }
 
   // ---------------------------------------------------------------------------
   // Platform booleans

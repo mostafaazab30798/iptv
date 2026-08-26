@@ -491,8 +491,10 @@ class PlayerControls extends StatelessWidget {
                           if (caps.fullscreen) ...[
                             Builder(
                               builder: (context) {
+                                final isMobile = Theme.of(context).platform == TargetPlatform.android ||
+                                    Theme.of(context).platform == TargetPlatform.iOS;
                                 final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-                                final isFullscreenActive = playerState.isFullscreen || isLandscape;
+                                final isFullscreenActive = playerState.isFullscreen || (isMobile && isLandscape);
                                 return _CompactGlassButton(
                                   icon: isFullscreenActive
                                       ? AppIcons.exitFullscreen

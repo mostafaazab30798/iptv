@@ -790,60 +790,49 @@ class _BrandLogoState extends State<_BrandLogo> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Premium Glowing Logo Emblem
-              Container(
+              // Clean Logo Emblem
+              Image.asset(
+                AppConstants.appLogo,
                 width: 44,
                 height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accent.withValues(alpha: _hovered ? 0.45 : 0.2),
-                      blurRadius: _hovered ? 20 : 12,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Image.asset(
-                  AppConstants.appLogo,
-                  width: 44,
-                  height: 44,
-                  fit: BoxFit.contain,
-                ),
+                fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
-              // Modern Dual-Tone Typography
-              RichText(
-                text: TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: 'IP',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.8,
-                      ),
+              // Modern Dual-Row Branding Typography (HOPE on top, IPTV below)
+              const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'HOPE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2.5,
+                      height: 1.05,
                     ),
-                    TextSpan(
-                      text: 'TV',
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.8,
-                        shadows: [
-                          Shadow(
-                            color: AppColors.accent.withAlpha(120),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
+                  ),
+                  SizedBox(height: 1),
+                  Text(
+                    'IPTV',
+                    style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 3.5,
+                      height: 1.0,
+                      shadows: [
+                        Shadow(
+                          color: Color(0x7A00E5FF),
+                          blurRadius: 8,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               // Sleek 4K LIVE Pulse Badge Chip
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),

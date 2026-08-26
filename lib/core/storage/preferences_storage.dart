@@ -30,6 +30,37 @@ class PreferencesStorage {
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyPlayerVolume = 'player_volume';
   static const String _keyLastRoute = 'last_route';
+  static const String _keyAuthServerUrl = 'auth_server_url';
+  static const String _keyAuthUsername = 'auth_username';
+  static const String _keyAuthPasswordEnc = 'auth_password_enc';
+
+  // ---------------------------------------------------------------------------
+  // Auth Credentials Fallback
+  // ---------------------------------------------------------------------------
+
+  String? get authServerUrl => _prefs.getString(_keyAuthServerUrl);
+  String? get authUsername => _prefs.getString(_keyAuthUsername);
+  String? get authPasswordEnc => _prefs.getString(_keyAuthPasswordEnc);
+
+  Future<void> saveAuthCredentials({
+    required String serverUrl,
+    required String username,
+    required String passwordEnc,
+  }) async {
+    await Future.wait([
+      _prefs.setString(_keyAuthServerUrl, serverUrl),
+      _prefs.setString(_keyAuthUsername, username),
+      _prefs.setString(_keyAuthPasswordEnc, passwordEnc),
+    ]);
+  }
+
+  Future<void> clearAuthCredentials() async {
+    await Future.wait([
+      _prefs.remove(_keyAuthServerUrl),
+      _prefs.remove(_keyAuthUsername),
+      _prefs.remove(_keyAuthPasswordEnc),
+    ]);
+  }
 
   // ---------------------------------------------------------------------------
   // Locale

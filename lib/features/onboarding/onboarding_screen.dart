@@ -45,6 +45,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.initState();
     _selectedPreset = ServerPresets.presets.first;
     _urlController.text = _selectedPreset.url;
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final saved = await ref.read(secureStorageProvider).loadCredentials();
+    if (saved != null && mounted) {
+      setState(() {
+        final matchingPreset = ServerPresets.presets.firstWhere(
+          (p) => p.url.trim().toLowerCase() == saved.serverUrl.trim().toLowerCase(),
+          orElse: () => ServerPresets.customPreset,
+        );
+        _selectedPreset = matchingPreset;
+        _isCustomServer = matchingPreset.id == ServerPresets.customServerId;
+        _urlController.text = saved.serverUrl;
+        _userController.text = saved.username;
+        _passController.text = saved.password;
+      });
+    }
   }
 
   @override
@@ -434,14 +452,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           fit: BoxFit.contain,
         ),
         const SizedBox(height: 12),
-        Text(
-          context.l10n.onboardingClientTitle,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 3,
-          ),
+        const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'HOPE',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4.5,
+                height: 1.1,
+              ),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'IPTV',
+              style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 6.0,
+                shadows: [
+                  Shadow(
+                    color: Color(0x7A00E5FF),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
         Text(

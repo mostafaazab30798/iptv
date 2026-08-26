@@ -17,6 +17,7 @@ import 'package:iptv/player/presentation/player_controls.dart';
 import 'package:iptv/player/presentation/player_quick_settings_sheet.dart';
 import 'package:iptv/player/presentation/software_decode_badge.dart';
 import 'package:iptv/player/presentation/subtitle_selector.dart';
+import 'package:iptv/core/platform/platform_service.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 
 /// Clean and compact overlay shell managing touch gestures (double-tap 10s seek, vertical/horizontal drags),
@@ -102,12 +103,15 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   }
 
   Future<void> _initDeviceLevels() async {
-    try {
-      final brightness = await ScreenBrightness.instance.application;
-      if (mounted) {
-        setState(() => _brightnessLevel = brightness.clamp(0.01, 1.0));
-      }
-    } catch (_) {}
+    final isMobile = !PlatformService.instance.isWindows && !PlatformService.instance.isWeb;
+    if (isMobile) {
+      try {
+        final brightness = await ScreenBrightness.instance.application;
+        if (mounted) {
+          setState(() => _brightnessLevel = brightness.clamp(0.01, 1.0));
+        }
+      } catch (_) {}
+    }
 
     try {
       final vol = await FlutterVolumeController.getVolume();
@@ -215,6 +219,15 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     if (widget.playerState.isLocked) return;
     _tapDebounceTimer?.cancel();
 
+    // On Desktop (Windows / Linux / macOS), double click anywhere toggles fullscreen (standard player UX)
+    final isDesktop = Theme.of(context).platform == TargetPlatform.windows ||
+        Theme.of(context).platform == TargetPlatform.linux ||
+        Theme.of(context).platform == TargetPlatform.macOS;
+    if (isDesktop) {
+      widget.onToggleFullscreen();
+      return;
+    }
+
     final screenWidth = constraints.maxWidth;
     final tapX = details.localPosition.dx;
     final xRatio = tapX / screenWidth;
@@ -239,8 +252,9 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     _hudDismissTimer?.cancel();
     _isDragging = true;
 
+    final isMobile = !PlatformService.instance.isWindows && !PlatformService.instance.isWeb;
     final xRatio = details.localPosition.dx / constraints.maxWidth;
-    if (xRatio < 0.5) {
+    if (xRatio < 0.5 && isMobile) {
       _isBrightnessDrag = true;
       _isVolumeDrag = false;
       ScreenBrightness.instance.application.then((b) {
@@ -391,7 +405,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.keyF) {
+    if (key == LogicalKeyboardKey.keyF || key == LogicalKeyboardKey.f11) {
       widget.onToggleFullscreen();
       return KeyEventResult.handled;
     }
@@ -443,7 +457,9 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     _hudDismissTimer?.cancel();
     _activeSleepTimer?.cancel();
     _focusNode.dispose();
-    ScreenBrightness.instance.resetApplicationScreenBrightness().catchError((_) {});
+    if (!PlatformService.instance.isWindows && !PlatformService.instance.isWeb) {
+      ScreenBrightness.instance.resetApplicationScreenBrightness().catchError((_) {});
+    }
     super.dispose();
   }
 

@@ -27,7 +27,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _enterFullscreenMode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _controller = ref.read(playerControllerProvider.notifier);
+        _enterFullscreenMode();
+      }
+    });
   }
 
   @override
@@ -46,16 +51,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     _controller = ref.read(playerControllerProvider.notifier);
   }
 
-  void _enterFullscreenMode() {
-    if (PlatformService.instance.isAndroid || PlatformService.instance.isAndroidTv) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    }
+  Future<void> _enterFullscreenMode() async {
+    _controller ??= ref.read(playerControllerProvider.notifier);
+    _controller?.setFullscreen(true);
+    await PlatformService.instance.setFullScreen(true);
   }
 
-  void _exitFullscreenMode() {
-    if (PlatformService.instance.isAndroid || PlatformService.instance.isAndroidTv) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    }
+  Future<void> _exitFullscreenMode() async {
+    _controller ??= ref.read(playerControllerProvider.notifier);
+    _controller?.setFullscreen(false);
+    await PlatformService.instance.setFullScreen(false);
   }
 
   void _restoreDefaultOrientations() {
@@ -69,23 +74,33 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     }
   }
 
-  void _toggleFullscreen() {
-    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
-    if (isPortrait || !ref.read(playerControllerProvider).isFullscreen) {
-      // Force Landscape Fullscreen
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      _controller?.setFullscreen(true);
-      _enterFullscreenMode();
+  Future<void> _toggleFullscreen() async {
+    final isMobile = PlatformService.instance.isAndroid;
+    if (isMobile) {
+      final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+      if (isPortrait || !ref.read(playerControllerProvider).isFullscreen) {
+        // Force Landscape Fullscreen
+        await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+        await _enterFullscreenMode();
+      } else {
+        // Force Portrait
+        await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
+        ]);
+        await _exitFullscreenMode();
+      }
     } else {
-      // Force Portrait
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
-      _controller?.setFullscreen(false);
+      final isPlatformFull = await PlatformService.instance.isFullScreen();
+      final isCurrentlyFull = isPlatformFull || ref.read(playerControllerProvider).isFullscreen;
+      if (isCurrentlyFull) {
+        await _exitFullscreenMode();
+      } else {
+        await _enterFullscreenMode();
+      }
     }
   }
 
@@ -101,6 +116,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
 
   void _handleBack() {
     _restoreDefaultOrientations();
+    _exitFullscreenMode();
     _controller?.savePlaybackProgress();
     _controller?.stop();
     if (Navigator.of(context).canPop()) {

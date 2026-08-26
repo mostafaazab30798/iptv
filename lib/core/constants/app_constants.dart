@@ -1,7 +1,7 @@
 /// Application-wide constants.
 abstract final class AppConstants {
   // App identity
-  static const String appName = 'IPTV';
+  static const String appName = 'HOPE IPTV';
   static const String appVersion = '0.1.0';
   static const String appLogo = 'assets/icons/app_logo.png';
 

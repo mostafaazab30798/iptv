@@ -16,7 +16,7 @@ class App extends ConsumerWidget {
     final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
-      title: 'IPTV',
+      title: 'HOPE IPTV',
       debugShowCheckedModeBanner: false,
 
       // Routing

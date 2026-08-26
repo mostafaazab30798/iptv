@@ -9,7 +9,7 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appName => 'IPTV';
+  String get appName => 'HOPE IPTV';
 
   @override
   String get navHome => 'الرئيسية';

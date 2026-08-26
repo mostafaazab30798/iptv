@@ -6,6 +6,7 @@ import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/player/presentation/buffering_indicator.dart';
 import 'package:iptv/player/presentation/player_view.dart';
+import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
 /// Live mini-player preview panel embedded inside the Live TV section.
@@ -277,28 +278,39 @@ class LiveMiniPreview extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    InkWell(
-                      onTap: controller.previousChannel,
-                      borderRadius: BorderRadius.circular(16),
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: HugeIcon(
-                          icon: AppIcons.previous,
-                          color: AppColors.textSecondary,
-                          size: 20,
+                    Tooltip(
+                      message: context.l10n.playerPreviousChannel,
+                      child: InkWell(
+                        onTap: controller.previousChannel,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Transform.flip(
+                            flipX: context.isRtl,
+                            child: const HugeIcon(
+                              icon: AppIcons.previous,
+                              color: AppColors.textSecondary,
+                              size: 20,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    InkWell(
-                      onTap: controller.nextChannel,
-                      borderRadius: BorderRadius.circular(16),
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: HugeIcon(
-                          icon: AppIcons.next,
-                          color: AppColors.textSecondary,
-                          size: 20,
+                    Tooltip(
+                      message: context.l10n.playerNextChannel,
+                      child: InkWell(
+                        onTap: controller.nextChannel,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Transform.flip(
+                            flipX: context.isRtl,
+                            child: const HugeIcon(
+                              icon: AppIcons.next,
+                              color: AppColors.textSecondary,
+                              size: 20,
+                            ),
+                          ),
                         ),
                       ),
                     ),

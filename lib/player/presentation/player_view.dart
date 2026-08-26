@@ -39,10 +39,12 @@ class PlayerView extends StatelessWidget {
           fit = BoxFit.contain;
       }
 
-      Widget videoWidget = mkv.Video(
-        controller: videoController,
-        fit: fit,
-        controls: (state) => const SizedBox.shrink(),
+      Widget videoWidget = Center(
+        child: mkv.Video(
+          controller: videoController,
+          fit: fit,
+          controls: (state) => const SizedBox.shrink(),
+        ),
       );
 
       if (forcedAspectRatio != null) {
@@ -54,7 +56,13 @@ class PlayerView extends StatelessWidget {
         );
       }
 
-      return videoWidget;
+      return Container(
+        color: Colors.black,
+        width: double.infinity,
+        height: double.infinity,
+        alignment: Alignment.center,
+        child: videoWidget,
+      );
     }
 
     return const ColoredBox(

@@ -88,14 +88,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ],
               ),
               const SizedBox(height: 24),
-              const Text(
-                'IPTV',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 6,
-                ),
+              const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'HOPE',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 8,
+                      height: 1.1,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'IPTV',
+                    style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 10,
+                      shadows: [
+                        Shadow(
+                          color: Color(0x9600E5FF),
+                          blurRadius: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 48),
               const SizedBox(
