@@ -214,6 +214,12 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-DatabaseConnection _openConnection() {
-  return DatabaseConnection(driftDatabase(name: AppConstants.dbName));
+QueryExecutor _openConnection() {
+  return driftDatabase(
+    name: AppConstants.dbName,
+    web: DriftWebOptions(
+      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+      driftWorker: Uri.parse('drift_worker.js'),
+    ),
+  );
 }
