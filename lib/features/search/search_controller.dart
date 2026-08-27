@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/providers.dart';
+import 'package:iptv/core/cache/local_catalog_cache.dart';
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/movie.dart';
@@ -33,7 +35,7 @@ class SearchState {
 
 /// Simple typed in-memory catalog cache with TTL.
 class _CatalogCache<T> {
-  static const _ttl = Duration(minutes: 5);
+  static const _ttl = Duration(minutes: 20);
 
   List<T>? _data;
   DateTime? _fetchedAt;
@@ -67,10 +69,15 @@ class SearchController extends StateNotifier<SearchState> {
   Timer? _debounceTimer;
   int _searchToken = 0;
 
-  // In-memory TTL caches — avoids full-catalog network round-trips on every search keystroke.
+  // In-memory TTL caches — avoids full-catalog network round-trips on every search.
   final _channelCache = _CatalogCache<Channel>();
   final _movieCache = _CatalogCache<Movie>();
   final _seriesCache = _CatalogCache<Series>();
+
+  static const _minQueryLength = 2;
+  static const _resultLimit = 24;
+  static const _debounce = Duration(milliseconds: 400);
+  static const _isolateThreshold = 1500;
 
   Future<void> search(String query) async {
     _debounceTimer?.cancel();
@@ -82,38 +89,46 @@ class SearchController extends StateNotifier<SearchState> {
       return;
     }
 
-    // Debounce rapid typing to avoid freezing the main isolate on every keystroke
-    _debounceTimer = Timer(const Duration(milliseconds: 250), () async {
+    // Avoid scanning huge catalogs for 1-character queries.
+    if (trimmed.length < _minQueryLength) {
+      _searchToken++;
+      state = SearchState(query: trimmed);
+      return;
+    }
+
+    _debounceTimer = Timer(_debounce, () async {
       final currentToken = ++_searchToken;
       state = SearchState(query: trimmed, isLoading: true);
 
       try {
         final q = trimmed.toLowerCase();
 
-        // Fetch catalogs — use in-memory cache when fresh, otherwise hit network and populate cache.
-        final channelsFuture = _fetchChannels();
-        final moviesFuture = _fetchMovies();
-        final seriesFuture = _fetchSeriesList();
+        // Load catalogs from memory/disk first — no server traffic when warm.
+        final results = await Future.wait([
+          _fetchChannels(),
+          _fetchMovies(),
+          _fetchSeriesList(),
+        ]);
 
-        final results = await Future.wait([channelsFuture, moviesFuture, seriesFuture]);
-
-        // If a newer search or clear was issued while we awaited, discard this response.
         if (_searchToken != currentToken) return;
 
-        final channels = (results[0] as List<Channel>)
-            .where((c) => c.name.toLowerCase().contains(q))
-            .take(30)
-            .toList();
+        final channels = await _filterByName(
+          results[0] as List<Channel>,
+          q,
+          (c) => c.name,
+        );
+        final movies = await _filterByName(
+          results[1] as List<Movie>,
+          q,
+          (m) => m.name,
+        );
+        final series = await _filterByName(
+          results[2] as List<Series>,
+          q,
+          (s) => s.name,
+        );
 
-        final movies = (results[1] as List<Movie>)
-            .where((m) => m.name.toLowerCase().contains(q))
-            .take(30)
-            .toList();
-
-        final series = (results[2] as List<Series>)
-            .where((s) => s.name.toLowerCase().contains(q))
-            .take(30)
-            .toList();
+        if (_searchToken != currentToken) return;
 
         state = SearchState(
           query: trimmed,
@@ -136,9 +151,16 @@ class SearchController extends StateNotifier<SearchState> {
     super.dispose();
   }
 
-  /// Returns cached channels or fetches from network and populates cache.
+  /// Prefer memory → local disk cache → repository (network only as last resort).
   Future<List<Channel>> _fetchChannels() async {
     if (_channelCache.isValid) return _channelCache.data!;
+
+    final disk = await LocalCatalogCache.instance.loadChannels();
+    if (disk != null && disk.isNotEmpty) {
+      _channelCache.set(disk);
+      return disk;
+    }
+
     final res = await (_liveRepo?.getChannels() ??
         Future.value(const Err<List<Channel>>(AppResultError('No repo'))));
     final list = res.when(ok: (l) => l, err: (_) => <Channel>[]);
@@ -146,9 +168,15 @@ class SearchController extends StateNotifier<SearchState> {
     return list;
   }
 
-  /// Returns cached movies or fetches from network and populates cache.
   Future<List<Movie>> _fetchMovies() async {
     if (_movieCache.isValid) return _movieCache.data!;
+
+    final disk = await LocalCatalogCache.instance.loadMovies();
+    if (disk != null && disk.isNotEmpty) {
+      _movieCache.set(disk);
+      return disk;
+    }
+
     final res = await (_vodRepo?.getMovies() ??
         Future.value(const Err<List<Movie>>(AppResultError('No repo'))));
     final list = res.when(ok: (l) => l, err: (_) => <Movie>[]);
@@ -156,9 +184,15 @@ class SearchController extends StateNotifier<SearchState> {
     return list;
   }
 
-  /// Returns cached series or fetches from network and populates cache.
   Future<List<Series>> _fetchSeriesList() async {
     if (_seriesCache.isValid) return _seriesCache.data!;
+
+    final disk = await LocalCatalogCache.instance.loadSeries();
+    if (disk != null && disk.isNotEmpty) {
+      _seriesCache.set(disk);
+      return disk;
+    }
+
     final res = await (_seriesRepo?.getSeries() ??
         Future.value(const Err<List<Series>>(AppResultError('No repo'))));
     final list = res.when(ok: (l) => l, err: (_) => <Series>[]);
@@ -166,8 +200,41 @@ class SearchController extends StateNotifier<SearchState> {
     return list;
   }
 
+  /// Early-exit name filter; offloads large catalogs to a background isolate.
+  Future<List<T>> _filterByName<T>(
+    List<T> items,
+    String query,
+    String Function(T) nameOf,
+  ) async {
+    if (items.isEmpty) return const [];
+
+    if (items.length < _isolateThreshold) {
+      return _filterSync(items, query, nameOf);
+    }
+
+    final names = items.map((e) => nameOf(e).toLowerCase()).toList(growable: false);
+    final indices = await compute(_matchNameIndices, <Object>[names, query, _resultLimit]);
+    return [for (final i in indices) items[i]];
+  }
+
+  List<T> _filterSync<T>(
+    List<T> items,
+    String query,
+    String Function(T) nameOf,
+  ) {
+    final out = <T>[];
+    for (final item in items) {
+      if (nameOf(item).toLowerCase().contains(query)) {
+        out.add(item);
+        if (out.length >= _resultLimit) break;
+      }
+    }
+    return out;
+  }
+
   void clear() {
     _searchToken++;
+    _debounceTimer?.cancel();
     state = const SearchState();
   }
 
@@ -177,6 +244,20 @@ class SearchController extends StateNotifier<SearchState> {
     _movieCache.invalidate();
     _seriesCache.invalidate();
   }
+}
+
+List<int> _matchNameIndices(List<Object> args) {
+  final names = args[0] as List<String>;
+  final query = args[1] as String;
+  final limit = args[2] as int;
+  final out = <int>[];
+  for (var i = 0; i < names.length; i++) {
+    if (names[i].contains(query)) {
+      out.add(i);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
 }
 
 final searchControllerProvider =

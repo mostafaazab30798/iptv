@@ -66,6 +66,23 @@ class FavoritesRepositoryImpl implements FavoritesRepository {
   }
 
   @override
+  Future<Result<void>> removeFavoriteByItemId({
+    required FavoriteType type,
+    required int itemId,
+  }) async {
+    try {
+      await (database.delete(database.favorites)
+            ..where(
+              (tbl) => tbl.type.equals(type.name) & tbl.itemId.equals(itemId),
+            ))
+          .go();
+      return const Ok(null);
+    } catch (e) {
+      return Err(AppResultError('Failed to remove favorite by item', cause: e));
+    }
+  }
+
+  @override
   Future<bool> isFavorite({required FavoriteType type, required int itemId}) async {
     try {
       final row = await (database.select(database.favorites)

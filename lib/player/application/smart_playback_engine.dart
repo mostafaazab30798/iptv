@@ -24,9 +24,11 @@ class SmartPlaybackEngine {
     required PlayerEngine engine,
     PlaybackRetryManager? retryManager,
     DeviceDecodeProber? decodeProber,
+    PlaybackBufferMode initialBufferMode = PlaybackBufferMode.balanced,
   })  : _engine = engine,
         _retryManager = retryManager ?? PlaybackRetryManager(),
-        _decodeProber = decodeProber ?? DeviceDecodeProber();
+        _decodeProber = decodeProber ?? DeviceDecodeProber(),
+        _currentBufferMode = initialBufferMode;
 
   final PlayerEngine _engine;
   final PlaybackRetryManager _retryManager;
@@ -59,6 +61,7 @@ class SmartPlaybackEngine {
   static const _escalateWindow = 3;
 
   Timer? _escalationTimer;
+  StreamSubscription<PlayerMetrics>? _metricsSubscription;
 
   // ── Adaptive network buffer escalation ──────────────────────────────────────────
   //
@@ -77,7 +80,7 @@ class SmartPlaybackEngine {
   // healthy window, to avoid oscillating back into the mode that caused the
   // stress in the first place.
 
-  PlaybackBufferMode _currentBufferMode = PlaybackBufferMode.balanced;
+  PlaybackBufferMode _currentBufferMode;
   int _networkStressConsecutiveSeconds = 0;
   int _networkHealthyConsecutiveSeconds = 0;
   int _lastBufferingCount = 0;
@@ -149,7 +152,7 @@ class SmartPlaybackEngine {
     });
 
     // Also subscribe to the engine metrics stream so _latestMetrics stays current.
-    _engine.metricsStream.listen((m) {
+    _metricsSubscription = _engine.metricsStream.listen((m) {
       _latestMetrics = m;
       // Reconcile device profile if we have fresh hwdec data.
       if (m.hwdecCurrent != null) {
@@ -167,6 +170,8 @@ class SmartPlaybackEngine {
   void _stopEscalationMonitor() {
     _escalationTimer?.cancel();
     _escalationTimer = null;
+    _metricsSubscription?.cancel();
+    _metricsSubscription = null;
   }
 
   /// Called every second. Drives the two-tier escalation / de-escalation state machine.
@@ -254,6 +259,7 @@ class SmartPlaybackEngine {
 
   Future<void> _escalateBufferMode() async {
     final next = switch (_currentBufferMode) {
+      PlaybackBufferMode.compact => PlaybackBufferMode.lowLatency,
       PlaybackBufferMode.lowLatency => PlaybackBufferMode.balanced,
       PlaybackBufferMode.balanced => PlaybackBufferMode.stability,
       PlaybackBufferMode.stability => PlaybackBufferMode.stability,

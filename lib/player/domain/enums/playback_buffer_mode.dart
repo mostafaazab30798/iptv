@@ -1,5 +1,11 @@
+import 'package:iptv/core/platform/device_memory.dart';
+
 /// Playback buffer sizing preset determining latency vs re-buffering tradeoff.
 enum PlaybackBufferMode {
+  /// Compact mode: ~2–4s behind live, minimal RAM.
+  /// Default on low-RAM phones (≤3 GiB).
+  compact,
+
   /// Low Latency mode: ~3–5s behind live.
   /// Best for sports channels on stable/fast connections.
   lowLatency,
@@ -15,6 +21,8 @@ enum PlaybackBufferMode {
   /// Demuxer read-ahead duration in seconds.
   int get demuxerReadaheadSecs {
     switch (this) {
+      case PlaybackBufferMode.compact:
+        return 3;
       case PlaybackBufferMode.lowLatency:
         return 6; // 6s — fast fill, resilient to single-segment network jitter
       case PlaybackBufferMode.balanced:
@@ -27,6 +35,8 @@ enum PlaybackBufferMode {
   /// mpv cache duration in seconds.
   int get cacheSecs {
     switch (this) {
+      case PlaybackBufferMode.compact:
+        return 4;
       case PlaybackBufferMode.lowLatency:
         return 8; // 8s cache — keeps smooth when readahead fills
       case PlaybackBufferMode.balanced:
@@ -39,6 +49,8 @@ enum PlaybackBufferMode {
   /// App-level buffer size in bytes for PlayerConfiguration.
   int get bufferSizeBytes {
     switch (this) {
+      case PlaybackBufferMode.compact:
+        return 6 * 1024 * 1024; // 6MB
       case PlaybackBufferMode.lowLatency:
         return 16 * 1024 * 1024; // 16MB
       case PlaybackBufferMode.balanced:
@@ -51,6 +63,8 @@ enum PlaybackBufferMode {
   /// mpv demuxer-max-bytes property value.
   String get demuxerMaxBytes {
     switch (this) {
+      case PlaybackBufferMode.compact:
+        return '12MiB';
       case PlaybackBufferMode.lowLatency:
         return '32MiB';
       case PlaybackBufferMode.balanced:
@@ -63,6 +77,8 @@ enum PlaybackBufferMode {
   /// mpv demuxer-max-back-bytes property value.
   String get demuxerMaxBackBytes {
     switch (this) {
+      case PlaybackBufferMode.compact:
+        return '4MiB';
       case PlaybackBufferMode.lowLatency:
         return '8MiB';
       case PlaybackBufferMode.balanced:
@@ -74,6 +90,8 @@ enum PlaybackBufferMode {
 
   String get displayName {
     switch (this) {
+      case PlaybackBufferMode.compact:
+        return 'Compact (Low RAM)';
       case PlaybackBufferMode.lowLatency:
         return 'Low Latency (Sports)';
       case PlaybackBufferMode.balanced:
@@ -82,4 +100,10 @@ enum PlaybackBufferMode {
         return 'Stability (High Buffer)';
     }
   }
+
+  /// Compact on ≤3 GiB RAM devices; otherwise low-latency for live zap speed.
+  static PlaybackBufferMode get deviceDefault =>
+      DeviceMemory.isLowRamDevice
+          ? PlaybackBufferMode.compact
+          : PlaybackBufferMode.lowLatency;
 }

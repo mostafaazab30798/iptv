@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/domain/entities/channel.dart';
-import 'package:iptv/domain/entities/favorite.dart';
+import 'package:iptv/features/favorites/favorite_channel_ids.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
@@ -241,40 +240,24 @@ class ChannelListTile extends ConsumerWidget {
             onTap();
             break;
           case 'favorite':
-            final repo = ref.read(favoritesRepositoryProvider);
-            final isFav = await repo.isFavorite(
-              type: FavoriteType.channel,
-              itemId: channel.streamId,
-            );
-            if (isFav) {
-              await repo.removeFavorite(channel.streamId);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Removed ${channel.name} from Favorites'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-            } else {
-              await repo.addFavorite(
-                Favorite(
-                  id: channel.streamId,
-                  type: FavoriteType.channel,
+            final ids = ref.read(favoriteChannelIdsProvider);
+            final wasFav = ids.contains(channel.streamId);
+            await ref.read(favoriteChannelIdsProvider.notifier).toggleChannel(
                   itemId: channel.streamId,
                   name: channel.name,
                   imageUrl: channel.streamIcon,
-                  addedAt: DateTime.now(),
+                );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    wasFav
+                        ? 'Removed ${channel.name} from Favorites'
+                        : 'Added ${channel.name} to Favorites',
+                  ),
+                  duration: const Duration(seconds: 2),
                 ),
               );
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Added ${channel.name} to Favorites'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
             }
             break;
         }
@@ -305,93 +288,40 @@ class ChannelListTile extends ConsumerWidget {
   }
 }
 
-/// Instant 1-tap quick Favorite heart button
-class _QuickFavoriteButton extends ConsumerStatefulWidget {
+/// Instant 1-tap quick Favorite heart button — membership from a batched ID set.
+class _QuickFavoriteButton extends ConsumerWidget {
   const _QuickFavoriteButton({required this.channel});
   final Channel channel;
 
   @override
-  ConsumerState<_QuickFavoriteButton> createState() => _QuickFavoriteButtonState();
-}
-
-class _QuickFavoriteButtonState extends ConsumerState<_QuickFavoriteButton> {
-  bool? _isFav;
-  bool _loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkFavorite();
-  }
-
-  Future<void> _checkFavorite() async {
-    final repo = ref.read(favoritesRepositoryProvider);
-    final fav = await repo.isFavorite(
-      type: FavoriteType.channel,
-      itemId: widget.channel.streamId,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isFav = ref.watch(
+      favoriteChannelIdsProvider.select((ids) => ids.contains(channel.streamId)),
     );
-    if (mounted) {
-      setState(() => _isFav = fav);
-    }
-  }
-
-  Future<void> _toggleFavorite() async {
-    if (_loading) return;
-    setState(() => _loading = true);
-
-    final repo = ref.read(favoritesRepositoryProvider);
-    final currentlyFav = _isFav ?? false;
-
-    if (currentlyFav) {
-      await repo.removeFavorite(widget.channel.streamId);
-      if (mounted) {
-        setState(() {
-          _isFav = false;
-          _loading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Removed ${widget.channel.name} from Favorites'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      }
-    } else {
-      await repo.addFavorite(
-        Favorite(
-          id: widget.channel.streamId,
-          itemId: widget.channel.streamId,
-          name: widget.channel.name,
-          type: FavoriteType.channel,
-          imageUrl: widget.channel.streamIcon,
-          addedAt: DateTime.now(),
-        ),
-      );
-      if (mounted) {
-        setState(() {
-          _isFav = true;
-          _loading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Added ${widget.channel.name} to Favorites'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isFav = _isFav ?? false;
 
     return IconButton(
       tooltip: isFav ? 'Remove Favorite' : 'Add to Favorites',
       iconSize: 18,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-      onPressed: _toggleFavorite,
+      onPressed: () async {
+        await ref.read(favoriteChannelIdsProvider.notifier).toggleChannel(
+              itemId: channel.streamId,
+              name: channel.name,
+              imageUrl: channel.streamIcon,
+            );
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isFav
+                  ? 'Removed ${channel.name} from Favorites'
+                  : 'Added ${channel.name} to Favorites',
+            ),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
       icon: AnimatedSwitcher(
         duration: const Duration(milliseconds: 180),
         child: HugeIcon(

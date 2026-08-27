@@ -47,7 +47,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
         _isAllMoviesSelected = false;
       });
       _movieSearchController.clear();
-      ref.read(moviesControllerProvider.notifier).search('');
+      ref.read(moviesControllerProvider.notifier).showCategoriesHub();
     } else {
       if (context.canPop()) {
         context.pop();
@@ -63,7 +63,14 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
       _isAllMoviesSelected = isAll;
     });
     _movieSearchController.clear();
-    ref.read(moviesControllerProvider.notifier).selectCategory(category?.id);
+    final notifier = ref.read(moviesControllerProvider.notifier);
+    if (isAll) {
+      notifier.showAllMovies();
+    } else if (category != null) {
+      notifier.selectCategory(category.id);
+    } else {
+      notifier.showCategoriesHub();
+    }
   }
 
   void _playMovie(Movie movie) {
@@ -138,7 +145,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                 if (index == 0) {
                   return CategoryCard(
                     title: context.l10n.labelAllMovies,
-                    itemCount: moviesState.movies.length,
+                    itemCount: moviesState.totalMovieCount,
                     itemCountLabel: context.l10n.labelMovies,
                     isAllCard: true,
                     onTap: () => _selectCategory(null, isAll: true),
@@ -247,28 +254,31 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                     ),
                     child: SizedBox(
                       height: 34,
-                      child: TextField(
-                        controller: _movieSearchController,
-                        onChanged: (q) {
-                          ref.read(moviesControllerProvider.notifier).search(q);
-                          setState(() {});
+                      child: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _movieSearchController,
+                        builder: (context, value, _) {
+                          return TextField(
+                            controller: _movieSearchController,
+                            onChanged: (q) {
+                              ref.read(moviesControllerProvider.notifier).search(q);
+                            },
+                            style: const TextStyle(fontSize: 12),
+                            decoration: InputDecoration(
+                              hintText: isCompact ? context.l10n.actionSearch : context.l10n.moviesSearchHint,
+                              prefixIcon: const HugeIcon(icon: AppIcons.search, size: 15, color: AppColors.textSecondary),
+                              suffixIcon: value.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const HugeIcon(icon: AppIcons.close, size: 13, color: AppColors.textSecondary),
+                                      onPressed: () {
+                                        _movieSearchController.clear();
+                                        ref.read(moviesControllerProvider.notifier).search('');
+                                      },
+                                    )
+                                  : null,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                            ),
+                          );
                         },
-                        style: const TextStyle(fontSize: 12),
-                        decoration: InputDecoration(
-                          hintText: isCompact ? context.l10n.actionSearch : context.l10n.moviesSearchHint,
-                          prefixIcon: const HugeIcon(icon: AppIcons.search, size: 15, color: AppColors.textSecondary),
-                          suffixIcon: _movieSearchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const HugeIcon(icon: AppIcons.close, size: 13, color: AppColors.textSecondary),
-                                  onPressed: () {
-                                    _movieSearchController.clear();
-                                    ref.read(moviesControllerProvider.notifier).search('');
-                                    setState(() {});
-                                  },
-                                )
-                              : null,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                        ),
                       ),
                     ),
                   ),

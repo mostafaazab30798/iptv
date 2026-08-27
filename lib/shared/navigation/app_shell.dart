@@ -8,6 +8,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 
+import 'package:iptv/features/favorites/favorite_channel_ids.dart';
 import 'package:iptv/features/favorites/favorites_screen.dart';
 import 'package:iptv/features/guide/guide_controller.dart';
 import 'package:iptv/features/home/home_controller.dart';
@@ -110,6 +111,7 @@ class AppShell extends ConsumerWidget {
       ref.read(seriesControllerProvider.notifier).loadData(forceRefresh: true);
     } else if (currentPath.startsWith(Routes.favorites)) {
       ref.invalidate(favoritesListProvider);
+      ref.invalidate(favoriteChannelIdsProvider);
     } else if (currentPath.startsWith(Routes.guide)) {
       ref.read(guideControllerProvider.notifier).loadData();
     }
@@ -189,6 +191,14 @@ class _ShellTopNav extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      _GlassActionButton(
+                        icon: AppIcons.search,
+                        activeIcon: AppIcons.search,
+                        isActive: currentPath == Routes.search,
+                        tooltip: context.l10n.actionSearch,
+                        onTap: () => context.push(Routes.search),
+                      ),
+                      const SizedBox(width: 3),
                       _SpinningRefreshButton(
                         tooltip: context.l10n.actionRefresh,
                         onTap: onRefresh,
@@ -276,6 +286,14 @@ class _ShellTopNav extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          _GlassActionButton(
+                            icon: AppIcons.search,
+                            activeIcon: AppIcons.search,
+                            isActive: currentPath == Routes.search,
+                            tooltip: context.l10n.actionSearch,
+                            onTap: () => context.push(Routes.search),
+                          ),
+                          const SizedBox(width: 4),
                           _SpinningRefreshButton(
                             tooltip: context.l10n.actionRefresh,
                             onTap: onRefresh,
@@ -780,49 +798,6 @@ class _BrandLogoState extends State<_BrandLogo> {
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(width: 10),
-              // Sleek 4K LIVE Pulse Badge Chip
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00FF87).withAlpha(22),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: const Color(0xFF00FF87).withAlpha(80),
-                    width: 0.7,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 5,
-                      height: 5,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF00FF87),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xFF00FF87),
-                            blurRadius: 5,
-                            spreadRadius: 0.5,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '4K LIVE',
-                      style: TextStyle(
-                        color: Color(0xFF00FF87),
-                        fontSize: 8.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),

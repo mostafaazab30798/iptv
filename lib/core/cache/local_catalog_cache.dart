@@ -154,14 +154,7 @@ class LocalCatalogCache {
       final content = await file.readAsString();
       if (content.isEmpty) return null;
 
-      final decoded = jsonDecode(content);
-      if (decoded is List) {
-        return decoded
-            .whereType<Map<dynamic, dynamic>>()
-            .map((m) => DataMapper.categoryFromJson(Map<String, dynamic>.from(m), type))
-            .toList();
-      }
-      return null;
+      return await compute(_decodeAndMapCategories, (content, type.index));
     } catch (e) {
       AppLogger.error('Failed to load cached categories ($typeKey): $e', feature: 'cache');
       return null;
@@ -174,7 +167,8 @@ class LocalCatalogCache {
       final dir = await _getDirPath();
       if (dir == null) return;
       final file = File('$dir/categories_$typeKey.json');
-      await file.writeAsString(jsonEncode(rawList), flush: true);
+      final jsonStr = await compute(_encodeJson, rawList);
+      await file.writeAsString(jsonStr, flush: true);
     } catch (e) {
       AppLogger.error('Failed to save categories cache ($typeKey): $e', feature: 'cache');
     }
@@ -227,6 +221,18 @@ List<Series> _decodeAndMapSeries(String jsonStr) {
     return decoded
         .whereType<Map<dynamic, dynamic>>()
         .map((m) => DataMapper.seriesFromJson(Map<String, dynamic>.from(m)))
+        .toList();
+  }
+  return [];
+}
+
+List<Category> _decodeAndMapCategories((String jsonStr, int typeIndex) args) {
+  final decoded = jsonDecode(args.$1);
+  final type = CategoryType.values[args.$2];
+  if (decoded is List) {
+    return decoded
+        .whereType<Map<dynamic, dynamic>>()
+        .map((m) => DataMapper.categoryFromJson(Map<String, dynamic>.from(m), type))
         .toList();
   }
   return [];

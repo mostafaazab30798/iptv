@@ -1,10 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
+import 'package:iptv/shared/widgets/adaptive_glass.dart';
 
 typedef SleepTimerCallback = void Function(Duration? duration, [String? label]);
 
@@ -113,8 +113,8 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+      child: AdaptiveGlass(
+        sigma: 24,
         child: Container(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.88,
@@ -264,6 +264,7 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                   const SizedBox(height: 6),
                   _SegmentedTrack(
                     children: [
+                      (PlaybackBufferMode.compact, 'Compact'),
                       (PlaybackBufferMode.lowLatency, 'Low Latency'),
                       (PlaybackBufferMode.balanced, 'Balanced'),
                       (PlaybackBufferMode.stability, 'Stability'),

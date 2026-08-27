@@ -6,8 +6,9 @@ import 'package:iptv/core/storage/preferences_storage.dart';
 
 /// Secure key-value store for sensitive data (credentials, tokens).
 ///
-/// Combines hardware-backed FlutterSecureStorage (Windows DPAPI, Android KeyStore, WebCrypto)
-/// with a reliable fallback persistence layer to guarantee persistent sessions across app restarts on Windows & Web.
+/// Passwords live only in hardware-backed [FlutterSecureStorage]
+/// (Windows DPAPI, Android KeyStore, WebCrypto). URL/username may also be
+/// mirrored to preferences for UX prefill — never the password.
 class SecureStorage {
   SecureStorage._()
       : _storage = const FlutterSecureStorage(
@@ -28,10 +29,6 @@ class SecureStorage {
   static const String _keyUsername = 'username';
   static const String _keyPassword = 'password';
 
-  String _encodeString(String value) {
-    return base64Encode(utf8.encode(value));
-  }
-
   String? _decodeString(String? value) {
     if (value == null || value.isEmpty) return null;
     try {
@@ -50,7 +47,6 @@ class SecureStorage {
     required String username,
     required String password,
   }) async {
-    // 1. Write to hardware-backed secure storage
     try {
       await Future.wait([
         _storage.write(key: _keyServerUrl, value: serverUrl),
@@ -61,37 +57,20 @@ class SecureStorage {
       AppLogger.error('SecureStorage write warning: $e', feature: 'storage');
     }
 
-    // 2. Write to persistent preferences fallback (guarantees persistence across Windows/Web reboots)
+    // Mirror non-sensitive identity only; always clear legacy Base64 password.
     try {
-      await PreferencesStorage.instance.saveAuthCredentials(
+      await PreferencesStorage.instance.saveAuthIdentity(
         serverUrl: serverUrl,
         username: username,
-        passwordEnc: _encodeString(password),
       );
-      AppLogger.info('Credentials saved successfully across secure & fallback stores', feature: 'storage');
+      AppLogger.info('Credentials saved to secure storage', feature: 'storage');
     } catch (e) {
-      AppLogger.error('Failed to save fallback credentials: $e', feature: 'storage');
+      AppLogger.error('Failed to save auth identity prefs: $e', feature: 'storage');
     }
   }
 
   Future<({String serverUrl, String username, String password})?> loadCredentials() async {
-    // 1. Fast path: PreferencesStorage is already in memory from bootstrap — 0ms synchronous read!
-    try {
-      final prefUrl = PreferencesStorage.instance.authServerUrl;
-      final prefUser = PreferencesStorage.instance.authUsername;
-      final prefPassEnc = PreferencesStorage.instance.authPasswordEnc;
-
-      if (prefUrl != null && prefUrl.isNotEmpty &&
-          prefUser != null && prefUser.isNotEmpty &&
-          prefPassEnc != null && prefPassEnc.isNotEmpty) {
-        final decodedPass = _decodeString(prefPassEnc);
-        if (decodedPass != null && decodedPass.isNotEmpty) {
-          return (serverUrl: prefUrl, username: prefUser, password: decodedPass);
-        }
-      }
-    } catch (_) {}
-
-    // 2. Slow fallback: FlutterSecureStorage
+    // 1. Prefer FlutterSecureStorage
     String? serverUrl;
     String? username;
     String? password;
@@ -115,15 +94,37 @@ class SecureStorage {
         username.isNotEmpty &&
         password != null &&
         password.isNotEmpty) {
-      // Re-sync to preferences fallback for subsequent instant launches
-      unawaited(PreferencesStorage.instance.saveAuthCredentials(
-        serverUrl: serverUrl,
-        username: username,
-        passwordEnc: _encodeString(password),
-      ).catchError((_) {}));
-
+      unawaited(
+        PreferencesStorage.instance
+            .saveAuthIdentity(serverUrl: serverUrl, username: username)
+            .catchError((_) {}),
+      );
       return (serverUrl: serverUrl, username: username, password: password);
     }
+
+    // 2. One-time migrate legacy Base64 password from preferences, then clear it.
+    try {
+      final prefUrl = PreferencesStorage.instance.authServerUrl;
+      final prefUser = PreferencesStorage.instance.authUsername;
+      final prefPassEnc = PreferencesStorage.instance.authPasswordEnc;
+
+      if (prefUrl != null &&
+          prefUrl.isNotEmpty &&
+          prefUser != null &&
+          prefUser.isNotEmpty &&
+          prefPassEnc != null &&
+          prefPassEnc.isNotEmpty) {
+        final decodedPass = _decodeString(prefPassEnc);
+        if (decodedPass != null && decodedPass.isNotEmpty) {
+          await saveCredentials(
+            serverUrl: prefUrl,
+            username: prefUser,
+            password: decodedPass,
+          );
+          return (serverUrl: prefUrl, username: prefUser, password: decodedPass);
+        }
+      }
+    } catch (_) {}
 
     return null;
   }
@@ -142,7 +143,7 @@ class SecureStorage {
     try {
       await PreferencesStorage.instance.clearAuthCredentials();
     } catch (e) {
-      AppLogger.error('Failed to clear fallback credentials: $e', feature: 'storage');
+      AppLogger.error('Failed to clear auth identity prefs: $e', feature: 'storage');
     }
   }
 

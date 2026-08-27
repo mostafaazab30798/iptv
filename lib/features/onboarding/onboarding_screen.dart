@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +16,7 @@ import 'package:iptv/core/utils/m3u_converter.dart';
 import 'package:iptv/features/auth/auth_controller.dart';
 import 'package:iptv/features/home/home_controller.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/widgets/adaptive_glass.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -500,8 +500,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _buildGlassCard({required Widget child}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+      child: AdaptiveGlass(
+        sigma: 20,
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
@@ -886,7 +886,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   if (v == null || v.trim().isEmpty) {
                     return context.l10n.validationUrlRequired;
                   }
-                  if (!v.trim().startsWith('http://') && !v.trim().startsWith('https://')) {
+                  final trimmed = v.trim();
+                  final uri = Uri.tryParse(trimmed);
+                  final hasHttpScheme =
+                      trimmed.startsWith('http://') || trimmed.startsWith('https://');
+                  if (!hasHttpScheme ||
+                      uri == null ||
+                      uri.host.isEmpty ||
+                      (uri.scheme != 'http' && uri.scheme != 'https')) {
                     return context.l10n.validationUrlInvalid;
                   }
                   return null;
@@ -1180,8 +1187,8 @@ class _ServerGatewayPickerDialogState
         constraints: const BoxConstraints(maxWidth: 580, maxHeight: 680),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.dialog),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+          child: AdaptiveGlass(
+            sigma: 25,
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
@@ -1332,7 +1339,6 @@ class _ServerGatewayPickerDialogState
                             ),
                           )
                         : ListView.separated(
-                            shrinkWrap: true,
                             itemCount: filtered.length,
                             separatorBuilder: (context, index) => const SizedBox(height: 8),
                             itemBuilder: (context, index) {
@@ -1571,8 +1577,8 @@ class _M3uConverterDialogState extends State<_M3uConverterDialog> {
         constraints: const BoxConstraints(maxWidth: 540),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.dialog),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+          child: AdaptiveGlass(
+            sigma: 25,
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(

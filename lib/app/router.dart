@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iptv/features/splash/splash_screen.dart';
-import 'package:iptv/features/onboarding/onboarding_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:iptv/app/providers.dart';
+import 'package:iptv/features/favorites/favorites_screen.dart';
+import 'package:iptv/features/guide/guide_screen.dart';
+import 'package:iptv/features/history/history_screen.dart';
 import 'package:iptv/features/home/home_screen.dart';
 import 'package:iptv/features/live/live_screen.dart';
-import 'package:iptv/features/guide/guide_screen.dart';
 import 'package:iptv/features/movies/movies_screen.dart';
-import 'package:iptv/features/series/series_screen.dart';
-import 'package:iptv/features/favorites/favorites_screen.dart';
-import 'package:iptv/features/history/history_screen.dart';
-import 'package:iptv/features/settings/settings_screen.dart';
+import 'package:iptv/features/onboarding/onboarding_screen.dart';
 import 'package:iptv/features/player/player_screen.dart';
+import 'package:iptv/features/search/search_screen.dart';
+import 'package:iptv/features/series/series_screen.dart';
+import 'package:iptv/features/settings/settings_screen.dart';
+import 'package:iptv/features/splash/splash_screen.dart';
 import 'package:iptv/shared/navigation/app_shell.dart';
 
 // ---------------------------------------------------------------------------
@@ -29,6 +31,7 @@ abstract final class Routes {
   static const favorites = '/favorites';
   static const history = '/history';
   static const settings = '/settings';
+  static const search = '/search';
   static const player = '/player';
 }
 
@@ -37,9 +40,36 @@ abstract final class Routes {
 // ---------------------------------------------------------------------------
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final refresh = ValueNotifier<int>(0);
+  ref.listen(sessionProvider, (previous, next) {
+    refresh.value++;
+  });
+  ref.onDispose(refresh.dispose);
+
   return GoRouter(
     initialLocation: Routes.splash,
     debugLogDiagnostics: false,
+    refreshListenable: refresh,
+    redirect: (context, state) {
+      final loc = state.matchedLocation;
+      final sessionAsync = ref.read(sessionProvider);
+
+      // Splash owns the initial session load + first navigation.
+      if (loc == Routes.splash) return null;
+
+      if (sessionAsync.isLoading) {
+        return Routes.splash;
+      }
+
+      final isAuthed = sessionAsync.valueOrNull?.isValid ?? false;
+      final isOnboarding = loc == Routes.onboarding;
+
+      if (!isAuthed && !isOnboarding) {
+        return Routes.onboarding;
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: Routes.splash,
@@ -52,6 +82,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.player,
         pageBuilder: (context, state) => _noTransition(const PlayerScreen()),
+      ),
+      GoRoute(
+        path: Routes.search,
+        pageBuilder: (context, state) => _fade(const SearchScreen()),
       ),
       ShellRoute(
         builder: (context, state, child) => AppShell(state: state, child: child),

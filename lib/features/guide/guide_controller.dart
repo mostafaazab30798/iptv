@@ -87,6 +87,9 @@ class GuideController extends StateNotifier<GuideState> {
 
 final guideControllerProvider =
     StateNotifierProvider<GuideController, GuideState>((ref) {
+  // Shares LiveRepositoryImpl static cache — no second full catalog in Guide state
+  // (Guide only keeps a small take(20) slice for the grid).
+  ref.keepAlive();
   final liveRepo = ref.watch(liveRepositoryProvider);
   final epgRepo = ref.watch(epgRepositoryProvider);
   return GuideController(liveRepo, epgRepo);

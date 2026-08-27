@@ -35,24 +35,28 @@ class PreferencesStorage {
   static const String _keyAuthPasswordEnc = 'auth_password_enc';
 
   // ---------------------------------------------------------------------------
-  // Auth Credentials Fallback
+  // Auth identity (non-sensitive) — password must never be stored here.
   // ---------------------------------------------------------------------------
 
   String? get authServerUrl => _prefs.getString(_keyAuthServerUrl);
   String? get authUsername => _prefs.getString(_keyAuthUsername);
+
+  /// Legacy Base64 password blob; read only for one-time migration then cleared.
   String? get authPasswordEnc => _prefs.getString(_keyAuthPasswordEnc);
 
-  Future<void> saveAuthCredentials({
+  /// Persists server URL + username for UX; always clears any legacy password.
+  Future<void> saveAuthIdentity({
     required String serverUrl,
     required String username,
-    required String passwordEnc,
   }) async {
     await Future.wait([
       _prefs.setString(_keyAuthServerUrl, serverUrl),
       _prefs.setString(_keyAuthUsername, username),
-      _prefs.setString(_keyAuthPasswordEnc, passwordEnc),
+      _prefs.remove(_keyAuthPasswordEnc),
     ]);
   }
+
+  Future<void> clearLegacyPasswordEnc() => _prefs.remove(_keyAuthPasswordEnc);
 
   Future<void> clearAuthCredentials() async {
     await Future.wait([

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/domain/entities/category.dart';
@@ -8,8 +10,8 @@ class SeriesState {
   const SeriesState({
     this.categories = const [],
     this.selectedCategoryId,
-    this.seriesList = const [],
     this.filteredSeries = const [],
+    this.totalSeriesCount = 0,
     this.categoryCounts = const {},
     this.categoryLeadingCovers = const {},
     this.categoryNames = const {},
@@ -20,8 +22,8 @@ class SeriesState {
 
   final List<Category> categories;
   final int? selectedCategoryId;
-  final List<Series> seriesList;
   final List<Series> filteredSeries;
+  final int totalSeriesCount;
   final Map<int, int> categoryCounts;
   final Map<int, String?> categoryLeadingCovers;
   final Map<int, String> categoryNames;
@@ -29,12 +31,14 @@ class SeriesState {
   final bool isLoading;
   final String? error;
 
+  List<Series> get seriesList => filteredSeries;
+
   SeriesState copyWith({
     List<Category>? categories,
     int? selectedCategoryId,
     bool clearCategory = false,
-    List<Series>? seriesList,
     List<Series>? filteredSeries,
+    int? totalSeriesCount,
     Map<int, int>? categoryCounts,
     Map<int, String?>? categoryLeadingCovers,
     Map<int, String>? categoryNames,
@@ -45,11 +49,13 @@ class SeriesState {
   }) {
     return SeriesState(
       categories: categories ?? this.categories,
-      selectedCategoryId: clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
-      seriesList: seriesList ?? this.seriesList,
+      selectedCategoryId:
+          clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
       filteredSeries: filteredSeries ?? this.filteredSeries,
+      totalSeriesCount: totalSeriesCount ?? this.totalSeriesCount,
       categoryCounts: categoryCounts ?? this.categoryCounts,
-      categoryLeadingCovers: categoryLeadingCovers ?? this.categoryLeadingCovers,
+      categoryLeadingCovers:
+          categoryLeadingCovers ?? this.categoryLeadingCovers,
       categoryNames: categoryNames ?? this.categoryNames,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
@@ -64,10 +70,26 @@ class SeriesController extends StateNotifier<SeriesState> {
   }
 
   final SeriesRepository? _seriesRepo;
+  List<Series> _catalog = const [];
+  Timer? _searchDebounce;
+  int _searchEpoch = 0;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
 
   Future<void> loadData({bool forceRefresh = false}) async {
     final repo = _seriesRepo;
     if (repo == null) return;
+
+    if (!forceRefresh &&
+        _catalog.isNotEmpty &&
+        state.categories.isNotEmpty &&
+        !state.isLoading) {
+      return;
+    }
 
     state = state.copyWith(isLoading: true, clearError: true);
 
@@ -88,13 +110,17 @@ class SeriesController extends StateNotifier<SeriesState> {
         err: (_) => <Series>[],
       );
 
+      _catalog = list;
+
       final counts = <int, int>{};
       final leadingCovers = <int, String?>{};
       for (final series in list) {
         final catId = series.categoryId;
         if (catId != null) {
           counts[catId] = (counts[catId] ?? 0) + 1;
-          if (!leadingCovers.containsKey(catId) && series.cover != null && series.cover!.isNotEmpty) {
+          if (!leadingCovers.containsKey(catId) &&
+              series.cover != null &&
+              series.cover!.isNotEmpty) {
             leadingCovers[catId] = series.cover;
           }
         }
@@ -105,11 +131,20 @@ class SeriesController extends StateNotifier<SeriesState> {
         names[cat.id] = cat.name;
       }
 
+      final selectedId = state.selectedCategoryId;
+      final List<Series> visible;
+      if (state.filteredSeries.isNotEmpty || selectedId != null) {
+        visible = selectedId == null
+            ? list
+            : list.where((s) => s.categoryId == selectedId).toList();
+      } else {
+        visible = const [];
+      }
+
       state = state.copyWith(
         categories: categories,
-        clearCategory: true,
-        seriesList: list,
-        filteredSeries: list,
+        filteredSeries: visible,
+        totalSeriesCount: list.length,
         categoryCounts: counts,
         categoryLeadingCovers: leadingCovers,
         categoryNames: names,
@@ -121,52 +156,91 @@ class SeriesController extends StateNotifier<SeriesState> {
   }
 
   Future<void> selectCategory(int? categoryId) async {
-    final repo = _seriesRepo;
-    if (repo == null) return;
+    _searchDebounce?.cancel();
+    if (categoryId == null) {
+      showCategoriesHub();
+      return;
+    }
 
     state = state.copyWith(
       selectedCategoryId: categoryId,
-      clearCategory: categoryId == null,
       searchQuery: '',
-      isLoading: true,
-      clearError: true,
+      filteredSeries: _catalog.where((s) => s.categoryId == categoryId).toList(),
+      isLoading: false,
     );
+  }
 
-    try {
-      final seriesResult = await repo.getSeries(categoryId: categoryId);
-      final list = seriesResult.when(
-        ok: (s) => s,
-        err: (_) => <Series>[],
-      );
+  void showAllSeries() {
+    _searchDebounce?.cancel();
+    state = state.copyWith(
+      clearCategory: true,
+      searchQuery: '',
+      filteredSeries: _catalog,
+    );
+  }
 
-      state = state.copyWith(
-        seriesList: list,
-        filteredSeries: list,
-        searchQuery: '',
-        isLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-    }
+  void showCategoriesHub() {
+    _searchDebounce?.cancel();
+    state = state.copyWith(
+      clearCategory: true,
+      searchQuery: '',
+      filteredSeries: const [],
+    );
   }
 
   void search(String query) {
-    final q = query.trim();
-    state = state.copyWith(
-      searchQuery: q,
-      filteredSeries: _applyFilter(state.seriesList, q),
-    );
+    _searchDebounce?.cancel();
+    final trimmed = query.trim();
+    state = state.copyWith(searchQuery: trimmed);
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      unawaited(_runSearch(trimmed));
+    });
   }
 
-  List<Series> _applyFilter(List<Series> list, String query) {
-    if (query.isEmpty) return list;
-    final q = query.toLowerCase();
-    return list.where((s) => s.name.toLowerCase().contains(q)).toList();
+  Future<void> _runSearch(String query) async {
+    final epoch = ++_searchEpoch;
+    final base = state.selectedCategoryId == null
+        ? _catalog
+        : _catalog
+            .where((s) => s.categoryId == state.selectedCategoryId)
+            .toList();
+
+    if (query.isEmpty) {
+      if (epoch != _searchEpoch) return;
+      state = state.copyWith(filteredSeries: base);
+      return;
+    }
+
+    final List<Series> filtered;
+    if (base.length > 1500) {
+      final names = [for (final s in base) s.name];
+      final indexes =
+          await compute(_filterNameIndexes, (names, query.toLowerCase()));
+      if (epoch != _searchEpoch) return;
+      filtered = [for (final i in indexes) base[i]];
+    } else {
+      final q = query.toLowerCase();
+      filtered = base.where((s) => s.name.toLowerCase().contains(q)).toList();
+    }
+
+    if (epoch != _searchEpoch) return;
+    state = state.copyWith(filteredSeries: filtered);
   }
+}
+
+List<int> _filterNameIndexes((List<String> names, String query) args) {
+  final names = args.$1;
+  final q = args.$2;
+  final out = <int>[];
+  for (var i = 0; i < names.length; i++) {
+    if (names[i].toLowerCase().contains(q)) out.add(i);
+  }
+  return out;
 }
 
 final seriesControllerProvider =
     StateNotifierProvider<SeriesController, SeriesState>((ref) {
+  ref.keepAlive();
   final repo = ref.watch(seriesRepositoryProvider);
   return SeriesController(repo);
 });

@@ -1,8 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
+import 'package:iptv/shared/widgets/adaptive_glass.dart';
 
 /// Glassmorphic HUD overlay for Volume and Brightness vertical swipe gestures.
 class GestureLevelHud extends StatelessWidget {
@@ -25,8 +25,8 @@ class GestureLevelHud extends StatelessWidget {
     return Center(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: AdaptiveGlass(
+          sigma: 12,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
@@ -110,8 +110,8 @@ class SeekScrubHud extends StatelessWidget {
     return Center(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: AdaptiveGlass(
+          sigma: 12,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(

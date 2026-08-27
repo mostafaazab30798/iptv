@@ -1,6 +1,8 @@
-import 'dart:developer' as dev;
+import 'package:flutter/foundation.dart';
+import 'package:iptv/core/logging/app_logger.dart';
 import 'package:iptv/core/network/api_client.dart';
 import 'package:iptv/core/network/api_config.dart';
+import 'package:iptv/core/network/url_helpers.dart';
 import 'package:iptv/core/storage/secure_storage.dart';
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
@@ -19,20 +21,17 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      // Clean and normalize input server URL
-      var normalizedUrl = serverUrl.trim();
-      if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
-        normalizedUrl = 'http://$normalizedUrl';
-      }
-      // Remove trailing slash and any trailing /player_api.php
-      normalizedUrl = normalizedUrl
-          .replaceAll(RegExp(r'/player_api\.php.*$', caseSensitive: false), '')
-          .replaceAll(RegExp(r'/+$'), '');
+      final normalizedUrl = UrlHelpers.normalizeServerUrl(serverUrl);
 
       final user = username.trim();
       final pass = password.trim();
 
-      dev.log('Authenticating with server: $normalizedUrl, user: $user', name: 'AuthRepo');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Authenticating with server: $normalizedUrl',
+          feature: 'auth',
+        );
+      }
 
       // Create client to validate credentials with server
       final tempClient = ApiClient(ApiConfig(
@@ -43,8 +42,6 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final dataSource = XtreamRemoteDataSource(tempClient);
       final response = await dataSource.authenticate();
-
-      dev.log('Server response: $response', name: 'AuthRepo');
 
       final userInfo = response['user_info'] as Map<String, dynamic>?;
       if (userInfo == null) {
@@ -82,7 +79,12 @@ class AuthRepositoryImpl implements AuthRepository {
         password: pass,
       ));
     } catch (e) {
-      dev.log('Authentication failed with error: $e', name: 'AuthRepo');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Authentication failed: ${e.runtimeType}',
+          feature: 'auth',
+        );
+      }
       return Err(AppResultError('Could not connect to server: ${e.toString()}', cause: e));
     }
   }

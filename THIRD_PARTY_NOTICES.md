@@ -4,6 +4,14 @@ This application includes reference channel artwork for beIN SPORTS channels sou
 
 ---
 
+## Cairo (Arabic UI font)
+
+- **Source**: [Gue3bara/Cairo](https://github.com/Gue3bara/Cairo) / [google/fonts ofl/cairo](https://github.com/google/fonts/tree/main/ofl/cairo)
+- **License**: SIL Open Font License 1.1
+- **Usage**: Static weight files under `assets/fonts/` (`Cairo-Regular.ttf`, `Cairo-Medium.ttf`, `Cairo-SemiBold.ttf`, `Cairo-Bold.ttf`), instantiated from the upstream variable font for precise Flutter weight selection.
+
+---
+
 ## tv-logo / tv-logos
 
 - **Source**: [https://github.com/tv-logo/tv-logos](https://github.com/tv-logo/tv-logos)

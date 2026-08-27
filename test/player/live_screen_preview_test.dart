@@ -21,20 +21,17 @@ class FakeLiveController extends LiveController {
         Category(id: 1, serverId: 1, type: CategoryType.live, name: 'Sports'),
         Category(id: 2, serverId: 1, type: CategoryType.live, name: 'News'),
       ],
-      channels: [
-        Channel(id: 1, serverId: 1, streamId: 101, name: 'ESPN HD', categoryId: 1),
-        Channel(id: 2, serverId: 1, streamId: 102, name: 'BBC News', categoryId: 2),
-      ],
       filteredChannels: [
         Channel(id: 1, serverId: 1, streamId: 101, name: 'ESPN HD', categoryId: 1),
         Channel(id: 2, serverId: 1, streamId: 102, name: 'BBC News', categoryId: 2),
       ],
+      totalChannelCount: 2,
       isLoading: false,
     );
   }
 
   @override
-  Future<void> selectCategory(int? categoryId) async {}
+  void selectCategory(int categoryId) {}
 }
 
 class FakeFavoritesRepository implements FavoritesRepository {
@@ -49,6 +46,13 @@ class FakeFavoritesRepository implements FavoritesRepository {
 
   @override
   Future<Result<void>> removeFavorite(int favoriteId) async => const Ok(null);
+
+  @override
+  Future<Result<void>> removeFavoriteByItemId({
+    required FavoriteType type,
+    required int itemId,
+  }) async =>
+      const Ok(null);
 }
 
 void main() {
@@ -60,6 +64,15 @@ void main() {
       fakeEngine = FakePlayerEngine();
       controller = PlayerController(engine: fakeEngine);
     });
+
+    tearDown(() {
+      controller.dispose();
+    });
+
+    Future<void> settleBriefly(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     Widget createTestApp() {
       return ProviderScope(
@@ -77,42 +90,34 @@ void main() {
       );
     }
 
-
     testWidgets('navigates to channels view and toggles between grid and list views', (tester) async {
       await tester.pumpWidget(createTestApp());
-      await tester.pumpAndSettle();
+      await settleBriefly(tester);
 
-      // Tap category to navigate to channel view
       await tester.tap(find.text('Sports'));
-      await tester.pumpAndSettle();
+      await settleBriefly(tester);
 
       expect(find.text('ESPN HD'), findsOneWidget);
       expect(find.text('BBC News'), findsOneWidget);
 
-      // Tap list toggle button
       final toggleBtn = find.byKey(const ValueKey('live_view_mode_toggle'));
       expect(toggleBtn, findsOneWidget);
       await tester.tap(toggleBtn);
-      await tester.pumpAndSettle();
+      await settleBriefly(tester);
 
-      // Now grid view is active for channels
       expect(find.byTooltip('Switch to List View'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
-
-
-
-
-
 
     testWidgets('shows live preview and quick controls when player source is active in channels view', (tester) async {
       await tester.pumpWidget(createTestApp());
-      await tester.pumpAndSettle();
+      await settleBriefly(tester);
 
-      // Open channels view
       await tester.tap(find.text('Sports'));
-      await tester.pumpAndSettle();
+      await settleBriefly(tester);
 
-      // Simulate loading channel into player
       await controller.load(
         PlayerSource.live(
           url: 'http://test.live/espn.m3u8',
@@ -120,16 +125,17 @@ void main() {
           channelId: 101,
         ),
       );
-      await tester.pumpAndSettle();
+      await settleBriefly(tester);
 
       expect(find.text('LIVE PREVIEW'), findsOneWidget);
       expect(find.text('Fullscreen'), findsOneWidget);
       expect(find.byType(PlayerView), findsOneWidget);
 
-      // Stop player
       await controller.stop();
       expect(controller.state.status, equals(PlayerStatus.stopped));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
   });
 }
-

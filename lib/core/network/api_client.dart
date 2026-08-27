@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show compute, kIsWeb;
+import 'package:flutter/foundation.dart' show compute, kDebugMode, kIsWeb;
 import 'package:iptv/core/constants/api_constants.dart';
 import 'package:iptv/core/errors/app_error.dart';
 import 'package:iptv/core/network/api_config.dart';
@@ -27,7 +28,8 @@ class ApiClient {
         connectTimeout: config.connectTimeout,
         receiveTimeout: config.receiveTimeout,
         sendTimeout: config.sendTimeout,
-        responseType: ResponseType.plain,
+        // Bytes avoids an extra multi-MB Dart String peak on large Xtream payloads.
+        responseType: ResponseType.bytes,
         headers: {
           'Accept': '*/*',
           if (!kIsWeb)
@@ -60,14 +62,18 @@ class ApiClient {
       );
       return await _parse<T>(response.data, fromJson);
     } on DioException catch (e) {
-      dev.log(
-        'DioException on GET $path: type=${e.type}, message=${e.message}, error=${e.error}, statusCode=${e.response?.statusCode}',
-        name: 'ApiClient',
-        error: e,
-      );
+      if (kDebugMode) {
+        dev.log(
+          'DioException on GET $path: type=${e.type}, message=${e.message}, error=${e.error}, statusCode=${e.response?.statusCode}',
+          name: 'ApiClient',
+          error: e,
+        );
+      }
       throw ApiException(_translateDioError(e));
     } catch (e) {
-      dev.log('Exception on GET $path: $e', name: 'ApiClient', error: e);
+      if (kDebugMode) {
+        dev.log('Exception on GET $path: $e', name: 'ApiClient', error: e);
+      }
       if (e is ApiException) rethrow;
       throw ApiException(NetworkError(message: e.toString(), cause: e));
     }
@@ -88,11 +94,13 @@ class ApiClient {
       );
       return await _parse<T>(response.data, fromJson);
     } on DioException catch (e) {
-      dev.log(
-        'DioException on POST $path: type=${e.type}, message=${e.message}, error=${e.error}, statusCode=${e.response?.statusCode}',
-        name: 'ApiClient',
-        error: e,
-      );
+      if (kDebugMode) {
+        dev.log(
+          'DioException on POST $path: type=${e.type}, message=${e.message}, error=${e.error}, statusCode=${e.response?.statusCode}',
+          name: 'ApiClient',
+          error: e,
+        );
+      }
       throw ApiException(_translateDioError(e));
     }
   }
@@ -106,8 +114,27 @@ class ApiClient {
   Future<T> _parse<T>(dynamic rawData, T Function(dynamic)? fromJson) async {
     dynamic data = rawData;
 
-    // Decode plain text if returned as String
-    if (data is String) {
+    // Prefer bytes → isolate decode for large Xtream payloads (cuts String peak RAM).
+    if (data is Uint8List || data is List<int>) {
+      final bytes = data is Uint8List ? data : Uint8List.fromList(data as List<int>);
+      if (bytes.isEmpty) {
+        data = (T == List || T.toString().startsWith('List<')) ? <dynamic>[] : <String, dynamic>{};
+      } else {
+        try {
+          if (bytes.length > 50000) {
+            data = await compute<Uint8List, Object?>(_decodeJsonBytes, bytes);
+          } else {
+            data = jsonDecode(utf8.decode(bytes));
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            final preview = utf8.decode(bytes.take(100).toList(), allowMalformed: true);
+            dev.log('JSON decode failed: $e. Raw preview: $preview', name: 'ApiClient');
+          }
+        }
+      }
+    } else if (data is String) {
+      // Decode plain text if returned as String (legacy / interceptor path)
       final trimmed = data.trim();
       if (trimmed.isEmpty) {
         data = (T == List || T.toString().startsWith('List<')) ? <dynamic>[] : <String, dynamic>{};
@@ -121,7 +148,9 @@ class ApiClient {
             data = jsonDecode(trimmed);
           }
         } catch (e) {
-          dev.log('JSON decode failed: $e. Raw preview: ${trimmed.take(100)}', name: 'ApiClient');
+          if (kDebugMode) {
+            dev.log('JSON decode failed: $e. Raw preview: ${trimmed.take(100)}', name: 'ApiClient');
+          }
         }
       }
     }
@@ -204,4 +233,6 @@ extension on String {
 /// Top-level function required by [compute] — isolate entry points must be
 /// top-level (or static) and match ComputeCallback(String, Object?).
 Object? _decodeJson(String source) => jsonDecode(source);
+
+Object? _decodeJsonBytes(Uint8List bytes) => jsonDecode(utf8.decode(bytes));
 

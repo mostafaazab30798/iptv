@@ -1,3 +1,5 @@
+import 'dart:async' show scheduleMicrotask;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +24,8 @@ class PlayerScreen extends ConsumerStatefulWidget {
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBindingObserver {
   PlayerController? _controller;
+  /// Cached so exit logic still works after system-back dispose (ref unusable).
+  bool _isLiveSource = false;
 
   @override
   void initState() {
@@ -30,6 +34,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _controller = ref.read(playerControllerProvider.notifier);
+        _isLiveSource = ref.read(playerControllerProvider).isLive;
+        _controller?.setPlayerRouteActive(true);
         _enterFullscreenMode();
       }
     });
@@ -76,27 +82,24 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
 
   Future<void> _toggleFullscreen() async {
     final isMobile = PlatformService.instance.isAndroid;
+    final isCurrentlyFull = ref.read(playerControllerProvider).isFullscreen;
     if (isMobile) {
-      final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
-      if (isPortrait || !ref.read(playerControllerProvider).isFullscreen) {
-        // Force Landscape Fullscreen
+      // Branch only on fullscreen flag — do not mix in current orientation,
+      // which previously forced landscape when the exit icon was shown.
+      if (isCurrentlyFull) {
+        _restoreDefaultOrientations();
+        await _exitFullscreenMode();
+      } else {
         await SystemChrome.setPreferredOrientations([
           DeviceOrientation.landscapeLeft,
           DeviceOrientation.landscapeRight,
         ]);
         await _enterFullscreenMode();
-      } else {
-        // Force Portrait
-        await SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ]);
-        await _exitFullscreenMode();
       }
     } else {
       final isPlatformFull = await PlatformService.instance.isFullScreen();
-      final isCurrentlyFull = isPlatformFull || ref.read(playerControllerProvider).isFullscreen;
-      if (isCurrentlyFull) {
+      final shouldExit = isPlatformFull || isCurrentlyFull;
+      if (shouldExit) {
         await _exitFullscreenMode();
       } else {
         await _enterFullscreenMode();
@@ -109,14 +112,45 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _restoreDefaultOrientations();
     PlatformService.instance.setFullScreen(false);
+    final controller = _controller;
     super.dispose();
+    // Defer provider writes until after the unmount cascade finishes. Calling
+    // setState on listeners mid-unmount marks defunct elements dirty. Tests
+    // must pump once after removing PlayerScreen to drain this microtask.
+    scheduleMicrotask(() {
+      if (controller == null || !controller.mounted) return;
+      controller.setPlayerRouteActive(false);
+      controller.setFullscreen(false);
+    });
   }
 
-  void _handleBack() {
-    _restoreDefaultOrientations();
-    _exitFullscreenMode();
+  /// Leaves the fullscreen player without tearing down live playback so the
+  /// Live TV mini preview can keep showing the same stream.
+  void _leavePlayer({required bool alreadyPopped}) {
+    if (!alreadyPopped) {
+      _restoreDefaultOrientations();
+      // Exit OS immersive mode immediately. Surface ownership is released in
+      // dispose so LiveMiniPreview remounts after this Video is gone.
+      PlatformService.instance.setFullScreen(false);
+      if (mounted) {
+        _isLiveSource = ref.read(playerControllerProvider).isLive;
+      }
+    }
     _controller?.savePlaybackProgress();
-    _controller?.stop();
+
+    // Keep playback only when Live TV registered a mini-preview handoff.
+    // Favourites / search / history open live channels without that host, so
+    // those must stop on exit or audio continues in the background.
+    // Kick stop before pop; do not wrap in Future — that leaves pending
+    // timers when the route is disposed under widget tests.
+    final retainForMiniPreview =
+        _isLiveSource && (_controller?.hasLivePreviewHandoff ?? false);
+    if (!retainForMiniPreview) {
+      _controller?.stop();
+    }
+
+    if (alreadyPopped) return;
+
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
@@ -125,6 +159,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
       } catch (_) {}
     }
   }
+
+  void _handleBack() => _leavePlayer(alreadyPopped: false);
 
 
   @override
@@ -168,12 +204,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     // Reconstruct a full PlayerState for widgets that need it.
     final fullPlayerState = ref.read(playerControllerProvider);
     final controller = ref.read(playerControllerProvider.notifier);
+    _isLiveSource = fullPlayerState.isLive;
 
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
-          _controller?.stop();
+          _leavePlayer(alreadyPopped: true);
         } else {
           _handleBack();
         }

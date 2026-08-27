@@ -41,9 +41,8 @@ dependencies:
   # Images
   cached_network_image: ^3.4.1
 
-  # Fonts & UI
-  google_fonts: ^6.2.1
-
+  # Fonts & UI (bundled under assets/fonts — no runtime fetch)
+  # google_fonts removed; AppTypography uses pubspec font families.
   # Logging
   logger: ^2.5.0
 
@@ -79,3 +78,25 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/logos/bein/
+
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/NotoSans-Bold.ttf
+          weight: 700
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Cairo-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Cairo-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700

@@ -1,10 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
 /// Compact, non-interfering interactive playback controls overlay.
@@ -487,24 +487,18 @@ class PlayerControls extends StatelessWidget {
                             const SizedBox(width: 4),
                           ],
 
-                          // Fullscreen
+                          // Fullscreen — icon follows controller flag only (not orientation).
                           if (caps.fullscreen) ...[
-                            Builder(
-                              builder: (context) {
-                                final isMobile = Theme.of(context).platform == TargetPlatform.android ||
-                                    Theme.of(context).platform == TargetPlatform.iOS;
-                                final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-                                final isFullscreenActive = playerState.isFullscreen || (isMobile && isLandscape);
-                                return _CompactGlassButton(
-                                  icon: isFullscreenActive
-                                      ? AppIcons.exitFullscreen
-                                      : AppIcons.fullscreen,
-                                  tooltip: isFullscreenActive ? 'Exit Fullscreen' : 'Fullscreen',
-                                  size: 32,
-                                  iconSize: 18,
-                                  onPressed: onToggleFullscreen,
-                                );
-                              },
+                            _CompactGlassButton(
+                              icon: playerState.isFullscreen
+                                  ? AppIcons.exitFullscreen
+                                  : AppIcons.fullscreen,
+                              tooltip: playerState.isFullscreen
+                                  ? 'Exit Fullscreen'
+                                  : 'Fullscreen',
+                              size: 32,
+                              iconSize: 18,
+                              onPressed: onToggleFullscreen,
                             ),
                           ],
                         ],
@@ -552,8 +546,8 @@ class _CompactGlassButton extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(size / 2),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+      child: AdaptiveGlass(
+        sigma: 8,
         child: Container(
           width: size,
           height: size,
@@ -592,8 +586,8 @@ class _CompactGlassActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+      child: AdaptiveGlass(
+        sigma: 8,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.12),

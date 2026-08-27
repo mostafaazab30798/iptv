@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:iptv/core/constants/api_constants.dart';
 import 'package:iptv/core/network/api_client.dart';
+import 'package:iptv/core/network/url_helpers.dart';
 
 /// Remote datasource communicating with Xtream-compatible IPTV server APIs.
 class XtreamRemoteDataSource {
@@ -146,9 +146,9 @@ class XtreamRemoteDataSource {
     required int streamId,
     String extension = 'ts',
   }) {
-    final base = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl;
+    final base = UrlHelpers.normalizeServerUrl(serverUrl);
     final raw = '$base/live/$username/$password/$streamId.$extension';
-    return _wrapWebUrl(raw);
+    return UrlHelpers.wrapWebProxy(raw);
   }
 
   static String buildVodStreamUrl({
@@ -158,9 +158,9 @@ class XtreamRemoteDataSource {
     required int streamId,
     String extension = 'mp4',
   }) {
-    final base = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl;
+    final base = UrlHelpers.normalizeServerUrl(serverUrl);
     final raw = '$base/movie/$username/$password/$streamId.$extension';
-    return _wrapWebUrl(raw);
+    return UrlHelpers.wrapWebProxy(raw);
   }
 
   static String buildSeriesStreamUrl({
@@ -170,19 +170,8 @@ class XtreamRemoteDataSource {
     required int streamId,
     String extension = 'mp4',
   }) {
-    final base = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl;
+    final base = UrlHelpers.normalizeServerUrl(serverUrl);
     final raw = '$base/series/$username/$password/$streamId.$extension';
-    return _wrapWebUrl(raw);
-  }
-
-  static String _wrapWebUrl(String rawUrl) {
-    if (!kIsWeb) return rawUrl;
-    final isLocalhost =
-        Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1';
-    if (!isLocalhost &&
-        (Uri.base.scheme == 'https' || rawUrl.startsWith('http://'))) {
-      return '${Uri.base.origin}/proxy?url=${Uri.encodeComponent(rawUrl)}';
-    }
-    return rawUrl;
+    return UrlHelpers.wrapWebProxy(raw);
   }
 }

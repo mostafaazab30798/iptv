@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,11 +32,9 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
-  Timer? _debounce;
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -92,13 +88,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           fillColor: Colors.transparent,
                         ),
                         onChanged: (v) {
-                          // Update clear-button visibility immediately (cheap setState — no network call).
+                          // Clear-button visibility only — search is debounced in the controller.
                           setState(() {});
-                          // Debounce the actual search to avoid per-keystroke full-catalog fetches.
-                          _debounce?.cancel();
-                          _debounce = Timer(const Duration(milliseconds: 350), () {
-                            ref.read(searchControllerProvider.notifier).search(v);
-                          });
+                          ref.read(searchControllerProvider.notifier).search(v);
                         },
                       ),
                     ),

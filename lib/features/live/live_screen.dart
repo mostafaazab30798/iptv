@@ -33,10 +33,26 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
   bool _isAllChannelsSelected = false;
   Channel? _selectedChannel;
   bool _isGridView = false;
+  PlayerController? _playerController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _playerController = ref.read(playerControllerProvider.notifier);
+  }
 
   @override
   void dispose() {
     _channelSearchController.dispose();
+    // Leaving Live tab/route: free decoder RAM/CPU. Keep playback if fullscreen
+    // player is open (PlayerScreen owns lifecycle; mini-preview resumes on return).
+    // Use addPostFrameCallback (not Future) so widget tests can flush via pump.
+    final player = _playerController;
+    if (player != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        player.stopWhenLeavingLiveRoute();
+      });
+    }
     super.dispose();
   }
 
@@ -49,8 +65,13 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     });
 
     final notifier = ref.read(liveControllerProvider.notifier);
-    notifier.selectCategory(category?.id);
-    notifier.search('');
+    if (isAll) {
+      notifier.showAllChannels();
+    } else if (category != null) {
+      notifier.selectCategory(category.id);
+    } else {
+      notifier.showCategoriesHub();
+    }
   }
 
   void _onBack() {
@@ -61,8 +82,11 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
       _selectedChannel = null;
     });
     final notifier = ref.read(liveControllerProvider.notifier);
-    notifier.selectCategory(null);
-    notifier.search('');
+    notifier.showCategoriesHub();
+
+    // Tear down live preview when leaving the channel list for categories.
+    final player = ref.read(playerControllerProvider.notifier);
+    Future(() => player.stop());
   }
 
   void _playChannel(Channel channel, {bool openFullscreen = false}) {
@@ -71,34 +95,26 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
 
     setState(() => _selectedChannel = channel);
 
-    final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
-      serverUrl: session.serverUrl,
-      username: session.username,
-      password: session.password,
-      streamId: channel.streamId,
-    );
-
     final liveState = ref.read(liveControllerProvider);
-    final playlist = liveState.filteredChannels.map((c) {
-      final url = XtreamRemoteDataSource.buildLiveStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: c.streamId,
-      );
-      return PlayerSource.live(
-        url: url,
-        title: c.name,
-        channelId: c.streamId,
-        logoUrl: c.streamIcon,
-      );
-    }).toList();
+    final channels = liveState.filteredChannels;
+    final initialIndex = channels.indexWhere((c) => c.streamId == channel.streamId);
+
+    String urlFor(Channel c) => XtreamRemoteDataSource.buildLiveStreamUrl(
+          serverUrl: session.serverUrl,
+          username: session.username,
+          password: session.password,
+          streamId: c.streamId,
+        );
 
     final playerNotifier = ref.read(playerControllerProvider.notifier);
-    playerNotifier.setChannelPlaylist(playlist);
+    playerNotifier.setLazyLivePlaylist(
+      channels: channels,
+      initialIndex: initialIndex >= 0 ? initialIndex : 0,
+      urlFor: urlFor,
+    );
     playerNotifier.load(
       PlayerSource.live(
-        url: streamUrl,
+        url: urlFor(channel),
         title: channel.name,
         channelId: channel.streamId,
         logoUrl: channel.streamIcon,
@@ -112,7 +128,12 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final liveState = ref.watch(liveControllerProvider);
+    final isLoading = ref.watch(
+      liveControllerProvider.select((s) => s.isLoading),
+    );
+    final categories = ref.watch(
+      liveControllerProvider.select((s) => s.categories),
+    );
     final inChannelsView = _selectedCategory != null || _isAllChannelsSelected;
 
     return PopScope(
@@ -127,8 +148,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
         body: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
           child: inChannelsView
-              ? _buildChannelsView(liveState)
-              : _buildCategoriesHub(liveState),
+              ? _buildChannelsView()
+              : _buildCategoriesHub(isLoading: isLoading, categories: categories),
         ),
       ),
     );
@@ -138,12 +159,23 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
   // Stage 1: Categories Hub Showcase
   // ---------------------------------------------------------------------------
 
-  Widget _buildCategoriesHub(LiveState liveState) {
-    if (liveState.isLoading && liveState.categories.isEmpty) {
+  Widget _buildCategoriesHub({
+    required bool isLoading,
+    required List<Category> categories,
+  }) {
+    if (isLoading && categories.isEmpty) {
       return const CategoryListSkeleton();
     }
 
-    final categories = liveState.categories;
+    final totalCount = ref.watch(
+      liveControllerProvider.select((s) => s.totalChannelCount),
+    );
+    final categoryCounts = ref.watch(
+      liveControllerProvider.select((s) => s.categoryCounts),
+    );
+    final leading = ref.watch(
+      liveControllerProvider.select((s) => s.categoryLeadingChannels),
+    );
 
     return KeyedSubtree(
       key: const ValueKey('categories_hub'),
@@ -162,7 +194,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                 if (index == 0) {
                   return CategoryCard(
                     title: context.l10n.labelAllChannels,
-                    itemCount: liveState.channels.length,
+                    itemCount: totalCount,
                     itemCountLabel: context.l10n.labelChannels,
                     isAllCard: true,
                     onTap: () => _selectCategory(null, isAll: true),
@@ -170,8 +202,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                 }
 
                 final category = categories[index - 1];
-                final count = liveState.categoryCounts[category.id] ?? 0;
-                final leadingChannel = liveState.categoryLeadingChannels[category.id];
+                final count = categoryCounts[category.id] ?? 0;
+                final leadingChannel = leading[category.id];
 
                 return CategoryCard(
                   title: category.name,
@@ -189,7 +221,16 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
   // Stage 2: Category Channels View
   // ---------------------------------------------------------------------------
 
-  Widget _buildChannelsView(LiveState liveState) {
+  Widget _buildChannelsView() {
+    final filteredChannels = ref.watch(
+      liveControllerProvider.select((s) => s.filteredChannels),
+    );
+    final isLoading = ref.watch(
+      liveControllerProvider.select((s) => s.isLoading),
+    );
+    final categoryNames = ref.watch(
+      liveControllerProvider.select((s) => s.categoryNames),
+    );
     final activeChannelId = ref.watch(
       playerControllerProvider.select((s) => s.source?.channelId),
     );
@@ -264,7 +305,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '${liveState.filteredChannels.length}',
+                            '${filteredChannels.length}',
                             style: const TextStyle(color: AppColors.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -310,33 +351,27 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       child: SizedBox(
                         height: 38,
-                        child: TextField(
+                        child: _LiveSearchField(
                           controller: _channelSearchController,
+                          hintText: context.l10n.liveSearchHint,
                           onChanged: (q) {
                             ref.read(liveControllerProvider.notifier).search(q);
                           },
-                          style: const TextStyle(fontSize: 13),
-                          decoration: InputDecoration(
-                            hintText: context.l10n.liveSearchHint,
-                            prefixIcon: const HugeIcon(icon: AppIcons.search, size: 18, color: AppColors.textSecondary),
-                            suffixIcon: _channelSearchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const HugeIcon(icon: AppIcons.close, size: 16, color: AppColors.textSecondary),
-                                    onPressed: () {
-                                      _channelSearchController.clear();
-                                      ref.read(liveControllerProvider.notifier).search('');
-                                      setState(() {});
-                                    },
-                                  )
-                                : null,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                          ),
+                          onClear: () {
+                            _channelSearchController.clear();
+                            ref.read(liveControllerProvider.notifier).search('');
+                          },
                         ),
                       ),
                     ),
 
                     Expanded(
-                      child: _buildChannelList(liveState, activeChannelId),
+                      child: _buildChannelList(
+                        filteredChannels: filteredChannels,
+                        isLoading: isLoading,
+                        categoryNames: categoryNames,
+                        activeChannelId: activeChannelId,
+                      ),
                     ),
                   ],
                 );
@@ -351,32 +386,26 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                           padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
                           child: SizedBox(
                             height: 38,
-                            child: TextField(
+                            child: _LiveSearchField(
                               controller: _channelSearchController,
+                              hintText: context.l10n.liveSearchHint,
                               onChanged: (q) {
                                 ref.read(liveControllerProvider.notifier).search(q);
                               },
-                              style: const TextStyle(fontSize: 13),
-                              decoration: InputDecoration(
-                                hintText: context.l10n.liveSearchHint,
-                                prefixIcon: const HugeIcon(icon: AppIcons.search, size: 18, color: AppColors.textSecondary),
-                                suffixIcon: _channelSearchController.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: const HugeIcon(icon: AppIcons.close, size: 16, color: AppColors.textSecondary),
-                                        onPressed: () {
-                                          _channelSearchController.clear();
-                                          ref.read(liveControllerProvider.notifier).search('');
-                                          setState(() {});
-                                        },
-                                      )
-                                    : null,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                              ),
+                              onClear: () {
+                                _channelSearchController.clear();
+                                ref.read(liveControllerProvider.notifier).search('');
+                              },
                             ),
                           ),
                         ),
                         Expanded(
-                          child: _buildChannelList(liveState, activeChannelId),
+                          child: _buildChannelList(
+                            filteredChannels: filteredChannels,
+                            isLoading: isLoading,
+                            categoryNames: categoryNames,
+                            activeChannelId: activeChannelId,
+                          ),
                         ),
                       ],
                     ),
@@ -401,12 +430,17 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     );
   }
 
-  Widget _buildChannelList(LiveState liveState, int? activeChannelId) {
-    if (liveState.isLoading) {
+  Widget _buildChannelList({
+    required List<Channel> filteredChannels,
+    required bool isLoading,
+    required Map<int, String> categoryNames,
+    required int? activeChannelId,
+  }) {
+    if (isLoading && filteredChannels.isEmpty) {
       return const ChannelListSkeleton();
     }
 
-    if (liveState.filteredChannels.isEmpty) {
+    if (filteredChannels.isEmpty) {
       return EmptyState(
         title: context.l10n.liveNoChannelsFound,
         subtitle: context.l10n.searchNoResultsSubtitle,
@@ -424,9 +458,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
           crossAxisSpacing: AppSpacing.sm,
           mainAxisSpacing: AppSpacing.sm,
         ),
-        itemCount: liveState.filteredChannels.length,
+        itemCount: filteredChannels.length,
         itemBuilder: (context, i) {
-          final channel = liveState.filteredChannels[i];
+          final channel = filteredChannels[i];
           final isPlaying = activeChannelId == channel.streamId;
           return ChannelCard(
             channel: channel,
@@ -438,20 +472,65 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
       );
     }
 
-    return ListView.separated(
+    // Fixed extent: tile padding (10*2) + logo row (~44) ≈ 72 + separator 8 via
+    // prototypeItem would need separated; use itemExtent on plain ListView.
+    return ListView.builder(
       padding: const EdgeInsets.all(AppSpacing.md),
       cacheExtent: 350,
-      itemCount: liveState.filteredChannels.length,
-      separatorBuilder: (_, index) => const SizedBox(height: 8),
+      itemExtent: 80,
+      itemCount: filteredChannels.length,
       itemBuilder: (context, i) {
-        final channel = liveState.filteredChannels[i];
+        final channel = filteredChannels[i];
         final isPlaying = activeChannelId == channel.streamId;
-        final catName = liveState.categoryNames[channel.categoryId] ?? context.l10n.navLive;
-        return ChannelListTile(
-          channel: channel,
-          isPlaying: isPlaying,
-          categoryName: catName,
-          onTap: () => _playChannel(channel),
+        final catName = categoryNames[channel.categoryId] ?? context.l10n.navLive;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: ChannelListTile(
+            channel: channel,
+            isPlaying: isPlaying,
+            categoryName: catName,
+            onTap: () => _playChannel(channel),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Search field with local suffix rebuilds (avoids setState on the whole Live screen).
+class _LiveSearchField extends StatelessWidget {
+  const _LiveSearchField({
+    required this.controller,
+    required this.hintText,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        return TextField(
+          controller: controller,
+          onChanged: onChanged,
+          style: const TextStyle(fontSize: 13),
+          decoration: InputDecoration(
+            hintText: hintText,
+            prefixIcon: const HugeIcon(icon: AppIcons.search, size: 18, color: AppColors.textSecondary),
+            suffixIcon: value.text.isNotEmpty
+                ? IconButton(
+                    icon: const HugeIcon(icon: AppIcons.close, size: 16, color: AppColors.textSecondary),
+                    onPressed: onClear,
+                  )
+                : null,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          ),
         );
       },
     );

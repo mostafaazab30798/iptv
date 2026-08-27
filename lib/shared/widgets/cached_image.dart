@@ -5,6 +5,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_radius.dart';
+import 'package:iptv/core/network/url_helpers.dart';
 
 /// Reusable cached image widget with disk + memory caching, placeholder, and error fallback.
 ///
@@ -52,21 +53,14 @@ class CachedImage extends StatelessWidget {
     // Derive memory cache dimensions from explicit params or fall back to widget size.
     // Ensure an unconstrained image is never decoded at full 4K resolution into memory.
     final effectiveCacheWidth = memCacheWidth ??
-        ((width != null && !width!.isInfinite) ? width!.ceil() : 512);
+        ((width != null && !width!.isInfinite) ? width!.ceil() : 256);
     final effectiveCacheHeight = memCacheHeight ??
-        ((height != null && !height!.isInfinite) ? height!.ceil() : 768);
+        ((height != null && !height!.isInfinite) ? height!.ceil() : 256);
 
-    var finalImageUrl = imageUrl!;
-    if (kIsWeb) {
-      final isLocalhost =
-          Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1';
-      if (!isLocalhost &&
-          (finalImageUrl.startsWith('http://') ||
-              finalImageUrl.startsWith('https://'))) {
-        finalImageUrl =
-            '${Uri.base.origin}/proxy?url=${Uri.encodeComponent(finalImageUrl)}';
-      }
-    }
+    final finalImageUrl = UrlHelpers.wrapWebProxy(
+      imageUrl!,
+      proxyAllHttpTargets: true,
+    );
 
     return ClipRRect(
       borderRadius: radius,

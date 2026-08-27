@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:iptv/core/constants/api_constants.dart';
+import 'package:iptv/core/network/url_helpers.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/enums/playback_profile.dart';
 import 'package:iptv/player/utils/stream_type_detector.dart';
@@ -38,7 +39,7 @@ class StreamResolver {
 
     final rawUrl = uri.toString();
     final streamType = StreamTypeDetector.detect(rawUrl, hint: cleanFormat);
-    final finalUrl = _wrapWebProxy(rawUrl);
+    final finalUrl = UrlHelpers.wrapWebProxy(rawUrl);
 
     final headers = <String, String>{
       if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
@@ -83,7 +84,7 @@ class StreamResolver {
 
     final rawUrl = uri.toString();
     final streamType = StreamTypeDetector.detect(rawUrl, hint: ext);
-    final finalUrl = _wrapWebProxy(rawUrl);
+    final finalUrl = UrlHelpers.wrapWebProxy(rawUrl);
 
     final headers = <String, String>{
       if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
@@ -114,7 +115,7 @@ class StreamResolver {
     Map<String, dynamic>? metadata,
   }) {
     final streamType = StreamTypeDetector.detect(url);
-    final finalUrl = _wrapWebProxy(url);
+    final finalUrl = UrlHelpers.wrapWebProxy(url);
 
     final headers = <String, String>{
       if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
@@ -133,29 +134,12 @@ class StreamResolver {
     );
   }
 
-  /// Wraps stream URLs with the Cloudflare /proxy endpoint when running on Web HTTPS to bypass Mixed Content & CORS.
-  String _wrapWebProxy(String rawUrl) {
-    if (!kIsWeb) return rawUrl;
-    final isLocalhost =
-        Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1';
-    if (!isLocalhost &&
-        (Uri.base.scheme == 'https' || rawUrl.startsWith('http://'))) {
-      return '${Uri.base.origin}/proxy?url=${Uri.encodeComponent(rawUrl)}';
-    }
-    return rawUrl;
-  }
-
   /// Structured URI builder with robust port and path segment handling.
   Uri _buildUri({
     required String serverUrl,
     required List<String> pathSegments,
   }) {
-    var raw = serverUrl.trim();
-    if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
-      raw = 'http://$raw';
-    }
-
-    final baseUri = Uri.parse(raw);
+    final baseUri = Uri.parse(UrlHelpers.normalizeServerUrl(serverUrl));
     final existingSegments = List<String>.from(baseUri.pathSegments)
       ..removeWhere((s) => s.isEmpty);
 

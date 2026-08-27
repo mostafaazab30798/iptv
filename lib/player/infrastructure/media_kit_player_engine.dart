@@ -624,12 +624,13 @@ class MediaKitPlayerEngine implements PlayerEngine {
   }
 
   void _handleBackendError(String rawError) {
+    final safeError = PlayerLogger.sanitizeMessage(rawError);
     if (_isNonFatalMessage(rawError)) {
-      PlayerLogger.note('MediaKit non-fatal note: $rawError');
+      PlayerLogger.note('MediaKit non-fatal note: $safeError');
       return;
     }
 
-    PlayerLogger.error('MediaKit error', message: rawError);
+    PlayerLogger.error('MediaKit error', message: safeError);
     final errorType = _classifyError(rawError);
     _metrics = _metrics.copyWith(playbackErrorCount: _metrics.playbackErrorCount + 1);
     _metricsController.add(_metrics);

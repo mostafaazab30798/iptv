@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:logger/logger.dart';
 
 /// Structured logging abstraction.
@@ -27,7 +28,10 @@ class AppLogger {
         printEmojis: true,
         dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
       ),
-      level: verbose ? Level.trace : Level.info,
+      // Release: warnings+ only. Debug: info (or trace when verbose).
+      level: !kDebugMode
+          ? Level.warning
+          : (verbose ? Level.trace : Level.info),
       output: ConsoleOutput(),
     );
     _initialized = true;

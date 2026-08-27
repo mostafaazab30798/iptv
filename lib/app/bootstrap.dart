@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:iptv/app/app.dart';
 import 'package:iptv/core/logging/app_logger.dart';
+import 'package:iptv/core/platform/device_memory.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/core/storage/database/app_database.dart';
 import 'package:iptv/core/storage/preferences_storage.dart';
@@ -11,24 +13,31 @@ import 'package:iptv/core/storage/preferences_storage.dart';
 /// Bootstrap sequence:
 /// 1. Initialize Flutter bindings
 /// 2. Initialize MediaKit playback subsystem
-/// 3. Initialize logging
-/// 4. Initialize platform service
-/// 5. Initialize preferences
-/// 6. Open local database
-/// 7. Support all device orientations (portrait + landscape)
-/// 8. Launch app
+/// 3. Cap Flutter image cache (low-RAM aware)
+/// 4. Initialize logging
+/// 5. Initialize platform service
+/// 6. Initialize preferences
+/// 7. Open local database
+/// 8. Support all device orientations (portrait + landscape)
+/// 9. Launch app
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
 
+  // Cap decoded image RAM — unbounded cache is a major low-spec pressure source.
+  final lowRam = DeviceMemory.isLowRamDevice;
+  final imageCache = PaintingBinding.instance.imageCache;
+  imageCache.maximumSizeBytes = lowRam ? 32 * 1024 * 1024 : 48 * 1024 * 1024;
+  imageCache.maximumSize = lowRam ? 80 : 120;
+
   // Logging first — so everything below can log.
-  AppLogger.initialize(verbose: false);
+  AppLogger.initialize(verbose: kDebugMode);
   AppLogger.info('Bootstrap starting', feature: 'bootstrap');
 
   // Platform detection.
   await PlatformService.instance.initialize();
   AppLogger.info(
-    'Platform: ${PlatformService.instance.platformType}',
+    'Platform: ${PlatformService.instance.platformType} lowRam=$lowRam',
     feature: 'bootstrap',
   );
 

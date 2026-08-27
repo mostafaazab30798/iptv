@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
@@ -18,6 +17,7 @@ import 'package:iptv/player/presentation/player_quick_settings_sheet.dart';
 import 'package:iptv/player/presentation/software_decode_badge.dart';
 import 'package:iptv/player/presentation/subtitle_selector.dart';
 import 'package:iptv/core/platform/platform_service.dart';
+import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 
 /// Clean and compact overlay shell managing touch gestures (double-tap 10s seek, vertical/horizontal drags),
@@ -620,8 +620,8 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                     left: 28,
                     top: MediaQuery.of(context).size.height * 0.45,
                     child: ClipOval(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: AdaptiveGlass(
+                        sigma: 10,
                         child: Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,

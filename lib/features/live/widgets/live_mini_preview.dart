@@ -28,9 +28,14 @@ class LiveMiniPreview extends ConsumerWidget {
     final isBuffering = ref.watch(playerControllerProvider.select((s) => s.isBuffering));
     final isMuted = ref.watch(playerControllerProvider.select((s) => s.isMuted));
     final aspectRatioIndex = ref.watch(playerControllerProvider.select((s) => s.aspectRatioIndex));
+    // Only one mkv.Video may bind the shared controller at a time. While the
+    // fullscreen PlayerScreen owns the surface, detach the mini preview.
+    final isPlayerRouteActive =
+        ref.watch(playerControllerProvider.select((s) => s.isPlayerRouteActive));
     final controller = ref.read(playerControllerProvider.notifier);
 
     final hasActiveSource = source != null;
+    final showVideoSurface = hasActiveSource && !isPlayerRouteActive;
 
     if (!hasActiveSource && selectedChannel == null) {
       return Container(
@@ -108,7 +113,7 @@ class LiveMiniPreview extends ConsumerWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (hasActiveSource)
+                if (showVideoSurface)
                   PlayerView(
                     aspectRatioIndex: aspectRatioIndex,
                     platformHandle: controller.engine.platformHandle,
@@ -117,15 +122,17 @@ class LiveMiniPreview extends ConsumerWidget {
                   ColoredBox(
                     color: Colors.black,
                     child: Center(
-                      child: SmartChannelLogo(
-                        channel: selectedChannel,
-                        channelName: channelTitle,
-                        logoUrl: logoUrl,
-                        width: 64,
-                        height: 64,
-                        borderRadius: BorderRadius.circular(10),
-                        fit: BoxFit.contain,
-                      ),
+                      child: hasActiveSource
+                          ? null
+                          : SmartChannelLogo(
+                              channel: selectedChannel,
+                              channelName: channelTitle,
+                              logoUrl: logoUrl,
+                              width: 64,
+                              height: 64,
+                              borderRadius: BorderRadius.circular(10),
+                              fit: BoxFit.contain,
+                            ),
                     ),
                   ),
 

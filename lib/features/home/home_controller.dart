@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/core/utils/result.dart';
+import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/movie.dart';
@@ -156,40 +157,29 @@ class HomeController extends StateNotifier<HomeState> {
       List<Movie> latestMovies = state.featuredMovies;
       List<Channel> latestChannels = state.liveChannels;
 
-      final liveTask = _liveRepo.getChannels(forceRefresh: forceRefresh).then((res) {
-        final channels = res.when(ok: (c) => c, err: (_) => <Channel>[]);
-        if (channels.isNotEmpty) {
+      // Featured live uses take(20); sports/news use category-indexed slices
+      // (no full-catalog name keyword scan on Home).
+      final liveTask = () async {
+        try {
+          final channelsRes =
+              await _liveRepo!.getChannels(forceRefresh: forceRefresh);
+          final channels =
+              channelsRes.when(ok: (c) => c, err: (_) => <Channel>[]);
+          if (channels.isEmpty) return;
+
           latestChannels = channels;
-          final sports = <Channel>[];
-          final news = <Channel>[];
-          for (final c in channels) {
-            if (sports.length >= 15 && news.length >= 15) break;
-            final nameLower = c.name.toLowerCase();
-            if (sports.length < 15 &&
-                (nameLower.contains('sport') ||
-                    nameLower.contains('espn') ||
-                    nameLower.contains('bein') ||
-                    nameLower.contains('nba') ||
-                    nameLower.contains('football'))) {
-              sports.add(c);
-            } else if (news.length < 15 &&
-                (nameLower.contains('news') ||
-                    nameLower.contains('cnn') ||
-                    nameLower.contains('bbc') ||
-                    nameLower.contains('al jazeera') ||
-                    nameLower.contains('sky news'))) {
-              news.add(c);
-            }
-          }
           currentHero ??= _computeHeroItem(latestMovies, channels);
+
+          final rowSlices =
+              await _loadSportsAndNewsRows(forceRefresh: forceRefresh);
           state = state.copyWith(
             liveChannels: channels.take(20).toList(),
-            sportsChannels: sports,
-            newsChannels: news,
+            sportsChannels: rowSlices.sports,
+            newsChannels: rowSlices.news,
             heroItem: currentHero,
           );
-        }
-      }).catchError((_) {});
+        } catch (_) {}
+      }();
 
       final vodTask = (_vodRepo != null)
           ? _vodRepo.getMovies(forceRefresh: forceRefresh).then((res) {
@@ -297,6 +287,89 @@ class HomeController extends StateNotifier<HomeState> {
       );
     }
     return null;
+  }
+
+  /// Builds Home sports/news rows from category-scoped live cache slices.
+  Future<({List<Channel> sports, List<Channel> news})> _loadSportsAndNewsRows({
+    required bool forceRefresh,
+  }) async {
+    final liveRepo = _liveRepo;
+    if (liveRepo == null) {
+      return (sports: const <Channel>[], news: const <Channel>[]);
+    }
+
+    final catsRes = await liveRepo.getCategories(forceRefresh: forceRefresh);
+    final categories = catsRes.when(ok: (c) => c, err: (_) => <Category>[]);
+
+    final sportsCatIds = <int>[];
+    final newsCatIds = <int>[];
+    for (final cat in categories) {
+      if (_isSportsCategoryName(cat.name)) {
+        sportsCatIds.add(cat.id);
+      } else if (_isNewsCategoryName(cat.name)) {
+        newsCatIds.add(cat.id);
+      }
+    }
+
+    final sports = await _channelsFromCategoryIds(
+      sportsCatIds,
+      limit: 15,
+      forceRefresh: forceRefresh,
+    );
+    final news = await _channelsFromCategoryIds(
+      newsCatIds,
+      limit: 15,
+      forceRefresh: forceRefresh,
+    );
+    return (sports: sports, news: news);
+  }
+
+  Future<List<Channel>> _channelsFromCategoryIds(
+    List<int> categoryIds, {
+    required int limit,
+    required bool forceRefresh,
+  }) async {
+    if (categoryIds.isEmpty || _liveRepo == null) return const [];
+
+    final out = <Channel>[];
+    final seen = <int>{};
+    for (final categoryId in categoryIds) {
+      if (out.length >= limit) break;
+      final res = await _liveRepo.getChannels(
+        categoryId: categoryId,
+        forceRefresh: forceRefresh,
+      );
+      final slice = res.when(ok: (c) => c, err: (_) => <Channel>[]);
+      for (final c in slice) {
+        if (!seen.add(c.streamId)) continue;
+        out.add(c);
+        if (out.length >= limit) break;
+      }
+    }
+    return out;
+  }
+
+  static bool _isSportsCategoryName(String name) {
+    final n = name.toLowerCase();
+    return n.contains('sport') ||
+        n.contains('espn') ||
+        n.contains('bein') ||
+        n.contains('nba') ||
+        n.contains('football') ||
+        n.contains('رياض') ||
+        n.contains('كره') ||
+        n.contains('كرة');
+  }
+
+  static bool _isNewsCategoryName(String name) {
+    final n = name.toLowerCase();
+    return n.contains('news') ||
+        n.contains('cnn') ||
+        n.contains('bbc') ||
+        n.contains('jazeera') ||
+        n.contains('اخبار') ||
+        n.contains('أخبار') ||
+        n.contains('إخبار');
   }
 
   /// Fast refresh of watch history/continue watching items (e.g. on returning to Home).

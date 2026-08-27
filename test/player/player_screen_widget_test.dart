@@ -22,6 +22,24 @@ void main() {
       controller = PlayerController(engine: fakeEngine);
     });
 
+    tearDown(() {
+      // Safe if already disposed at end of the test body.
+      if (controller.mounted) {
+        controller.dispose();
+      }
+    });
+
+    /// Removes PlayerScreen, drains dispose microtasks, and cancels player
+    /// timers (progress saver) before Flutter's pending-timer invariant check.
+    Future<void> finishPlayerTest(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
+      if (controller.mounted) {
+        controller.dispose();
+      }
+    }
+
     Widget createTestApp() {
       return ProviderScope(
         overrides: [
@@ -38,15 +56,21 @@ void main() {
 
     testWidgets('renders PlayerView and overlay initial state', (tester) async {
       await tester.pumpWidget(createTestApp());
-      await tester.pumpAndSettle();
+      // Overlay schedules a 4s hide timer — advance past it instead of hanging
+      // on pumpAndSettle for the full duration.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
 
       expect(find.byType(PlayerView), findsOneWidget);
       expect(find.byType(BufferingIndicator), findsOneWidget);
       expect(find.byType(PlayerErrorView), findsNothing);
+
+      await finishPlayerTest(tester);
     });
 
     testWidgets('displays channel title when playing a live channel', (tester) async {
       await tester.pumpWidget(createTestApp());
+      await tester.pump();
 
       final source = PlayerSource.live(
         url: 'http://test.live/ch.m3u8',
@@ -56,15 +80,19 @@ void main() {
       );
 
       await controller.load(source);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
 
       expect(find.text('HBO HD'), findsAtLeast(1));
       expect(find.text('Game of Thrones'), findsOneWidget);
       expect(find.text('LIVE'), findsOneWidget);
+
+      await finishPlayerTest(tester);
     });
 
     testWidgets('renders PlayerErrorView on unrecoverable error and handles retry', (tester) async {
       await tester.pumpWidget(createTestApp());
+      await tester.pump();
 
       final source = PlayerSource.live(
         url: 'http://broken.stream/ch.m3u8',
@@ -73,16 +101,19 @@ void main() {
       await controller.load(source);
 
       fakeEngine.simulateError(PlayerErrorType.serverUnavailable);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
 
       expect(find.byType(PlayerErrorView), findsOneWidget);
       expect(find.text('Server error. Please try again.'), findsOneWidget);
 
-      // Tap retry
       final retryBtn = find.text('Retry');
       expect(retryBtn, findsOneWidget);
       await tester.tap(retryBtn);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await finishPlayerTest(tester);
     });
 
     testWidgets('stops playback and releases resources when PlayerScreen is popped or closed', (tester) async {
@@ -109,9 +140,9 @@ void main() {
         ),
       );
 
-      // Open PlayerScreen
       await tester.tap(find.text('Open Player'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       final source = PlayerSource.vod(
         url: 'http://test.vod/movie.mp4',
@@ -124,25 +155,27 @@ void main() {
       expect(controller.state.isPlaying, isTrue);
       expect(fakeEngine.currentStatus, equals(PlayerStatus.playing));
 
-      // Tap close button in player overlay
       final backBtn = find.byTooltip('Back');
       expect(backBtn, findsOneWidget);
       await tester.tap(backBtn);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(seconds: 5));
 
-      // Screen is popped back to previous screen
       expect(find.byType(PlayerScreen), findsNothing);
       expect(find.text('Open Player'), findsOneWidget);
 
-      // Verify controller and engine are completely stopped
       expect(controller.state.status, equals(PlayerStatus.stopped));
       expect(controller.state.source, isNull);
       expect(fakeEngine.currentStatus, equals(PlayerStatus.stopped));
       expect(fakeEngine.currentSource, isNull);
+
+      await finishPlayerTest(tester);
     });
 
     testWidgets('renders Replay 10s and Forward 10s buttons and handles taps', (tester) async {
       await tester.pumpWidget(createTestApp());
+      await tester.pump();
 
       final source = PlayerSource.vod(
         url: 'http://test.vod/movie.mp4',
@@ -159,19 +192,20 @@ void main() {
       expect(replayBtn, findsOneWidget);
       expect(forwardBtn, findsOneWidget);
 
-      // Tap forward 10s
       await tester.tap(forwardBtn);
       await tester.pump(const Duration(milliseconds: 100));
       expect(controller.state.position, equals(const Duration(seconds: 50)));
 
-      // Tap replay 10s
       await tester.tap(replayBtn);
       await tester.pump(const Duration(milliseconds: 100));
       expect(controller.state.position, equals(const Duration(seconds: 40)));
+
+      await finishPlayerTest(tester);
     });
 
     testWidgets('double-tap on left and right screen edges triggers 10s seek', (tester) async {
       await tester.pumpWidget(createTestApp());
+      await tester.pump();
 
       final source = PlayerSource.vod(
         url: 'http://test.vod/movie.mp4',
@@ -180,23 +214,24 @@ void main() {
       );
       await controller.load(source);
       await controller.seek(const Duration(seconds: 60));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
 
-      // Double tap right edge (e.g. 85% width)
       await tester.tapAt(const Offset(700, 300));
       await tester.pump(const Duration(milliseconds: 50));
       await tester.tapAt(const Offset(700, 300));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 1000));
 
       expect(controller.state.position, equals(const Duration(seconds: 70)));
 
-      // Double tap left edge (e.g. 15% width)
       await tester.tapAt(const Offset(100, 300));
       await tester.pump(const Duration(milliseconds: 50));
       await tester.tapAt(const Offset(100, 300));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 1000));
 
       expect(controller.state.position, equals(const Duration(seconds: 60)));
+
+      await finishPlayerTest(tester);
     });
   });
 }

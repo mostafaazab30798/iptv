@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 
-/// Typography scale — Noto Sans for Latin, Cairo for Arabic.
-/// Automatically selects the right font for the active locale.
+/// Typography scale — bundled Noto Sans for Latin, Cairo for Arabic.
+///
+/// Fonts are declared in pubspec.yaml as static weight files (no runtime
+/// google_fonts fetch, no variable-font weight mapping). Cairo ships Regular /
+/// Medium / SemiBold / Bold to match [FontWeight] w400–w700 used below.
 abstract final class AppTypography {
   static const _baseTextTheme = TextTheme(
     // Display
@@ -32,14 +34,12 @@ abstract final class AppTypography {
 
   static TextTheme textThemeForLocale(Locale? locale) {
     final isArabic = locale?.languageCode == 'ar';
-    final base = isArabic
-        ? GoogleFonts.cairoTextTheme(_baseTextTheme)
-        : GoogleFonts.notoSansTextTheme(_baseTextTheme);
-
-    // Apply primary text colors
-    return base.apply(
+    final family = isArabic ? 'Cairo' : 'NotoSans';
+    final base = _baseTextTheme.apply(
+      fontFamily: family,
       bodyColor: AppColors.textPrimary,
       displayColor: AppColors.textPrimary,
     );
+    return base;
   }
 }

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:iptv/core/cache/local_catalog_cache.dart';
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
@@ -29,9 +29,41 @@ class LiveRepositoryImpl implements LiveRepository {
   // Avoids fetching the entire live-stream list (10k+ entries) just to look up one channel.
   static final Map<int, Channel> _channelMap = {};
 
+  /// Precomputed category → channels slices from the full catalog cache.
+  /// Lets Home/Guide pull category rows without O(n) scans of all channels.
+  static final Map<int, List<Channel>> _channelsByCategoryIndex = {};
+
   static bool _isFresh(DateTime? fetchedAt) {
     if (fetchedAt == null) return false;
     return DateTime.now().difference(fetchedAt) < _ttl;
+  }
+
+  static void _rebuildCategoryIndex(List<Channel> channels) {
+    _channelsByCategoryIndex
+      ..clear()
+      ..addEntries(_groupChannelsByCategory(channels).entries);
+  }
+
+  static Map<int, List<Channel>> _groupChannelsByCategory(List<Channel> channels) {
+    final map = <int, List<Channel>>{};
+    for (final c in channels) {
+      final catId = c.categoryId;
+      if (catId == null) continue;
+      (map[catId] ??= <Channel>[]).add(c);
+    }
+    return map;
+  }
+
+  /// Test/debug helper: clear static catalog caches between suites.
+  @visibleForTesting
+  static void debugResetCaches() {
+    _cachedCategories = null;
+    _categoriesFetchedAt = null;
+    _cachedAllChannels = null;
+    _channelsFetchedAt = null;
+    _cachedCategoryChannels.clear();
+    _channelMap.clear();
+    _channelsByCategoryIndex.clear();
   }
 
   @override
@@ -88,8 +120,12 @@ class LiveRepositoryImpl implements LiveRepository {
 
     // Fast path 2: Filtered request and full catalog is already cached in memory
     if (categoryId != null && !forceRefresh && _cachedAllChannels != null && _isFresh(_channelsFetchedAt)) {
-      final filtered = _cachedAllChannels!.where((c) => c.categoryId == categoryId).toList();
-      return Ok(filtered);
+      if (_channelsByCategoryIndex.isEmpty) {
+        _rebuildCategoryIndex(_cachedAllChannels!);
+      }
+      return Ok(List<Channel>.unmodifiable(
+        _channelsByCategoryIndex[categoryId] ?? const <Channel>[],
+      ));
     }
 
     // Fast path 3: Cold-start disk cache loading (< 15ms)
@@ -99,6 +135,7 @@ class LiveRepositoryImpl implements LiveRepository {
         _cachedAllChannels = diskChannels;
         _channelsFetchedAt = DateTime.now();
         _cachedCategoryChannels.clear();
+        _rebuildCategoryIndex(diskChannels);
         _channelMap
           ..clear()
           ..addEntries(diskChannels.map((c) => MapEntry(c.streamId, c)));
@@ -111,6 +148,8 @@ class LiveRepositoryImpl implements LiveRepository {
                 : raw.map(DataMapper.channelFromJson).toList();
             _cachedAllChannels = channels;
             _channelsFetchedAt = DateTime.now();
+            _cachedCategoryChannels.clear();
+            _rebuildCategoryIndex(channels);
             _channelMap
               ..clear()
               ..addEntries(channels.map((c) => MapEntry(c.streamId, c)));
@@ -119,7 +158,9 @@ class LiveRepositoryImpl implements LiveRepository {
         }).catchError((_) {}));
 
         if (categoryId != null) {
-          return Ok(diskChannels.where((c) => c.categoryId == categoryId).toList());
+          return Ok(List<Channel>.unmodifiable(
+            _channelsByCategoryIndex[categoryId] ?? const <Channel>[],
+          ));
         }
         return Ok(diskChannels);
       }
@@ -140,6 +181,7 @@ class LiveRepositoryImpl implements LiveRepository {
         _cachedAllChannels = channels;
         _channelsFetchedAt = DateTime.now();
         _cachedCategoryChannels.clear();
+        _rebuildCategoryIndex(channels);
         _channelMap
           ..clear()
           ..addEntries(channels.map((c) => MapEntry(c.streamId, c)));
@@ -159,7 +201,12 @@ class LiveRepositoryImpl implements LiveRepository {
         return Ok(_cachedAllChannels!);
       }
       if (categoryId != null && _cachedAllChannels != null) {
-        return Ok(_cachedAllChannels!.where((c) => c.categoryId == categoryId).toList());
+        if (_channelsByCategoryIndex.isEmpty) {
+          _rebuildCategoryIndex(_cachedAllChannels!);
+        }
+        return Ok(List<Channel>.unmodifiable(
+          _channelsByCategoryIndex[categoryId] ?? const <Channel>[],
+        ));
       }
       return Err(AppResultError('Failed to load channels', cause: e));
     }

@@ -53,7 +53,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
         _isAllSeriesSelected = false;
       });
       _seriesSearchController.clear();
-      ref.read(seriesControllerProvider.notifier).search('');
+      ref.read(seriesControllerProvider.notifier).showCategoriesHub();
     } else {
       if (context.canPop()) {
         context.pop();
@@ -69,7 +69,14 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       _isAllSeriesSelected = isAll;
     });
     _seriesSearchController.clear();
-    ref.read(seriesControllerProvider.notifier).selectCategory(category?.id);
+    final notifier = ref.read(seriesControllerProvider.notifier);
+    if (isAll) {
+      notifier.showAllSeries();
+    } else if (category != null) {
+      notifier.selectCategory(category.id);
+    } else {
+      notifier.showCategoriesHub();
+    }
   }
 
   @override
@@ -122,7 +129,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                 if (index == 0) {
                   return CategoryCard(
                     title: context.l10n.labelAllSeries,
-                    itemCount: seriesState.seriesList.length,
+                    itemCount: seriesState.totalSeriesCount,
                     itemCountLabel: context.l10n.labelSeries,
                     isAllCard: true,
                     onTap: () => _selectCategory(null, isAll: true),
@@ -237,28 +244,31 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                     ),
                     child: SizedBox(
                       height: 34,
-                      child: TextField(
-                        controller: _seriesSearchController,
-                        onChanged: (q) {
-                          ref.read(seriesControllerProvider.notifier).search(q);
-                          setState(() {});
+                      child: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _seriesSearchController,
+                        builder: (context, value, _) {
+                          return TextField(
+                            controller: _seriesSearchController,
+                            onChanged: (q) {
+                              ref.read(seriesControllerProvider.notifier).search(q);
+                            },
+                            style: const TextStyle(fontSize: 12),
+                            decoration: InputDecoration(
+                              hintText: isCompact ? context.l10n.actionSearch : context.l10n.seriesSearchHint,
+                              prefixIcon: const HugeIcon(icon: AppIcons.search, size: 15, color: AppColors.textSecondary),
+                              suffixIcon: value.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const HugeIcon(icon: AppIcons.close, size: 13, color: AppColors.textSecondary),
+                                      onPressed: () {
+                                        _seriesSearchController.clear();
+                                        ref.read(seriesControllerProvider.notifier).search('');
+                                      },
+                                    )
+                                  : null,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                            ),
+                          );
                         },
-                        style: const TextStyle(fontSize: 12),
-                        decoration: InputDecoration(
-                          hintText: isCompact ? context.l10n.actionSearch : context.l10n.seriesSearchHint,
-                          prefixIcon: const HugeIcon(icon: AppIcons.search, size: 15, color: AppColors.textSecondary),
-                          suffixIcon: _seriesSearchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const HugeIcon(icon: AppIcons.close, size: 13, color: AppColors.textSecondary),
-                                  onPressed: () {
-                                    _seriesSearchController.clear();
-                                    ref.read(seriesControllerProvider.notifier).search('');
-                                    setState(() {});
-                                  },
-                                )
-                              : null,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                        ),
                       ),
                     ),
                   ),
@@ -379,29 +389,49 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final streamId = episode.streamId != 0 ? episode.streamId : episode.id;
-    final streamUrl = XtreamRemoteDataSource.buildSeriesStreamUrl(
-      serverUrl: session.serverUrl,
-      username: session.username,
-      password: session.password,
-      streamId: streamId,
-      extension: episode.containerExtension ?? 'mp4',
-    );
-
-    final currentSeason = (_selectedSeasonIndex >= 0 && _selectedSeasonIndex < _seasons.length)
-        ? _seasons[_selectedSeasonIndex]
-        : null;
-    final seasonNum = currentSeason?.seasonNumber ?? episode.seasonLocalId;
-
-    ref.read(playerControllerProvider.notifier).load(
-      EpisodeSource(
+    EpisodeSource buildSource(Episode ep, int seasonNum) {
+      final streamId = ep.streamId != 0 ? ep.streamId : ep.id;
+      final streamUrl = XtreamRemoteDataSource.buildSeriesStreamUrl(
+        serverUrl: session.serverUrl,
+        username: session.username,
+        password: session.password,
+        streamId: streamId,
+        extension: ep.containerExtension ?? 'mp4',
+      );
+      return EpisodeSource(
         url: streamUrl,
-        title: '${widget.series.name} - S${seasonNum}E${episode.episodeNum}: ${episode.title}',
+        title: '${widget.series.name} - S${seasonNum}E${ep.episodeNum}: ${ep.title}',
         episodeId: streamId,
         seriesName: widget.series.name,
-        posterUrl: episode.cover ?? widget.series.cover,
-      ),
-    );
+        posterUrl: ep.cover ?? widget.series.cover,
+      );
+    }
+
+    // Flatten all seasons so next/prev can move across the series.
+    final playlist = <PlayerSource>[];
+    var initialIndex = 0;
+    for (final season in _seasons) {
+      for (final ep in season.episodes) {
+        if (ep.id == episode.id ||
+            (ep.streamId != 0 && ep.streamId == episode.streamId) ||
+            (episode.streamId != 0 && ep.id == episode.streamId)) {
+          initialIndex = playlist.length;
+        }
+        playlist.add(buildSource(ep, season.seasonNumber));
+      }
+    }
+
+    if (playlist.isEmpty) {
+      final seasonNum =
+          (_selectedSeasonIndex >= 0 && _selectedSeasonIndex < _seasons.length)
+              ? _seasons[_selectedSeasonIndex].seasonNumber
+              : episode.seasonLocalId;
+      playlist.add(buildSource(episode, seasonNum));
+    }
+
+    final playerNotifier = ref.read(playerControllerProvider.notifier);
+    playerNotifier.setChannelPlaylist(playlist, initialIndex: initialIndex);
+    playerNotifier.load(playlist[initialIndex]);
 
     Navigator.of(context).pop();
     context.push(Routes.player);

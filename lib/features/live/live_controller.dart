@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/domain/entities/category.dart';
@@ -8,8 +10,8 @@ class LiveState {
   const LiveState({
     this.categories = const [],
     this.selectedCategoryId,
-    this.channels = const [],
     this.filteredChannels = const [],
+    this.totalChannelCount = 0,
     this.categoryCounts = const {},
     this.categoryLeadingChannels = const {},
     this.categoryNames = const {},
@@ -20,8 +22,12 @@ class LiveState {
 
   final List<Category> categories;
   final int? selectedCategoryId;
-  final List<Channel> channels;
+
+  /// Visible list for the current category / All / search page.
   final List<Channel> filteredChannels;
+
+  /// Full catalog size for the All-channels card (catalog stays in controller/repo).
+  final int totalChannelCount;
   final Map<int, int> categoryCounts;
   final Map<int, Channel> categoryLeadingChannels;
   final Map<int, String> categoryNames;
@@ -33,8 +39,8 @@ class LiveState {
     List<Category>? categories,
     int? selectedCategoryId,
     bool clearCategory = false,
-    List<Channel>? channels,
     List<Channel>? filteredChannels,
+    int? totalChannelCount,
     Map<int, int>? categoryCounts,
     Map<int, Channel>? categoryLeadingChannels,
     Map<int, String>? categoryNames,
@@ -45,11 +51,13 @@ class LiveState {
   }) {
     return LiveState(
       categories: categories ?? this.categories,
-      selectedCategoryId: clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
-      channels: channels ?? this.channels,
+      selectedCategoryId:
+          clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
       filteredChannels: filteredChannels ?? this.filteredChannels,
+      totalChannelCount: totalChannelCount ?? this.totalChannelCount,
       categoryCounts: categoryCounts ?? this.categoryCounts,
-      categoryLeadingChannels: categoryLeadingChannels ?? this.categoryLeadingChannels,
+      categoryLeadingChannels:
+          categoryLeadingChannels ?? this.categoryLeadingChannels,
       categoryNames: categoryNames ?? this.categoryNames,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
@@ -65,9 +73,27 @@ class LiveController extends StateNotifier<LiveState> {
 
   final LiveRepository? _liveRepo;
 
+  /// Full catalog held once; UI state only mirrors the active visible page.
+  List<Channel> _catalog = const [];
+  Timer? _searchDebounce;
+  int _searchEpoch = 0;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
   Future<void> loadData({bool forceRefresh = false}) async {
     final repo = _liveRepo;
     if (repo == null) return;
+
+    if (!forceRefresh &&
+        _catalog.isNotEmpty &&
+        state.categories.isNotEmpty &&
+        !state.isLoading) {
+      return;
+    }
 
     state = state.copyWith(isLoading: true, clearError: true);
 
@@ -75,7 +101,7 @@ class LiveController extends StateNotifier<LiveState> {
       final catResult = await repo.getCategories(forceRefresh: forceRefresh);
       final categories = catResult.when(
         ok: (cats) => cats,
-        err: (e) => <Category>[],
+        err: (_) => <Category>[],
       );
 
       final chanResult = await repo.getChannels(
@@ -85,10 +111,11 @@ class LiveController extends StateNotifier<LiveState> {
 
       final channels = chanResult.when(
         ok: (chans) => chans,
-        err: (e) => <Channel>[],
+        err: (_) => <Channel>[],
       );
 
-      // Precompute category mappings once in background to eliminate UI main thread freeze.
+      _catalog = channels;
+
       final counts = <int, int>{};
       final leading = <int, Channel>{};
       for (final channel in channels) {
@@ -104,11 +131,21 @@ class LiveController extends StateNotifier<LiveState> {
         names[cat.id] = cat.name;
       }
 
+      final selectedId = state.selectedCategoryId;
+      final List<Channel> visible;
+      if (state.filteredChannels.isNotEmpty || selectedId != null) {
+        // Preserve in-category view across soft refresh.
+        visible = selectedId == null
+            ? channels
+            : channels.where((c) => c.categoryId == selectedId).toList();
+      } else {
+        visible = const [];
+      }
+
       state = state.copyWith(
         categories: categories,
-        clearCategory: true,
-        channels: channels,
-        filteredChannels: channels,
+        filteredChannels: visible,
+        totalChannelCount: channels.length,
         categoryCounts: counts,
         categoryLeadingChannels: leading,
         categoryNames: names,
@@ -119,43 +156,91 @@ class LiveController extends StateNotifier<LiveState> {
     }
   }
 
-  Future<void> selectCategory(int? categoryId) async {
-    // Filter the already-loaded channel list client-side — no network round-trip needed.
-    final allChannels = state.channels;
-    final filtered = categoryId == null
-        ? allChannels
-        : allChannels.where((c) => c.categoryId == categoryId).toList();
-
+  /// Open a single category page (scoped list only).
+  void selectCategory(int categoryId) {
+    _searchDebounce?.cancel();
+    final filtered =
+        _catalog.where((c) => c.categoryId == categoryId).toList();
     state = state.copyWith(
       selectedCategoryId: categoryId,
-      clearCategory: categoryId == null,
       searchQuery: '',
       filteredChannels: filtered,
     );
   }
 
-  void search(String query) {
-    final q = query.trim();
-    // Scope the base list to the active category before applying the text filter,
-    // so that clearing the search bar still respects the category selection.
-    final baseList = state.selectedCategoryId == null
-        ? state.channels
-        : state.channels.where((c) => c.categoryId == state.selectedCategoryId).toList();
+  /// "All channels" — one visible page over the shared catalog reference.
+  void showAllChannels() {
+    _searchDebounce?.cancel();
     state = state.copyWith(
-      searchQuery: q,
-      filteredChannels: _applyFilter(baseList, q),
+      clearCategory: true,
+      searchQuery: '',
+      filteredChannels: _catalog,
     );
   }
 
-  List<Channel> _applyFilter(List<Channel> list, String query) {
-    if (query.isEmpty) return list;
-    final q = query.toLowerCase();
-    return list.where((c) => c.name.toLowerCase().contains(q)).toList();
+  /// Categories hub — drop the visible channel list from UI state.
+  void showCategoriesHub() {
+    _searchDebounce?.cancel();
+    state = state.copyWith(
+      clearCategory: true,
+      searchQuery: '',
+      filteredChannels: const [],
+    );
   }
+
+  void search(String query) {
+    _searchDebounce?.cancel();
+    final trimmed = query.trim();
+    state = state.copyWith(searchQuery: trimmed);
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      unawaited(_runSearch(trimmed));
+    });
+  }
+
+  Future<void> _runSearch(String query) async {
+    final epoch = ++_searchEpoch;
+    final base = state.selectedCategoryId == null
+        ? _catalog
+        : _catalog
+            .where((c) => c.categoryId == state.selectedCategoryId)
+            .toList();
+
+    if (query.isEmpty) {
+      if (epoch != _searchEpoch) return;
+      state = state.copyWith(filteredChannels: base);
+      return;
+    }
+
+    final List<Channel> filtered;
+    if (base.length > 1500) {
+      final names = [for (final c in base) c.name];
+      final indexes =
+          await compute(_filterNameIndexes, (names, query.toLowerCase()));
+      if (epoch != _searchEpoch) return;
+      filtered = [for (final i in indexes) base[i]];
+    } else {
+      final q = query.toLowerCase();
+      filtered = base.where((c) => c.name.toLowerCase().contains(q)).toList();
+    }
+
+    if (epoch != _searchEpoch) return;
+    state = state.copyWith(filteredChannels: filtered);
+  }
+}
+
+List<int> _filterNameIndexes((List<String> names, String query) args) {
+  final names = args.$1;
+  final q = args.$2;
+  final out = <int>[];
+  for (var i = 0; i < names.length; i++) {
+    if (names[i].toLowerCase().contains(q)) out.add(i);
+  }
+  return out;
 }
 
 final liveControllerProvider =
     StateNotifierProvider<LiveController, LiveState>((ref) {
+  ref.keepAlive();
   final repo = ref.watch(liveRepositoryProvider);
   return LiveController(repo);
 });

@@ -18,6 +18,8 @@ class PlayerState extends Equatable {
     this.volume = 1.0,
     this.isMuted = false,
     this.isFullscreen = false,
+    /// True while [PlayerScreen] is mounted and owns the shared video texture.
+    this.isPlayerRouteActive = false,
     this.aspectRatioIndex = 0, // 0: Fit, 1: Fill, 2: 16:9, 3: 4:3
     this.playbackRate = 1.0,
     this.isLocked = false,
@@ -40,6 +42,7 @@ class PlayerState extends Equatable {
   final double volume;
   final bool isMuted;
   final bool isFullscreen;
+  final bool isPlayerRouteActive;
   final int aspectRatioIndex;
   final double playbackRate;
   final bool isLocked;
@@ -81,6 +84,7 @@ class PlayerState extends Equatable {
     double? volume,
     bool? isMuted,
     bool? isFullscreen,
+    bool? isPlayerRouteActive,
     int? aspectRatioIndex,
     double? playbackRate,
     bool? isLocked,
@@ -104,6 +108,7 @@ class PlayerState extends Equatable {
       volume: volume ?? this.volume,
       isMuted: isMuted ?? this.isMuted,
       isFullscreen: isFullscreen ?? this.isFullscreen,
+      isPlayerRouteActive: isPlayerRouteActive ?? this.isPlayerRouteActive,
       aspectRatioIndex: aspectRatioIndex ?? this.aspectRatioIndex,
       playbackRate: playbackRate ?? this.playbackRate,
       isLocked: isLocked ?? this.isLocked,
@@ -130,6 +135,7 @@ class PlayerState extends Equatable {
         volume,
         isMuted,
         isFullscreen,
+        isPlayerRouteActive,
         aspectRatioIndex,
         playbackRate,
         isLocked,
