@@ -10,6 +10,9 @@ class SeriesState {
     this.selectedCategoryId,
     this.seriesList = const [],
     this.filteredSeries = const [],
+    this.categoryCounts = const {},
+    this.categoryLeadingCovers = const {},
+    this.categoryNames = const {},
     this.searchQuery = '',
     this.isLoading = false,
     this.error,
@@ -19,6 +22,9 @@ class SeriesState {
   final int? selectedCategoryId;
   final List<Series> seriesList;
   final List<Series> filteredSeries;
+  final Map<int, int> categoryCounts;
+  final Map<int, String?> categoryLeadingCovers;
+  final Map<int, String> categoryNames;
   final String searchQuery;
   final bool isLoading;
   final String? error;
@@ -29,6 +35,9 @@ class SeriesState {
     bool clearCategory = false,
     List<Series>? seriesList,
     List<Series>? filteredSeries,
+    Map<int, int>? categoryCounts,
+    Map<int, String?>? categoryLeadingCovers,
+    Map<int, String>? categoryNames,
     String? searchQuery,
     bool? isLoading,
     String? error,
@@ -39,6 +48,9 @@ class SeriesState {
       selectedCategoryId: clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
       seriesList: seriesList ?? this.seriesList,
       filteredSeries: filteredSeries ?? this.filteredSeries,
+      categoryCounts: categoryCounts ?? this.categoryCounts,
+      categoryLeadingCovers: categoryLeadingCovers ?? this.categoryLeadingCovers,
+      categoryNames: categoryNames ?? this.categoryNames,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
@@ -76,11 +88,31 @@ class SeriesController extends StateNotifier<SeriesState> {
         err: (_) => <Series>[],
       );
 
+      final counts = <int, int>{};
+      final leadingCovers = <int, String?>{};
+      for (final series in list) {
+        final catId = series.categoryId;
+        if (catId != null) {
+          counts[catId] = (counts[catId] ?? 0) + 1;
+          if (!leadingCovers.containsKey(catId) && series.cover != null && series.cover!.isNotEmpty) {
+            leadingCovers[catId] = series.cover;
+          }
+        }
+      }
+
+      final names = <int, String>{};
+      for (final cat in categories) {
+        names[cat.id] = cat.name;
+      }
+
       state = state.copyWith(
         categories: categories,
         clearCategory: true,
         seriesList: list,
         filteredSeries: list,
+        categoryCounts: counts,
+        categoryLeadingCovers: leadingCovers,
+        categoryNames: names,
         isLoading: false,
       );
     } catch (e) {

@@ -119,193 +119,184 @@ class HomeController extends StateNotifier<HomeState> {
   final FavoritesRepository _favoritesRepo;
   final HistoryRepository _historyRepo;
 
+  bool _isFetching = false;
+
   Future<void> loadData({bool forceRefresh = false}) async {
-    if (_liveRepo == null) {
-      state = state.copyWith(isLoading: true);
-      return;
-    }
+    if (_liveRepo == null) return;
+    if (_isFetching && !forceRefresh) return;
+    _isFetching = true;
 
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // Execute all repository fetches in parallel for maximum speed
-      final results = await Future.wait([
-        _liveRepo.getChannels(forceRefresh: forceRefresh),
+      // 1. Instant local DB data (History & Favorites) — resolves in < 5ms
+      final localResults = await Future.wait([
         _historyRepo.getHistory(limit: 20),
         _favoritesRepo.getFavorites(),
-        if (_vodRepo != null)
-          _vodRepo.getMovies(forceRefresh: forceRefresh)
-        else
-          Future.value(null),
-        if (_seriesRepo != null)
-          _seriesRepo.getSeries(forceRefresh: forceRefresh)
-        else
-          Future.value(null),
       ]);
 
-      // 1. Live channels
-      final channelsRes = results[0] as Result<List<Channel>>?;
-      final List<Channel> allChannels = channelsRes != null
-          ? channelsRes.when(
-              ok: (c) => c,
-              err: (_) => <Channel>[],
-            )
-          : <Channel>[];
-
-      // 2. Watch History
-      final historyRes = results[1] as Result<List<WatchHistoryEntry>>?;
-      final List<WatchHistoryEntry> history = historyRes != null
-          ? historyRes.when(
-              ok: (h) => h,
-              err: (_) => <WatchHistoryEntry>[],
-            )
-          : <WatchHistoryEntry>[];
-
-      // 3. Favorites
-      final favoritesRes = results[2] as Result<List<Favorite>>?;
-      final List<Favorite> favorites = favoritesRes != null
-          ? favoritesRes.when(
-              ok: (f) => f,
-              err: (_) => <Favorite>[],
-            )
-          : <Favorite>[];
-
-      // 4. Movies
-      final moviesRes = results[3] as Result<List<Movie>>?;
-      final List<Movie> movies = moviesRes != null
-          ? moviesRes.when(
-              ok: (m) => m,
-              err: (_) => <Movie>[],
-            )
-          : <Movie>[];
-
-      // 5. Series
-      final seriesRes = results[4] as Result<List<Series>>?;
-      final List<Series> series = seriesRes != null
-          ? seriesRes.when(
-              ok: (s) => s,
-              err: (_) => <Series>[],
-            )
-          : <Series>[];
-
-      // Filter categorized channels for highlighted rows (Sports / News)
-      final sports = allChannels
-          .where((c) =>
-              c.name.toLowerCase().contains('sport') ||
-              c.name.toLowerCase().contains('espn') ||
-              c.name.toLowerCase().contains('bein') ||
-              c.name.toLowerCase().contains('nba') ||
-              c.name.toLowerCase().contains('football'))
-          .take(15)
-          .toList();
-
-      final news = allChannels
-          .where((c) =>
-              c.name.toLowerCase().contains('news') ||
-              c.name.toLowerCase().contains('cnn') ||
-              c.name.toLowerCase().contains('bbc') ||
-              c.name.toLowerCase().contains('al jazeera') ||
-              c.name.toLowerCase().contains('sky news'))
-          .take(15)
-          .toList();
-
-      // Pick an engaging hero item:
-      // Priority: Featured Movie with backdrop/plot -> Popular Series -> Top Live Channel
-      final featuredMoviesList = movies.take(20).toList();
-
-      // Pick the latest top-rated movie from featured movies:
-      HomeHeroItem? heroItem;
-      if (featuredMoviesList.isNotEmpty) {
-        double highestRating = -1.0;
-        for (final m in featuredMoviesList) {
-          final r = double.tryParse(m.rating ?? '');
-          if (r != null && r > highestRating) {
-            highestRating = r;
-          }
-        }
-
-        // Among top-rated tier movies, select the one with the latest release year
-        Movie latestTopRatedMovie = featuredMoviesList.first;
-        int latestYear = -1;
-        double bestRating = -1.0;
-
-        for (final m in featuredMoviesList) {
-          final r = double.tryParse(m.rating ?? '') ?? -1.0;
-          final year = m.releaseYear ?? 0;
-          final isTopTier = highestRating > 0 && r >= (highestRating - 0.8).clamp(0.0, 10.0);
-
-          if (isTopTier) {
-            if (year > latestYear || (year == latestYear && r > bestRating)) {
-              latestYear = year;
-              bestRating = r;
-              latestTopRatedMovie = m;
-            }
-          }
-        }
-
-        // If no rating available, select newest movie with plot or artwork
-        if (bestRating < 0) {
-          int newestYear = -1;
-          for (final m in featuredMoviesList) {
-            final y = m.releaseYear ?? 0;
-            if (y > newestYear) {
-              newestYear = y;
-              latestTopRatedMovie = m;
-            }
-          }
-        }
-
-        final ratingStr = latestTopRatedMovie.rating != null && latestTopRatedMovie.rating!.isNotEmpty
-            ? latestTopRatedMovie.rating!
-            : null;
-
-        heroItem = HomeHeroItem(
-          title: latestTopRatedMovie.name,
-          subtitle: 'Featured Movie',
-          type: HeroItemType.movie,
-          badge: ratingStr != null ? '★ $ratingStr' : (latestTopRatedMovie.releaseYear?.toString() ?? 'HD'),
-          rating: ratingStr,
-          genre: latestTopRatedMovie.genre ?? 'Top Rated Cinema',
-          description: latestTopRatedMovie.plot ?? 'Stream in high definition on your favorite screen.',
-          backdropUrl: latestTopRatedMovie.streamIcon,
-          posterUrl: latestTopRatedMovie.streamIcon,
-          movie: latestTopRatedMovie,
-        );
-      } else if (allChannels.isNotEmpty) {
-        final topChannel = allChannels.first;
-        heroItem = HomeHeroItem(
-          title: topChannel.name,
-          subtitle: 'Featured Live Stream',
-          type: HeroItemType.live,
-          badge: 'LIVE NOW',
-          genre: 'Live Television',
-          description: 'Watch real-time live broadcasting with zero latency.',
-          backdropUrl: topChannel.streamIcon,
-          posterUrl: topChannel.streamIcon,
-          channel: topChannel,
-        );
-      }
-
-      // Filter active in-progress VOD/Episodes for Continue Watching row (max 20 items)
+      final historyRes = localResults[0] as Result<List<WatchHistoryEntry>>?;
+      final history = historyRes?.when(ok: (h) => h, err: (_) => <WatchHistoryEntry>[]) ?? <WatchHistoryEntry>[];
       final activeContinueWatching = history
           .where((h) => h.type != WatchHistoryType.channel && !h.isFinished && h.positionSecs >= 5)
           .take(20)
           .toList();
 
+      final favoritesRes = localResults[1] as Result<List<Favorite>>?;
+      final favorites = favoritesRes?.when(ok: (f) => f, err: (_) => <Favorite>[]) ?? <Favorite>[];
+
+      // Immediately render local data
       state = state.copyWith(
-        heroItem: heroItem,
-        liveChannels: allChannels.take(20).toList(),
         continueWatching: activeContinueWatching,
         favorites: favorites,
-        featuredMovies: featuredMoviesList,
-        popularSeries: series.take(20).toList(),
-        sportsChannels: sports,
-        newsChannels: news,
-        isLoading: false,
       );
+
+      // 2. Launch catalog fetches in parallel, updating state progressively as each finishes
+      var currentHero = state.heroItem;
+      List<Movie> latestMovies = state.featuredMovies;
+      List<Channel> latestChannels = state.liveChannels;
+
+      final liveTask = _liveRepo.getChannels(forceRefresh: forceRefresh).then((res) {
+        final channels = res.when(ok: (c) => c, err: (_) => <Channel>[]);
+        if (channels.isNotEmpty) {
+          latestChannels = channels;
+          final sports = <Channel>[];
+          final news = <Channel>[];
+          for (final c in channels) {
+            if (sports.length >= 15 && news.length >= 15) break;
+            final nameLower = c.name.toLowerCase();
+            if (sports.length < 15 &&
+                (nameLower.contains('sport') ||
+                    nameLower.contains('espn') ||
+                    nameLower.contains('bein') ||
+                    nameLower.contains('nba') ||
+                    nameLower.contains('football'))) {
+              sports.add(c);
+            } else if (news.length < 15 &&
+                (nameLower.contains('news') ||
+                    nameLower.contains('cnn') ||
+                    nameLower.contains('bbc') ||
+                    nameLower.contains('al jazeera') ||
+                    nameLower.contains('sky news'))) {
+              news.add(c);
+            }
+          }
+          currentHero ??= _computeHeroItem(latestMovies, channels);
+          state = state.copyWith(
+            liveChannels: channels.take(20).toList(),
+            sportsChannels: sports,
+            newsChannels: news,
+            heroItem: currentHero,
+          );
+        }
+      }).catchError((_) {});
+
+      final vodTask = (_vodRepo != null)
+          ? _vodRepo.getMovies(forceRefresh: forceRefresh).then((res) {
+              final movies = res.when(ok: (m) => m, err: (_) => <Movie>[]);
+              if (movies.isNotEmpty) {
+                latestMovies = movies;
+                final featured = movies.take(20).toList();
+                currentHero = _computeHeroItem(movies, latestChannels);
+                state = state.copyWith(
+                  featuredMovies: featured,
+                  heroItem: currentHero,
+                );
+              }
+            }).catchError((_) {})
+          : Future<void>.value();
+
+      final seriesTask = (_seriesRepo != null)
+          ? _seriesRepo.getSeries(forceRefresh: forceRefresh).then((res) {
+              final series = res.when(ok: (s) => s, err: (_) => <Series>[]);
+              if (series.isNotEmpty) {
+                state = state.copyWith(
+                  popularSeries: series.take(20).toList(),
+                );
+              }
+            }).catchError((_) {})
+          : Future<void>.value();
+
+      await Future.wait([liveTask, vodTask, seriesTask]);
+      state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
+    } finally {
+      _isFetching = false;
     }
+  }
+
+  HomeHeroItem? _computeHeroItem(List<Movie> movies, List<Channel> channels) {
+    final featuredMoviesList = movies.take(20).toList();
+    if (featuredMoviesList.isNotEmpty) {
+      double highestRating = -1.0;
+      for (final m in featuredMoviesList) {
+        final r = double.tryParse(m.rating ?? '');
+        if (r != null && r > highestRating) {
+          highestRating = r;
+        }
+      }
+
+      Movie latestTopRatedMovie = featuredMoviesList.first;
+      int latestYear = -1;
+      double bestRating = -1.0;
+
+      for (final m in featuredMoviesList) {
+        final r = double.tryParse(m.rating ?? '') ?? -1.0;
+        final year = m.releaseYear ?? 0;
+        final isTopTier = highestRating > 0 && r >= (highestRating - 0.8).clamp(0.0, 10.0);
+
+        if (isTopTier) {
+          if (year > latestYear || (year == latestYear && r > bestRating)) {
+            latestYear = year;
+            bestRating = r;
+            latestTopRatedMovie = m;
+          }
+        }
+      }
+
+      if (bestRating < 0) {
+        int newestYear = -1;
+        for (final m in featuredMoviesList) {
+          final y = m.releaseYear ?? 0;
+          if (y > newestYear) {
+            newestYear = y;
+            latestTopRatedMovie = m;
+          }
+        }
+      }
+
+      final ratingStr = latestTopRatedMovie.rating != null && latestTopRatedMovie.rating!.isNotEmpty
+          ? latestTopRatedMovie.rating!
+          : null;
+
+      return HomeHeroItem(
+        title: latestTopRatedMovie.name,
+        subtitle: 'Featured Movie',
+        type: HeroItemType.movie,
+        badge: ratingStr != null ? '★ $ratingStr' : (latestTopRatedMovie.releaseYear?.toString() ?? 'HD'),
+        rating: ratingStr,
+        genre: latestTopRatedMovie.genre ?? 'Top Rated Cinema',
+        description: latestTopRatedMovie.plot ?? 'Stream in high definition on your favorite screen.',
+        backdropUrl: latestTopRatedMovie.streamIcon,
+        posterUrl: latestTopRatedMovie.streamIcon,
+        movie: latestTopRatedMovie,
+      );
+    } else if (channels.isNotEmpty) {
+      final topChannel = channels.first;
+      return HomeHeroItem(
+        title: topChannel.name,
+        subtitle: 'Featured Live Stream',
+        type: HeroItemType.live,
+        badge: 'LIVE NOW',
+        genre: 'Live Television',
+        description: 'Watch real-time live broadcasting with zero latency.',
+        backdropUrl: topChannel.streamIcon,
+        posterUrl: topChannel.streamIcon,
+        channel: topChannel,
+      );
+    }
+    return null;
   }
 
   /// Fast refresh of watch history/continue watching items (e.g. on returning to Home).
@@ -324,7 +315,6 @@ class HomeController extends StateNotifier<HomeState> {
     } catch (_) {}
   }
 }
-
 
 final homeControllerProvider =
     StateNotifierProvider<HomeController, HomeState>((ref) {

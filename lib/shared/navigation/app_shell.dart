@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -141,148 +140,107 @@ class _ShellTopNav extends StatelessWidget {
     final isPortrait = MediaQuery.orientationOf(context) == Orientation.portrait;
 
     if (isPortrait) {
-      // Portrait Top Header with Feathered Bottom Transparency
-      return ClipRect(
-        child: ShaderMask(
-          shaderCallback: (bounds) {
-            return const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [0.0, 0.60, 0.85, 1.0],
-              colors: [
-                Colors.black,
-                Colors.black,
-                Color(0xBB000000),
-                Colors.transparent,
-              ],
-            ).createShader(bounds);
-          },
-          blendMode: BlendMode.dstIn,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0.0, 0.45, 0.75, 1.0],
-                  colors: [
-                    Color(0xF0080B12),
-                    Color(0xBF080B12),
-                    Color(0x45080B12),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Container(
-                  height: 64,
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.xs,
-                    AppSpacing.lg,
-                    AppSpacing.md,
+      // Portrait Top Header with High-Performance Glass Gradient
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0.0, 0.70, 1.0],
+            colors: [
+              Color(0xF5080B12),
+              Color(0xDC080B12),
+              Colors.transparent,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Container(
+            height: 64,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.xs,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                _BrandLogo(onTap: () => context.go(Routes.home)),
+                const Spacer(),
+                // Modern Glass Action Capsule
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withAlpha(22),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(50),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _BrandLogo(onTap: () => context.go(Routes.home)),
-                      const Spacer(),
-                      // Modern Glass Action Capsule
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(12),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withAlpha(22),
-                            width: 0.8,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(50),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _SpinningRefreshButton(
-                              tooltip: context.l10n.actionRefresh,
-                              onTap: onRefresh,
-                            ),
-                            const SizedBox(width: 3),
-                            _GlassActionButton(
-                              icon: AppIcons.settings,
-                              activeIcon: AppIcons.settings,
-                              isActive: currentPath == Routes.settings,
-                              tooltip: context.l10n.navSettings,
-                              onTap: () => context.go(Routes.settings),
-                            ),
-                          ],
-                        ),
+                      _SpinningRefreshButton(
+                        tooltip: context.l10n.actionRefresh,
+                        onTap: onRefresh,
+                      ),
+                      const SizedBox(width: 3),
+                      _GlassActionButton(
+                        icon: AppIcons.settings,
+                        activeIcon: AppIcons.settings,
+                        isActive: currentPath == Routes.settings,
+                        tooltip: context.l10n.navSettings,
+                        onTap: () => context.go(Routes.settings),
                       ),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
       );
     }
 
-    // Landscape / Desktop / TV Frosted Header with Feathered Bottom Transparency
-    return ClipRect(
-      child: ShaderMask(
-        shaderCallback: (bounds) {
-          return const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.0, 0.65, 0.88, 1.0],
-            colors: [
-              Colors.black,
-              Colors.black,
-              Color(0xCC000000),
-              Colors.transparent,
-            ],
-          ).createShader(bounds);
-        },
-        blendMode: BlendMode.dstIn,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: [0.0, 0.45, 0.78, 1.0],
-                colors: [
-                  Color(0xF0080B12),
-                  Color(0xC0080B12),
-                  Color(0x40080B12),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                height: 70,
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  AppSpacing.xs,
-                  AppSpacing.xl,
-                  AppSpacing.md,
-                ),
+    // Landscape / Desktop / TV Header with High-Performance Gradient
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.75, 1.0],
+          colors: [
+            Color(0xF5080B12),
+            Color(0xDD080B12),
+            Colors.transparent,
+          ],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: 70,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.xs,
+            AppSpacing.xl,
+            AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              _BrandLogo(onTap: () => context.go(Routes.home)),
+              const SizedBox(width: AppSpacing.xl),
+              Expanded(
                 child: Row(
-                  children: [
-                    _BrandLogo(onTap: () => context.go(Routes.home)),
-                    const SizedBox(width: AppSpacing.xl),
-                    Expanded(
-                      child: Row(
                         children: List.generate(items.length, (i) {
                           final item = items[i];
                           final isSelected = i == selectedIndex;
@@ -337,12 +295,9 @@ class _ShellTopNav extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+          );
+        }
+      }
 
 // ---------------------------------------------------------------------------
 // Figma/Dribbble Floating Frosted Glass Dock (Portrait Mobile)
@@ -374,57 +329,51 @@ class _FloatingGlassDock extends StatelessWidget {
           isCompact ? 10.0 : 16.0,
           10.0,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.bg1.withAlpha(225),
-                    AppColors.bg2.withAlpha(235),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(
-                  color: Colors.white.withAlpha(35),
-                  width: 0.9,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(130),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                  BoxShadow(
-                    color: AppColors.accent.withAlpha(30),
-                    blurRadius: 18,
-                    spreadRadius: -2,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(items.length, (i) {
-                  final item = items[i];
-                  final isSelected = i == selectedIndex;
-                  return Expanded(
-                    child: _DockNavItem(
-                      item: item,
-                      isSelected: isSelected,
-                      isCompact: isCompact,
-                      onTap: () => onItemTap(i, item.route),
-                    ),
-                  );
-                }),
-              ),
+        child: Container(
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.bg1.withAlpha(245),
+                AppColors.bg2.withAlpha(252),
+              ],
             ),
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(
+              color: Colors.white.withAlpha(35),
+              width: 0.9,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(130),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: AppColors.accent.withAlpha(30),
+                blurRadius: 18,
+                spreadRadius: -2,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(items.length, (i) {
+              final item = items[i];
+              final isSelected = i == selectedIndex;
+              return Expanded(
+                child: _DockNavItem(
+                  item: item,
+                  isSelected: isSelected,
+                  isCompact: isCompact,
+                  onTap: () => onItemTap(i, item.route),
+                ),
+              );
+            }),
           ),
         ),
       ),

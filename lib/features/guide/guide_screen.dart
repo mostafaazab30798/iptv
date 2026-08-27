@@ -15,7 +15,7 @@ import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/loading_indicator.dart';
+import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class GuideScreen extends ConsumerWidget {
   const GuideScreen({super.key});
@@ -38,7 +38,7 @@ class GuideScreen extends ConsumerWidget {
       child: Scaffold(
         backgroundColor: AppColors.bg0,
         body: guideState.isLoading
-            ? LoadingIndicator(message: context.l10n.labelLoading)
+            ? const GuideSkeleton()
             : guideState.channels.isEmpty
                 ? EmptyState(
                     title: context.l10n.guideNoData,

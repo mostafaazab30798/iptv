@@ -64,6 +64,7 @@ class SearchController extends StateNotifier<SearchState> {
   final VodRepository? _vodRepo;
   final SeriesRepository? _seriesRepo;
 
+  Timer? _debounceTimer;
   int _searchToken = 0;
 
   // In-memory TTL caches — avoids full-catalog network round-trips on every search keystroke.
@@ -72,56 +73,67 @@ class SearchController extends StateNotifier<SearchState> {
   final _seriesCache = _CatalogCache<Series>();
 
   Future<void> search(String query) async {
-    final currentToken = ++_searchToken;
+    _debounceTimer?.cancel();
     final trimmed = query.trim();
 
     if (trimmed.isEmpty) {
+      _searchToken++;
       state = const SearchState();
       return;
     }
 
-    state = SearchState(query: trimmed, isLoading: true);
+    // Debounce rapid typing to avoid freezing the main isolate on every keystroke
+    _debounceTimer = Timer(const Duration(milliseconds: 250), () async {
+      final currentToken = ++_searchToken;
+      state = SearchState(query: trimmed, isLoading: true);
 
-    try {
-      final q = trimmed.toLowerCase();
+      try {
+        final q = trimmed.toLowerCase();
 
-      // Fetch catalogs — use in-memory cache when fresh, otherwise hit network and populate cache.
-      final channelsFuture = _fetchChannels();
-      final moviesFuture = _fetchMovies();
-      final seriesFuture = _fetchSeriesList();
+        // Fetch catalogs — use in-memory cache when fresh, otherwise hit network and populate cache.
+        final channelsFuture = _fetchChannels();
+        final moviesFuture = _fetchMovies();
+        final seriesFuture = _fetchSeriesList();
 
-      final results = await Future.wait([channelsFuture, moviesFuture, seriesFuture]);
+        final results = await Future.wait([channelsFuture, moviesFuture, seriesFuture]);
 
-      // If a newer search or clear was issued while we awaited, discard this response.
-      if (_searchToken != currentToken) return;
+        // If a newer search or clear was issued while we awaited, discard this response.
+        if (_searchToken != currentToken) return;
 
-      final channels = (results[0] as List<Channel>)
-          .where((c) => c.name.toLowerCase().contains(q))
-          .take(30)
-          .toList();
+        final channels = (results[0] as List<Channel>)
+            .where((c) => c.name.toLowerCase().contains(q))
+            .take(30)
+            .toList();
 
-      final movies = (results[1] as List<Movie>)
-          .where((m) => m.name.toLowerCase().contains(q))
-          .take(30)
-          .toList();
+        final movies = (results[1] as List<Movie>)
+            .where((m) => m.name.toLowerCase().contains(q))
+            .take(30)
+            .toList();
 
-      final series = (results[2] as List<Series>)
-          .where((s) => s.name.toLowerCase().contains(q))
-          .take(30)
-          .toList();
+        final series = (results[2] as List<Series>)
+            .where((s) => s.name.toLowerCase().contains(q))
+            .take(30)
+            .toList();
 
-      state = SearchState(
-        query: trimmed,
-        channels: channels,
-        movies: movies,
-        series: series,
-        isLoading: false,
-      );
-    } catch (_) {
-      if (_searchToken == currentToken) {
-        state = SearchState(query: trimmed, isLoading: false);
+        state = SearchState(
+          query: trimmed,
+          channels: channels,
+          movies: movies,
+          series: series,
+          isLoading: false,
+        );
+      } catch (_) {
+        if (_searchToken == currentToken) {
+          state = SearchState(query: trimmed, isLoading: false);
+        }
       }
-    }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   /// Returns cached channels or fetches from network and populates cache.

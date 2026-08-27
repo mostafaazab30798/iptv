@@ -50,9 +50,11 @@ class CachedImage extends StatelessWidget {
     }
 
     // Derive memory cache dimensions from explicit params or fall back to widget size.
-    // CachedNetworkImage multiplies by devicePixelRatio internally.
-    final effectiveCacheWidth = memCacheWidth ?? width?.ceil();
-    final effectiveCacheHeight = memCacheHeight ?? height?.ceil();
+    // Ensure an unconstrained image is never decoded at full 4K resolution into memory.
+    final effectiveCacheWidth = memCacheWidth ??
+        ((width != null && !width!.isInfinite) ? width!.ceil() : 512);
+    final effectiveCacheHeight = memCacheHeight ??
+        ((height != null && !height!.isInfinite) ? height!.ceil() : 768);
 
     var finalImageUrl = imageUrl!;
     if (kIsWeb) {
@@ -105,6 +107,7 @@ class CachedImage extends StatelessWidget {
     );
   }
 
+  /// High-performance static skeleton placeholder without CPU-taxing progress animation tickers.
   Widget _buildLoading(BorderRadius radius) {
     return Container(
       width: width,
@@ -112,14 +115,15 @@ class CachedImage extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.bg2,
         borderRadius: radius,
+        border: Border.all(color: AppColors.border.withAlpha(50), width: 0.5),
       ),
-      child: const Center(
-        child: SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: AppColors.accent,
+      child: Center(
+        child: Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: AppColors.accent.withAlpha(35),
+            shape: BoxShape.circle,
           ),
         ),
       ),

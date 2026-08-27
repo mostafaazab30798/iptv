@@ -1,3 +1,4 @@
+import 'package:iptv/core/cache/local_catalog_cache.dart';
 import 'package:iptv/core/logging/app_logger.dart';
 import 'package:iptv/core/storage/database/app_database.dart';
 
@@ -9,6 +10,7 @@ class CacheService {
 
   Future<void> clearAll() async {
     AppLogger.info('Clearing all caches', feature: 'cache');
+    await LocalCatalogCache.instance.clearAll();
     await _db.delete(_db.channels).go();
     await _db.delete(_db.categories).go();
     await _db.delete(_db.epgPrograms).go();
@@ -25,6 +27,7 @@ class CacheService {
 
   Future<void> clearMetadata() async {
     AppLogger.info('Clearing metadata cache', feature: 'cache');
+    await LocalCatalogCache.instance.clearAll();
     await _db.delete(_db.channels).go();
     await _db.delete(_db.categories).go();
     await _db.delete(_db.movies).go();

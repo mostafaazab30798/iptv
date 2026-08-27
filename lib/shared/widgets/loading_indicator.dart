@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/shared/widgets/shimmer.dart';
 
-/// Reusable loading indicator.
+/// Reusable shimmer-based loading indicator.
 class LoadingIndicator extends StatelessWidget {
   const LoadingIndicator({
     super.key,
@@ -15,28 +16,39 @@ class LoadingIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: size,
-            height: size,
-            child: const CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: AppColors.accent,
-            ),
-          ),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              message!,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
+      child: Shimmer(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: size * 1.5,
+              height: size * 1.5,
+              decoration: BoxDecoration(
+                color: AppColors.bg2,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border, width: 1.5),
+              ),
+              child: Center(
+                child: Container(
+                  width: size * 0.7,
+                  height: size * 0.7,
+                  decoration: const BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ),
             ),
+            if (message != null) ...[
+              const SizedBox(height: 16),
+              const ShimmerBox(
+                width: 120,
+                height: 14,
+                borderRadius: 4,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

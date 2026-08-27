@@ -29,7 +29,7 @@ abstract final class AppConstants {
   static const Duration animationFast = Duration(milliseconds: 150);
   static const Duration animationMedium = Duration(milliseconds: 300);
   static const Duration animationSlow = Duration(milliseconds: 500);
-  static const Duration splashMinDuration = Duration(seconds: 2);
+  static const Duration splashMinDuration = Duration(milliseconds: 300);
 
   // Pagination
   static const int defaultPageSize = 50;

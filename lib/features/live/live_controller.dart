@@ -10,6 +10,9 @@ class LiveState {
     this.selectedCategoryId,
     this.channels = const [],
     this.filteredChannels = const [],
+    this.categoryCounts = const {},
+    this.categoryLeadingChannels = const {},
+    this.categoryNames = const {},
     this.searchQuery = '',
     this.isLoading = false,
     this.error,
@@ -19,6 +22,9 @@ class LiveState {
   final int? selectedCategoryId;
   final List<Channel> channels;
   final List<Channel> filteredChannels;
+  final Map<int, int> categoryCounts;
+  final Map<int, Channel> categoryLeadingChannels;
+  final Map<int, String> categoryNames;
   final String searchQuery;
   final bool isLoading;
   final String? error;
@@ -29,6 +35,9 @@ class LiveState {
     bool clearCategory = false,
     List<Channel>? channels,
     List<Channel>? filteredChannels,
+    Map<int, int>? categoryCounts,
+    Map<int, Channel>? categoryLeadingChannels,
+    Map<int, String>? categoryNames,
     String? searchQuery,
     bool? isLoading,
     String? error,
@@ -39,6 +48,9 @@ class LiveState {
       selectedCategoryId: clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
       channels: channels ?? this.channels,
       filteredChannels: filteredChannels ?? this.filteredChannels,
+      categoryCounts: categoryCounts ?? this.categoryCounts,
+      categoryLeadingChannels: categoryLeadingChannels ?? this.categoryLeadingChannels,
+      categoryNames: categoryNames ?? this.categoryNames,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
@@ -76,11 +88,30 @@ class LiveController extends StateNotifier<LiveState> {
         err: (e) => <Channel>[],
       );
 
+      // Precompute category mappings once in background to eliminate UI main thread freeze.
+      final counts = <int, int>{};
+      final leading = <int, Channel>{};
+      for (final channel in channels) {
+        final catId = channel.categoryId;
+        if (catId != null) {
+          counts[catId] = (counts[catId] ?? 0) + 1;
+          leading.putIfAbsent(catId, () => channel);
+        }
+      }
+
+      final names = <int, String>{};
+      for (final cat in categories) {
+        names[cat.id] = cat.name;
+      }
+
       state = state.copyWith(
         categories: categories,
         clearCategory: true,
         channels: channels,
         filteredChannels: channels,
+        categoryCounts: counts,
+        categoryLeadingChannels: leading,
+        categoryNames: names,
         isLoading: false,
       );
     } catch (e) {

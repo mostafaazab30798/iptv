@@ -94,6 +94,8 @@ class SmartChannelLogo extends StatelessWidget {
           fit: fit,
           borderRadius: effectiveRadius,
           fallbackIcon: fallbackIcon,
+          memCacheWidth: (width ?? 64).ceil(),
+          memCacheHeight: (height ?? 64).ceil(),
         ),
       );
     }

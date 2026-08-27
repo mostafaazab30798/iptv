@@ -114,6 +114,7 @@ class HomeSectionRow<T> extends StatelessWidget {
           height: height,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
+            cacheExtent: 350,
             itemCount: items.length,
             separatorBuilder: (_, index) => const SizedBox(width: AppSpacing.md),
             itemBuilder: (context, i) => itemBuilder(context, items[i], i),

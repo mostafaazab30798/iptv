@@ -14,7 +14,7 @@ import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/loading_indicator.dart';
+import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 final favoritesListProvider = FutureProvider<List<Favorite>>((ref) async {
   final repo = ref.watch(favoritesRepositoryProvider);
@@ -118,7 +118,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
       child: Scaffold(
         backgroundColor: AppColors.bg0,
         body: favoritesAsync.when(
-          loading: () => LoadingIndicator(message: context.l10n.labelLoading),
+          loading: () => const FavoritesSkeleton(),
           error: (e, _) => Center(
             child: Text('Error: $e', style: const TextStyle(color: AppColors.error)),
           ),
@@ -394,6 +394,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                   ? AppIcons.live
                   : (item.type == FavoriteType.movie ? AppIcons.movies : AppIcons.series),
               borderRadius: BorderRadius.circular(8),
+              memCacheWidth: 64,
+              memCacheHeight: 64,
             ),
           ),
           const SizedBox(width: 14),
@@ -469,6 +471,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                           : (item.type == FavoriteType.movie ? AppIcons.movies : AppIcons.series),
                       fit: BoxFit.cover,
                       borderRadius: BorderRadius.circular(8),
+                      memCacheWidth: 150,
+                      memCacheHeight: 150,
                     ),
                   ),
                 ),

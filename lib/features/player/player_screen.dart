@@ -108,9 +108,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _restoreDefaultOrientations();
-    _exitFullscreenMode();
-    _controller?.savePlaybackProgress();
-    _controller?.stop();
+    PlatformService.instance.setFullScreen(false);
     super.dispose();
   }
 

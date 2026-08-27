@@ -21,7 +21,7 @@ import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/category_card.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/loading_indicator.dart';
+import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 
 /// Category-First Series Screen:
@@ -100,25 +100,10 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
 
   Widget _buildCategoriesHub(SeriesState seriesState) {
     if (seriesState.isLoading && seriesState.categories.isEmpty) {
-      return LoadingIndicator(message: context.l10n.labelLoading);
+      return const CategoryListSkeleton();
     }
 
     final categories = seriesState.categories;
-
-    // Compute series count and leading cover/logo per category
-    final Map<int, int> categoryCounts = {};
-    final Map<int, String> categoryLeadingLogos = {};
-
-    for (final s in seriesState.seriesList) {
-      if (s.categoryId != null) {
-        final catId = s.categoryId!;
-        categoryCounts[catId] = (categoryCounts[catId] ?? 0) + 1;
-
-        if (!categoryLeadingLogos.containsKey(catId) && s.cover != null && s.cover!.isNotEmpty) {
-          categoryLeadingLogos[catId] = s.cover!;
-        }
-      }
-    }
 
     return KeyedSubtree(
       key: const ValueKey('series_categories_hub'),
@@ -130,6 +115,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
             )
           : ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+              cacheExtent: 350,
               itemCount: categories.length + 1,
               separatorBuilder: (_, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
@@ -144,8 +130,8 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                 }
 
                 final category = categories[index - 1];
-                final count = categoryCounts[category.id] ?? 0;
-                final logoUrl = categoryLeadingLogos[category.id];
+                final count = seriesState.categoryCounts[category.id] ?? 0;
+                final logoUrl = seriesState.categoryLeadingCovers[category.id];
 
                 return CategoryCard(
                   title: category.name,
@@ -285,7 +271,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
         // Series Poster Grid
         Expanded(
           child: seriesState.isLoading
-              ? LoadingIndicator(message: context.l10n.labelLoading)
+              ? const PosterGridSkeleton()
               : seriesState.filteredSeries.isEmpty
                   ? EmptyState(
                       title: context.l10n.seriesNoSeriesFound,
@@ -294,6 +280,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                     )
                   : GridView.builder(
                       padding: const EdgeInsets.all(AppSpacing.md),
+                      cacheExtent: 350,
                       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 170,
                         childAspectRatio: 2 / 3,
@@ -529,7 +516,7 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
             // Body: Seasons & Episodes
             Expanded(
               child: _isLoading
-                  ? LoadingIndicator(message: context.l10n.labelLoading)
+                  ? const SeriesDetailSkeleton()
                   : _error != null
                       ? Center(child: Text('Error: $_error', style: const TextStyle(color: AppColors.error)))
                       : _seasons.isEmpty
@@ -719,6 +706,8 @@ class _SeriesPosterCard extends StatelessWidget {
             fit: BoxFit.cover,
             borderRadius: BorderRadius.circular(AppRadius.card),
             fallbackIcon: AppIcons.series,
+            memCacheWidth: 170,
+            memCacheHeight: 255,
           ),
           Positioned(
             bottom: 0,

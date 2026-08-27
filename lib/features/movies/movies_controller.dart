@@ -10,6 +10,9 @@ class MoviesState {
     this.selectedCategoryId,
     this.movies = const [],
     this.filteredMovies = const [],
+    this.categoryCounts = const {},
+    this.categoryLeadingLogos = const {},
+    this.categoryNames = const {},
     this.searchQuery = '',
     this.isLoading = false,
     this.error,
@@ -19,6 +22,9 @@ class MoviesState {
   final int? selectedCategoryId;
   final List<Movie> movies;
   final List<Movie> filteredMovies;
+  final Map<int, int> categoryCounts;
+  final Map<int, String?> categoryLeadingLogos;
+  final Map<int, String> categoryNames;
   final String searchQuery;
   final bool isLoading;
   final String? error;
@@ -29,6 +35,9 @@ class MoviesState {
     bool clearCategory = false,
     List<Movie>? movies,
     List<Movie>? filteredMovies,
+    Map<int, int>? categoryCounts,
+    Map<int, String?>? categoryLeadingLogos,
+    Map<int, String>? categoryNames,
     String? searchQuery,
     bool? isLoading,
     String? error,
@@ -39,6 +48,9 @@ class MoviesState {
       selectedCategoryId: clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
       movies: movies ?? this.movies,
       filteredMovies: filteredMovies ?? this.filteredMovies,
+      categoryCounts: categoryCounts ?? this.categoryCounts,
+      categoryLeadingLogos: categoryLeadingLogos ?? this.categoryLeadingLogos,
+      categoryNames: categoryNames ?? this.categoryNames,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
@@ -76,11 +88,31 @@ class MoviesController extends StateNotifier<MoviesState> {
         err: (_) => <Movie>[],
       );
 
+      final counts = <int, int>{};
+      final leadingLogos = <int, String?>{};
+      for (final movie in movies) {
+        final catId = movie.categoryId;
+        if (catId != null) {
+          counts[catId] = (counts[catId] ?? 0) + 1;
+          if (!leadingLogos.containsKey(catId) && movie.streamIcon != null && movie.streamIcon!.isNotEmpty) {
+            leadingLogos[catId] = movie.streamIcon;
+          }
+        }
+      }
+
+      final names = <int, String>{};
+      for (final cat in categories) {
+        names[cat.id] = cat.name;
+      }
+
       state = state.copyWith(
         categories: categories,
         clearCategory: true,
         movies: movies,
         filteredMovies: movies,
+        categoryCounts: counts,
+        categoryLeadingLogos: leadingLogos,
+        categoryNames: names,
         isLoading: false,
       );
     } catch (e) {

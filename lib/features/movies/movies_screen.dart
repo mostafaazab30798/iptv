@@ -19,7 +19,7 @@ import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/category_card.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/loading_indicator.dart';
+import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class MoviesScreen extends ConsumerStatefulWidget {
   const MoviesScreen({super.key});
@@ -116,24 +116,10 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
 
   Widget _buildCategoriesHub(MoviesState moviesState) {
     if (moviesState.isLoading && moviesState.categories.isEmpty) {
-      return LoadingIndicator(message: context.l10n.labelLoading);
+      return const CategoryListSkeleton();
     }
 
     final categories = moviesState.categories;
-
-    final Map<int, int> categoryCounts = {};
-    final Map<int, String?> categoryLeadingLogos = {};
-
-    for (final movie in moviesState.movies) {
-      if (movie.categoryId != null) {
-        final catId = movie.categoryId!;
-        categoryCounts[catId] = (categoryCounts[catId] ?? 0) + 1;
-
-        if (!categoryLeadingLogos.containsKey(catId) && movie.streamIcon != null && movie.streamIcon!.isNotEmpty) {
-          categoryLeadingLogos[catId] = movie.streamIcon;
-        }
-      }
-    }
 
     return KeyedSubtree(
       key: const ValueKey('movies_categories_hub'),
@@ -145,6 +131,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
             )
           : ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+              cacheExtent: 350,
               itemCount: categories.length + 1,
               separatorBuilder: (_, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
@@ -159,8 +146,8 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                 }
 
                 final category = categories[index - 1];
-                final count = categoryCounts[category.id] ?? 0;
-                final logoUrl = categoryLeadingLogos[category.id];
+                final count = moviesState.categoryCounts[category.id] ?? 0;
+                final logoUrl = moviesState.categoryLeadingLogos[category.id];
 
                 return CategoryCard(
                   title: category.name,
@@ -292,7 +279,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
         ),
         Expanded(
           child: moviesState.isLoading
-              ? LoadingIndicator(message: context.l10n.labelLoading)
+              ? const PosterGridSkeleton()
               : moviesState.filteredMovies.isEmpty
                   ? EmptyState(
                       title: context.l10n.moviesNoMoviesFound,
@@ -301,6 +288,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                     )
                   : GridView.builder(
                       padding: const EdgeInsets.all(AppSpacing.md),
+                      cacheExtent: 350,
                       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 170,
                         childAspectRatio: 2 / 3,

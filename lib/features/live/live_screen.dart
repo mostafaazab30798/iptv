@@ -1,4 +1,3 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +18,7 @@ import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/category_card.dart';
 import 'package:iptv/shared/widgets/channel_list_tile.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/loading_indicator.dart';
+import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class LiveScreen extends ConsumerStatefulWidget {
   const LiveScreen({super.key});
@@ -141,17 +140,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
 
   Widget _buildCategoriesHub(LiveState liveState) {
     if (liveState.isLoading && liveState.categories.isEmpty) {
-      return LoadingIndicator(message: context.l10n.labelLoading);
-    }
-
-    final categoryCounts = <int, int>{};
-    final categoryLeadingChannels = <int, Channel>{};
-    for (final channel in liveState.channels) {
-      final catId = channel.categoryId;
-      if (catId != null) {
-        categoryCounts[catId] = (categoryCounts[catId] ?? 0) + 1;
-        categoryLeadingChannels.putIfAbsent(channel.categoryId!, () => channel);
-      }
+      return const CategoryListSkeleton();
     }
 
     final categories = liveState.categories;
@@ -166,6 +155,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
             )
           : ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+              cacheExtent: 350,
               itemCount: categories.length + 1,
               separatorBuilder: (_, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
@@ -180,8 +170,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                 }
 
                 final category = categories[index - 1];
-                final count = categoryCounts[category.id] ?? 0;
-                final leadingChannel = categoryLeadingChannels[category.id];
+                final count = liveState.categoryCounts[category.id] ?? 0;
+                final leadingChannel = liveState.categoryLeadingChannels[category.id];
 
                 return CategoryCard(
                   title: category.name,
@@ -200,9 +190,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildChannelsView(LiveState liveState) {
-    final playerState = ref.watch(playerControllerProvider);
-    final playerController = ref.read(playerControllerProvider.notifier);
-    final activeChannelId = playerState.source?.channelId;
+    final activeChannelId = ref.watch(
+      playerControllerProvider.select((s) => s.source?.channelId),
+    );
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final categoryTitle = _isAllChannelsSelected
         ? context.l10n.labelAllChannels
@@ -311,8 +301,6 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                         color: AppColors.bg0,
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                         child: LiveMiniPreview(
-                          playerState: playerState,
-                          controller: playerController,
                           selectedChannel: _selectedChannel,
                           onExpandFullscreen: () => context.push(Routes.player),
                         ),
@@ -399,8 +387,6 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(AppSpacing.md),
                       child: LiveMiniPreview(
-                        playerState: playerState,
-                        controller: playerController,
                         selectedChannel: _selectedChannel,
                         onExpandFullscreen: () => context.push(Routes.player),
                       ),
@@ -417,7 +403,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
 
   Widget _buildChannelList(LiveState liveState, int? activeChannelId) {
     if (liveState.isLoading) {
-      return LoadingIndicator(message: context.l10n.labelLoading);
+      return const ChannelListSkeleton();
     }
 
     if (liveState.filteredChannels.isEmpty) {
@@ -431,6 +417,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     if (_isGridView) {
       return GridView.builder(
         padding: const EdgeInsets.all(AppSpacing.md),
+        cacheExtent: 350,
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 155,
           childAspectRatio: 1.15,
@@ -453,12 +440,13 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
 
     return ListView.separated(
       padding: const EdgeInsets.all(AppSpacing.md),
+      cacheExtent: 350,
       itemCount: liveState.filteredChannels.length,
       separatorBuilder: (_, index) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
         final channel = liveState.filteredChannels[i];
         final isPlaying = activeChannelId == channel.streamId;
-        final catName = liveState.categories.firstWhereOrNull((c) => c.id == channel.categoryId)?.name ?? context.l10n.navLive;
+        final catName = liveState.categoryNames[channel.categoryId] ?? context.l10n.navLive;
         return ChannelListTile(
           channel: channel,
           isPlaying: isPlaying,

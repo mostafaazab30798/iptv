@@ -81,6 +81,8 @@ class HistoryCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
                     fallbackIcon: AppIcons.play,
+                    memCacheWidth: 200,
+                    memCacheHeight: 120,
                   ),
                   // Gradient shadow
                   Container(

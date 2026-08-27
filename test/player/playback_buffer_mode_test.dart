@@ -9,8 +9,8 @@ void main() {
   group('PlaybackBufferMode', () {
     test('lowLatency configuration values match streaming guide specs', () {
       const mode = PlaybackBufferMode.lowLatency;
-      expect(mode.demuxerReadaheadSecs, equals(3));
-      expect(mode.cacheSecs, equals(4));
+      expect(mode.demuxerReadaheadSecs, equals(6));
+      expect(mode.cacheSecs, equals(8));
       expect(mode.bufferSizeBytes, equals(16 * 1024 * 1024));
       expect(mode.demuxerMaxBytes, equals('32MiB'));
       expect(mode.demuxerMaxBackBytes, equals('8MiB'));

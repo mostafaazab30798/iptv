@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
@@ -10,23 +11,26 @@ import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
 /// Live mini-player preview panel embedded inside the Live TV section.
-class LiveMiniPreview extends StatelessWidget {
+class LiveMiniPreview extends ConsumerWidget {
   const LiveMiniPreview({
     super.key,
-    required this.playerState,
-    required this.controller,
-    required this.selectedChannel,
+    this.selectedChannel,
     required this.onExpandFullscreen,
   });
 
-  final PlayerState playerState;
-  final PlayerController controller;
   final Channel? selectedChannel;
   final VoidCallback onExpandFullscreen;
 
   @override
-  Widget build(BuildContext context) {
-    final hasActiveSource = playerState.source != null;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final source = ref.watch(playerControllerProvider.select((s) => s.source));
+    final isPlaying = ref.watch(playerControllerProvider.select((s) => s.isPlaying));
+    final isBuffering = ref.watch(playerControllerProvider.select((s) => s.isBuffering));
+    final isMuted = ref.watch(playerControllerProvider.select((s) => s.isMuted));
+    final aspectRatioIndex = ref.watch(playerControllerProvider.select((s) => s.aspectRatioIndex));
+    final controller = ref.read(playerControllerProvider.notifier);
+
+    final hasActiveSource = source != null;
 
     if (!hasActiveSource && selectedChannel == null) {
       return Container(
@@ -76,8 +80,8 @@ class LiveMiniPreview extends StatelessWidget {
       );
     }
 
-    final channelTitle = playerState.source?.title ?? selectedChannel?.name ?? 'Live Stream';
-    final logoUrl = playerState.source?.logoUrl ?? selectedChannel?.streamIcon;
+    final channelTitle = source?.title ?? selectedChannel?.name ?? 'Live Stream';
+    final logoUrl = source?.logoUrl ?? selectedChannel?.streamIcon;
 
     return Container(
       width: double.infinity,
@@ -106,7 +110,7 @@ class LiveMiniPreview extends StatelessWidget {
               children: [
                 if (hasActiveSource)
                   PlayerView(
-                    aspectRatioIndex: playerState.aspectRatioIndex,
+                    aspectRatioIndex: aspectRatioIndex,
                     platformHandle: controller.engine.platformHandle,
                   )
                 else
@@ -126,9 +130,9 @@ class LiveMiniPreview extends StatelessWidget {
                   ),
 
                 // Buffering State
-                if (playerState.isBuffering)
+                if (isBuffering)
                   Positioned.fill(
-                    child: BufferingIndicator(isBuffering: playerState.isBuffering),
+                    child: BufferingIndicator(isBuffering: isBuffering),
                   ),
 
                 // Live Badge (Top Left)
@@ -245,7 +249,7 @@ class LiveMiniPreview extends StatelessWidget {
                   children: [
                     InkWell(
                       onTap: () {
-                        if (playerState.isPlaying) {
+                        if (isPlaying) {
                           controller.pause();
                         } else {
                           controller.play();
@@ -255,7 +259,7 @@ class LiveMiniPreview extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(2),
                         child: HugeIcon(
-                          icon: playerState.isPlaying
+                          icon: isPlaying
                               ? AppIcons.pause
                               : AppIcons.play,
                           color: AppColors.accent,
@@ -270,7 +274,7 @@ class LiveMiniPreview extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(4),
                         child: HugeIcon(
-                          icon: playerState.isMuted
+                          icon: isMuted
                               ? AppIcons.volumeMute
                               : AppIcons.volumeHigh,
                           color: AppColors.textSecondary,

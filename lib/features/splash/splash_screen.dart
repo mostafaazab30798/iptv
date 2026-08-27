@@ -5,6 +5,7 @@ import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/core/constants/app_constants.dart';
+import 'package:iptv/shared/widgets/shimmer.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -31,10 +32,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _navigate() async {
-    await Future.wait<void>([
-      Future.delayed(AppConstants.splashMinDuration),
-      ref.read(sessionProvider.notifier).loadSession(),
-    ]);
+    await ref.read(sessionProvider.notifier).loadSession();
     if (!mounted) return;
 
     final session = ref.read(sessionProvider).valueOrNull;
@@ -120,12 +118,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ],
               ),
               const SizedBox(height: 48),
-              const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.accent,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  width: 140,
+                  height: 4,
+                  child: Shimmer(
+                    baseColor: AppColors.bg3,
+                    highlightColor: AppColors.accent,
+                    child: Container(
+                      color: AppColors.bg3,
+                    ),
+                  ),
                 ),
               ),
             ],

@@ -56,12 +56,14 @@ class PlayerView extends StatelessWidget {
         );
       }
 
-      return Container(
-        color: Colors.black,
-        width: double.infinity,
-        height: double.infinity,
-        alignment: Alignment.center,
-        child: videoWidget,
+      return RepaintBoundary(
+        child: Container(
+          color: Colors.black,
+          width: double.infinity,
+          height: double.infinity,
+          alignment: Alignment.center,
+          child: videoWidget,
+        ),
       );
     }
 

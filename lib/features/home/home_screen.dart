@@ -25,7 +25,7 @@ import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/layouts/responsive_builder.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/loading_indicator.dart';
+import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -41,7 +41,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(playerControllerProvider.notifier).stop();
-        ref.read(homeControllerProvider.notifier).loadData();
+        ref.read(homeControllerProvider.notifier).refreshContinueWatching();
       }
     });
   }
@@ -67,11 +67,18 @@ class _HomeContent extends ConsumerWidget {
     final sessionAsync = ref.watch(sessionProvider);
     final homeState = ref.watch(homeControllerProvider);
 
-    if (sessionAsync.isLoading || (homeState.isLoading && homeState.liveChannels.isEmpty && homeState.featuredMovies.isEmpty)) {
-      return LoadingIndicator(message: context.l10n.labelLoading);
+    final hasContent = homeState.heroItem != null ||
+        homeState.continueWatching.isNotEmpty ||
+        homeState.liveChannels.isNotEmpty ||
+        homeState.favorites.isNotEmpty ||
+        homeState.featuredMovies.isNotEmpty ||
+        homeState.popularSeries.isNotEmpty;
+
+    if (sessionAsync.isLoading || (homeState.isLoading && !hasContent)) {
+      return const HomeSkeleton();
     }
 
-    if (homeState.error != null && homeState.liveChannels.isEmpty && homeState.featuredMovies.isEmpty) {
+    if (homeState.error != null && !hasContent) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -98,13 +105,6 @@ class _HomeContent extends ConsumerWidget {
       );
     }
 
-    final hasContent = homeState.heroItem != null ||
-        homeState.continueWatching.isNotEmpty ||
-        homeState.liveChannels.isNotEmpty ||
-        homeState.favorites.isNotEmpty ||
-        homeState.featuredMovies.isNotEmpty ||
-        homeState.popularSeries.isNotEmpty;
-
     if (!hasContent) {
       return EmptyState(
         title: context.l10n.homeEmptyPlaylist,
@@ -120,6 +120,7 @@ class _HomeContent extends ConsumerWidget {
         onRefresh: () => ref.read(homeControllerProvider.notifier).loadData(forceRefresh: true),
         child: ListView(
           padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+          cacheExtent: 350,
           children: [
             // 1. Full-Width Cinematic Hero Banner
             if (homeState.heroItem != null)

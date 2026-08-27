@@ -60,13 +60,15 @@ class HomeHeroBanner extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Full-bleed backdrop movie artwork
+          // 1. Full-bleed backdrop movie artwork (capped to prevent 4K buffer allocations)
           if (item.backdropUrl != null && item.backdropUrl!.isNotEmpty)
             Positioned.fill(
               child: CachedImage(
                 imageUrl: item.backdropUrl,
                 fit: BoxFit.cover,
                 fallbackIcon: AppIcons.movies,
+                memCacheWidth: 720,
+                memCacheHeight: 450,
               ),
             )
           else
@@ -315,6 +317,8 @@ class HomeHeroBanner extends StatelessWidget {
                       imageUrl: item.posterUrl,
                       fit: BoxFit.cover,
                       fallbackIcon: AppIcons.movies,
+                      memCacheWidth: 200,
+                      memCacheHeight: 300,
                     ),
                   ),
                 ],

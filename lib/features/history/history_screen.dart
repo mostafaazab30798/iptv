@@ -15,7 +15,7 @@ import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/loading_indicator.dart';
+import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 final historyListProvider = FutureProvider.autoDispose<List<WatchHistoryEntry>>((ref) async {
   final repo = ref.watch(historyRepositoryProvider);
@@ -67,7 +67,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         body: Builder(
           builder: (context) {
             if (historyAsync.isLoading && items == null) {
-              return LoadingIndicator(message: context.l10n.labelLoading);
+              return const HistorySkeleton();
             }
             if (historyAsync.hasError && items == null) {
               return Center(
@@ -187,6 +187,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                       fallbackIcon: AppIcons.play,
                                       fit: BoxFit.cover,
                                       borderRadius: BorderRadius.circular(8),
+                                      memCacheWidth: 64,
+                                      memCacheHeight: 64,
                                     ),
                                   ),
                                   if (progress > 0)

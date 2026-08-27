@@ -185,7 +185,10 @@ class AppDatabase extends _$AppDatabase {
           await _createIndexes();
         },
         onUpgrade: (m, from, to) async {
-          // Future migrations go here.
+          await _createIndexes();
+        },
+        beforeOpen: (details) async {
+          await _createIndexes();
         },
       );
 
@@ -197,6 +200,9 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_channels_category_id ON channels(category_id)',
     );
     await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_channels_name ON channels(name)',
+    );
+    await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_epg_channel_id ON epg_programs(channel_id)',
     );
     await customStatement(
@@ -204,6 +210,24 @@ class AppDatabase extends _$AppDatabase {
     );
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_movies_category_id ON movies(category_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_movies_name ON movies(name)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_series_category_id ON series(category_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_series_series_id ON series(series_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_series_name ON series(name)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_seasons_series_local_id ON seasons(series_local_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_episodes_season_local_id ON episodes(season_local_id)',
     );
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_watch_history_watched_at ON watch_history(watched_at DESC)',

@@ -75,35 +75,7 @@ class SecureStorage {
   }
 
   Future<({String serverUrl, String username, String password})?> loadCredentials() async {
-    String? serverUrl;
-    String? username;
-    String? password;
-
-    // 1. Try reading from FlutterSecureStorage
-    try {
-      final results = await Future.wait([
-        _storage.read(key: _keyServerUrl),
-        _storage.read(key: _keyUsername),
-        _storage.read(key: _keyPassword),
-      ]);
-      serverUrl = results[0];
-      username = results[1];
-      password = results[2];
-    } catch (e) {
-      AppLogger.error('SecureStorage read warning (will try fallback): $e', feature: 'storage');
-    }
-
-    // 2. If secure storage returned complete credentials, use them
-    if (serverUrl != null &&
-        serverUrl.isNotEmpty &&
-        username != null &&
-        username.isNotEmpty &&
-        password != null &&
-        password.isNotEmpty) {
-      return (serverUrl: serverUrl, username: username, password: password);
-    }
-
-    // 3. Fallback to PreferencesStorage
+    // 1. Fast path: PreferencesStorage is already in memory from bootstrap — 0ms synchronous read!
     try {
       final prefUrl = PreferencesStorage.instance.authServerUrl;
       final prefUser = PreferencesStorage.instance.authUsername;
@@ -114,16 +86,43 @@ class SecureStorage {
           prefPassEnc != null && prefPassEnc.isNotEmpty) {
         final decodedPass = _decodeString(prefPassEnc);
         if (decodedPass != null && decodedPass.isNotEmpty) {
-          // Re-sync to secure storage in background
-          unawaited(_storage.write(key: _keyServerUrl, value: prefUrl).catchError((_) {}));
-          unawaited(_storage.write(key: _keyUsername, value: prefUser).catchError((_) {}));
-          unawaited(_storage.write(key: _keyPassword, value: decodedPass).catchError((_) {}));
-
           return (serverUrl: prefUrl, username: prefUser, password: decodedPass);
         }
       }
+    } catch (_) {}
+
+    // 2. Slow fallback: FlutterSecureStorage
+    String? serverUrl;
+    String? username;
+    String? password;
+
+    try {
+      final results = await Future.wait([
+        _storage.read(key: _keyServerUrl),
+        _storage.read(key: _keyUsername),
+        _storage.read(key: _keyPassword),
+      ]);
+      serverUrl = results[0];
+      username = results[1];
+      password = results[2];
     } catch (e) {
-      AppLogger.error('Failed to load fallback credentials: $e', feature: 'storage');
+      AppLogger.error('SecureStorage read warning: $e', feature: 'storage');
+    }
+
+    if (serverUrl != null &&
+        serverUrl.isNotEmpty &&
+        username != null &&
+        username.isNotEmpty &&
+        password != null &&
+        password.isNotEmpty) {
+      // Re-sync to preferences fallback for subsequent instant launches
+      unawaited(PreferencesStorage.instance.saveAuthCredentials(
+        serverUrl: serverUrl,
+        username: username,
+        passwordEnc: _encodeString(password),
+      ).catchError((_) {}));
+
+      return (serverUrl: serverUrl, username: username, password: password);
     }
 
     return null;

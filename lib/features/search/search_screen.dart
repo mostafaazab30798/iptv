@@ -23,7 +23,7 @@ import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/channel_list_tile.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/loading_indicator.dart';
+import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -120,7 +120,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               // Results
               Expanded(
                 child: searchState.isLoading
-                    ? LoadingIndicator(message: context.l10n.labelLoading)
+                    ? const SearchSkeleton()
                     : searchState.query.isEmpty
                         ? const _SearchEmptyState()
                         : searchState.totalResults == 0
@@ -225,7 +225,9 @@ class _ChannelResultTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeChannelId = ref.watch(playerControllerProvider).source?.channelId;
+    final activeChannelId = ref.watch(
+      playerControllerProvider.select((s) => s.source?.channelId),
+    );
     final isPlaying = activeChannelId == channel.streamId;
 
     return Padding(
@@ -247,9 +249,9 @@ class _ChannelResultTile extends ConsumerWidget {
 
           ref.read(playerControllerProvider.notifier).load(
             LiveSource(
-              channelId: channel.streamId,
-              channelName: channel.name,
               url: url,
+              channelName: channel.name,
+              channelId: channel.streamId,
               logoUrl: channel.streamIcon,
             ),
           );
@@ -261,12 +263,12 @@ class _ChannelResultTile extends ConsumerWidget {
   }
 }
 
-class _MovieResultRow extends ConsumerWidget {
+class _MovieResultRow extends StatelessWidget {
   const _MovieResultRow({required this.movies});
   final List<Movie> movies;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return SizedBox(
       height: 150,
       child: ListView.separated(
@@ -277,56 +279,60 @@ class _MovieResultRow extends ConsumerWidget {
           final movie = movies[i];
           return SizedBox(
             width: 100,
-            child: FocusableCard(
-              onTap: () {
-                final session = ref.read(sessionProvider).valueOrNull;
-                if (session == null) return;
+            child: Consumer(
+              builder: (context, ref, _) => FocusableCard(
+                onTap: () {
+                  final session = ref.read(sessionProvider).valueOrNull;
+                  if (session == null) return;
 
-                final url = XtreamRemoteDataSource.buildVodStreamUrl(
-                  serverUrl: session.serverUrl,
-                  username: session.username,
-                  password: session.password,
-                  streamId: movie.streamId,
-                  extension: movie.containerExtension ?? 'mp4',
-                );
+                  final url = XtreamRemoteDataSource.buildVodStreamUrl(
+                    serverUrl: session.serverUrl,
+                    username: session.username,
+                    password: session.password,
+                    streamId: movie.streamId,
+                    extension: movie.containerExtension ?? 'mp4',
+                  );
 
-                ref.read(playerControllerProvider.notifier).load(
-                  VodSource(
-                    movieId: movie.streamId,
-                    title: movie.name,
-                    url: url,
-                    posterUrl: movie.streamIcon,
-                  ),
-                );
+                  ref.read(playerControllerProvider.notifier).load(
+                    VodSource(
+                      movieId: movie.streamId,
+                      title: movie.name,
+                      url: url,
+                      posterUrl: movie.streamIcon,
+                    ),
+                  );
 
-                context.push(Routes.player);
-              },
-              padding: EdgeInsets.zero,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CachedImage(
-                    imageUrl: movie.streamIcon,
-                    fit: BoxFit.cover,
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    fallbackIcon: AppIcons.movies,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      color: Colors.black87,
-                      child: Text(
-                        movie.name,
-                        style: const TextStyle(color: Colors.white, fontSize: 10),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  context.push(Routes.player);
+                },
+                padding: EdgeInsets.zero,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CachedImage(
+                      imageUrl: movie.streamIcon,
+                      fit: BoxFit.cover,
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      fallbackIcon: AppIcons.movies,
+                      memCacheWidth: 100,
+                      memCacheHeight: 150,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        color: Colors.black87,
+                        child: Text(
+                          movie.name,
+                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -363,6 +369,8 @@ class _SeriesResultRow extends StatelessWidget {
                     fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(AppRadius.card),
                     fallbackIcon: AppIcons.series,
+                    memCacheWidth: 100,
+                    memCacheHeight: 150,
                   ),
                   Positioned(
                     bottom: 0,
