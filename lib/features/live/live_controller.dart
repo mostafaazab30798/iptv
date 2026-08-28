@@ -51,8 +51,9 @@ class LiveState {
   }) {
     return LiveState(
       categories: categories ?? this.categories,
-      selectedCategoryId:
-          clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
+      selectedCategoryId: clearCategory
+          ? null
+          : (selectedCategoryId ?? this.selectedCategoryId),
       filteredChannels: filteredChannels ?? this.filteredChannels,
       totalChannelCount: totalChannelCount ?? this.totalChannelCount,
       categoryCounts: categoryCounts ?? this.categoryCounts,
@@ -159,8 +160,7 @@ class LiveController extends StateNotifier<LiveState> {
   /// Open a single category page (scoped list only).
   void selectCategory(int categoryId) {
     _searchDebounce?.cancel();
-    final filtered =
-        _catalog.where((c) => c.categoryId == categoryId).toList();
+    final filtered = _catalog.where((c) => c.categoryId == categoryId).toList();
     state = state.copyWith(
       selectedCategoryId: categoryId,
       searchQuery: '',
@@ -202,8 +202,8 @@ class LiveController extends StateNotifier<LiveState> {
     final base = state.selectedCategoryId == null
         ? _catalog
         : _catalog
-            .where((c) => c.categoryId == state.selectedCategoryId)
-            .toList();
+              .where((c) => c.categoryId == state.selectedCategoryId)
+              .toList();
 
     if (query.isEmpty) {
       if (epoch != _searchEpoch) return;
@@ -214,8 +214,10 @@ class LiveController extends StateNotifier<LiveState> {
     final List<Channel> filtered;
     if (base.length > 1500) {
       final names = [for (final c in base) c.name];
-      final indexes =
-          await compute(_filterNameIndexes, (names, query.toLowerCase()));
+      final indexes = await compute(_filterNameIndexes, (
+        names,
+        query.toLowerCase(),
+      ));
       if (epoch != _searchEpoch) return;
       filtered = [for (final i in indexes) base[i]];
     } else {
@@ -239,8 +241,7 @@ List<int> _filterNameIndexes((List<String> names, String query) args) {
 }
 
 final liveControllerProvider =
-    StateNotifierProvider<LiveController, LiveState>((ref) {
-  ref.keepAlive();
-  final repo = ref.watch(liveRepositoryProvider);
-  return LiveController(repo);
-});
+    StateNotifierProvider.autoDispose<LiveController, LiveState>((ref) {
+      final repo = ref.watch(liveRepositoryProvider);
+      return LiveController(repo);
+    });

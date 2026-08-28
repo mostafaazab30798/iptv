@@ -12,12 +12,18 @@ class ErrorView extends StatelessWidget {
     super.key,
     required this.message,
     this.onRetry,
+    this.eyebrow,
+    this.illustration,
     this.icon = AppIcons.error,
+    this.secondaryAction,
   });
 
   final String message;
   final VoidCallback? onRetry;
+  final String? eyebrow;
+  final Widget? illustration;
   final dynamic icon;
+  final Widget? secondaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +33,27 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            icon is IconData
-                ? Icon(icon as IconData, size: 48, color: AppColors.error)
-                : HugeIcon(icon: icon as List<List<dynamic>>, size: 48, color: AppColors.error),
+            illustration ??
+                (icon is IconData
+                    ? Icon(icon as IconData, size: 48, color: AppColors.error)
+                    : HugeIcon(
+                        icon: icon as List<List<dynamic>>,
+                        size: 48,
+                        color: AppColors.error,
+                      )),
             const SizedBox(height: AppSpacing.md),
+            if (eyebrow != null) ...[
+              Text(
+                eyebrow!,
+                style: const TextStyle(
+                  color: AppColors.error,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
             Text(
               message,
               style: const TextStyle(
@@ -43,9 +66,17 @@ class ErrorView extends StatelessWidget {
               const SizedBox(height: AppSpacing.xl),
               ElevatedButton.icon(
                 onPressed: onRetry,
-                icon: const HugeIcon(icon: AppIcons.refresh, size: 18, color: Colors.white),
+                icon: const HugeIcon(
+                  icon: AppIcons.refresh,
+                  size: 18,
+                  color: Colors.white,
+                ),
                 label: Text(context.l10n.actionTryAgain),
               ),
+            ],
+            if (secondaryAction != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              secondaryAction!,
             ],
           ],
         ),

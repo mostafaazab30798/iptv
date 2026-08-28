@@ -49,8 +49,9 @@ class SeriesState {
   }) {
     return SeriesState(
       categories: categories ?? this.categories,
-      selectedCategoryId:
-          clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
+      selectedCategoryId: clearCategory
+          ? null
+          : (selectedCategoryId ?? this.selectedCategoryId),
       filteredSeries: filteredSeries ?? this.filteredSeries,
       totalSeriesCount: totalSeriesCount ?? this.totalSeriesCount,
       categoryCounts: categoryCounts ?? this.categoryCounts,
@@ -105,10 +106,7 @@ class SeriesController extends StateNotifier<SeriesState> {
         forceRefresh: forceRefresh,
       );
 
-      final list = seriesResult.when(
-        ok: (s) => s,
-        err: (_) => <Series>[],
-      );
+      final list = seriesResult.when(ok: (s) => s, err: (_) => <Series>[]);
 
       _catalog = list;
 
@@ -165,7 +163,9 @@ class SeriesController extends StateNotifier<SeriesState> {
     state = state.copyWith(
       selectedCategoryId: categoryId,
       searchQuery: '',
-      filteredSeries: _catalog.where((s) => s.categoryId == categoryId).toList(),
+      filteredSeries: _catalog
+          .where((s) => s.categoryId == categoryId)
+          .toList(),
       isLoading: false,
     );
   }
@@ -202,8 +202,8 @@ class SeriesController extends StateNotifier<SeriesState> {
     final base = state.selectedCategoryId == null
         ? _catalog
         : _catalog
-            .where((s) => s.categoryId == state.selectedCategoryId)
-            .toList();
+              .where((s) => s.categoryId == state.selectedCategoryId)
+              .toList();
 
     if (query.isEmpty) {
       if (epoch != _searchEpoch) return;
@@ -214,8 +214,10 @@ class SeriesController extends StateNotifier<SeriesState> {
     final List<Series> filtered;
     if (base.length > 1500) {
       final names = [for (final s in base) s.name];
-      final indexes =
-          await compute(_filterNameIndexes, (names, query.toLowerCase()));
+      final indexes = await compute(_filterNameIndexes, (
+        names,
+        query.toLowerCase(),
+      ));
       if (epoch != _searchEpoch) return;
       filtered = [for (final i in indexes) base[i]];
     } else {
@@ -239,8 +241,7 @@ List<int> _filterNameIndexes((List<String> names, String query) args) {
 }
 
 final seriesControllerProvider =
-    StateNotifierProvider<SeriesController, SeriesState>((ref) {
-  ref.keepAlive();
-  final repo = ref.watch(seriesRepositoryProvider);
-  return SeriesController(repo);
-});
+    StateNotifierProvider.autoDispose<SeriesController, SeriesState>((ref) {
+      final repo = ref.watch(seriesRepositoryProvider);
+      return SeriesController(repo);
+    });

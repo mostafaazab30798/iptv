@@ -27,9 +27,13 @@ import 'package:iptv/domain/repositories/vod_repository.dart';
 // Core Storage & Infrastructure Providers
 // -----------------------------------------------------------------------------
 
-final secureStorageProvider = Provider<SecureStorage>((_) => SecureStorage.instance);
+final secureStorageProvider = Provider<SecureStorage>(
+  (_) => SecureStorage.instance,
+);
 
-final databaseProvider = Provider<AppDatabase>((ref) => ref.watch(appDatabaseProvider));
+final databaseProvider = Provider<AppDatabase>(
+  (ref) => ref.watch(appDatabaseProvider),
+);
 
 // -----------------------------------------------------------------------------
 // Auth & Session Providers
@@ -70,9 +74,9 @@ class SessionNotifier extends StateNotifier<AsyncValue<ServerConfig?>> {
 
 final sessionProvider =
     StateNotifierProvider<SessionNotifier, AsyncValue<ServerConfig?>>((ref) {
-  final authRepo = ref.watch(authRepositoryProvider);
-  return SessionNotifier(authRepo);
-});
+      final authRepo = ref.watch(authRepositoryProvider);
+      return SessionNotifier(authRepo);
+    });
 
 // -----------------------------------------------------------------------------
 // Networking & Remote DataSource Providers
@@ -83,11 +87,13 @@ final apiClientProvider = Provider<ApiClient?>((ref) {
   final config = sessionAsync.valueOrNull;
   if (config == null || !config.isValid) return null;
 
-  return ApiClient(ApiConfig(
-    baseUrl: config.serverUrl,
-    username: config.username,
-    password: config.password,
-  ));
+  return ApiClient(
+    ApiConfig(
+      baseUrl: config.serverUrl,
+      username: config.username,
+      password: config.password,
+    ),
+  );
 });
 
 final xtreamDataSourceProvider = Provider<XtreamRemoteDataSource?>((ref) {
@@ -155,6 +161,10 @@ class LocaleNotifier extends StateNotifier<Locale> {
       await PreferencesStorage.instance.setLocale(code);
     } catch (_) {}
     state = Locale(code);
+  }
+
+  void refreshFromStorage() {
+    state = _initialLocale();
   }
 }
 

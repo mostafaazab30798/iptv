@@ -33,34 +33,9 @@ class SearchState {
   int get totalResults => channels.length + movies.length + series.length;
 }
 
-/// Simple typed in-memory catalog cache with TTL.
-class _CatalogCache<T> {
-  static const _ttl = Duration(minutes: 20);
-
-  List<T>? _data;
-  DateTime? _fetchedAt;
-
-  bool get isValid =>
-      _data != null &&
-      _fetchedAt != null &&
-      DateTime.now().difference(_fetchedAt!) < _ttl;
-
-  List<T>? get data => isValid ? _data : null;
-
-  void set(List<T> data) {
-    _data = data;
-    _fetchedAt = DateTime.now();
-  }
-
-  void invalidate() {
-    _data = null;
-    _fetchedAt = null;
-  }
-}
-
 class SearchController extends StateNotifier<SearchState> {
   SearchController(this._liveRepo, this._vodRepo, this._seriesRepo)
-      : super(const SearchState());
+    : super(const SearchState());
 
   final LiveRepository? _liveRepo;
   final VodRepository? _vodRepo;
@@ -68,11 +43,6 @@ class SearchController extends StateNotifier<SearchState> {
 
   Timer? _debounceTimer;
   int _searchToken = 0;
-
-  // In-memory TTL caches — avoids full-catalog network round-trips on every search.
-  final _channelCache = _CatalogCache<Channel>();
-  final _movieCache = _CatalogCache<Movie>();
-  final _seriesCache = _CatalogCache<Series>();
 
   static const _minQueryLength = 2;
   static const _resultLimit = 24;
@@ -103,7 +73,7 @@ class SearchController extends StateNotifier<SearchState> {
       try {
         final q = trimmed.toLowerCase();
 
-        // Load catalogs from memory/disk first — no server traffic when warm.
+        // Keep catalogs local to this operation so Search releases them on exit.
         final results = await Future.wait([
           _fetchChannels(),
           _fetchMovies(),
@@ -151,53 +121,35 @@ class SearchController extends StateNotifier<SearchState> {
     super.dispose();
   }
 
-  /// Prefer memory → local disk cache → repository (network only as last resort).
+  /// Prefer local disk cache, then repository (network only as last resort).
   Future<List<Channel>> _fetchChannels() async {
-    if (_channelCache.isValid) return _channelCache.data!;
-
     final disk = await LocalCatalogCache.instance.loadChannels();
-    if (disk != null && disk.isNotEmpty) {
-      _channelCache.set(disk);
-      return disk;
-    }
+    if (disk != null && disk.isNotEmpty) return disk;
 
-    final res = await (_liveRepo?.getChannels() ??
-        Future.value(const Err<List<Channel>>(AppResultError('No repo'))));
-    final list = res.when(ok: (l) => l, err: (_) => <Channel>[]);
-    if (list.isNotEmpty) _channelCache.set(list);
-    return list;
+    final res =
+        await (_liveRepo?.getChannels() ??
+            Future.value(const Err<List<Channel>>(AppResultError('No repo'))));
+    return res.when(ok: (items) => items, err: (_) => <Channel>[]);
   }
 
   Future<List<Movie>> _fetchMovies() async {
-    if (_movieCache.isValid) return _movieCache.data!;
-
     final disk = await LocalCatalogCache.instance.loadMovies();
-    if (disk != null && disk.isNotEmpty) {
-      _movieCache.set(disk);
-      return disk;
-    }
+    if (disk != null && disk.isNotEmpty) return disk;
 
-    final res = await (_vodRepo?.getMovies() ??
-        Future.value(const Err<List<Movie>>(AppResultError('No repo'))));
-    final list = res.when(ok: (l) => l, err: (_) => <Movie>[]);
-    if (list.isNotEmpty) _movieCache.set(list);
-    return list;
+    final res =
+        await (_vodRepo?.getMovies() ??
+            Future.value(const Err<List<Movie>>(AppResultError('No repo'))));
+    return res.when(ok: (items) => items, err: (_) => <Movie>[]);
   }
 
   Future<List<Series>> _fetchSeriesList() async {
-    if (_seriesCache.isValid) return _seriesCache.data!;
-
     final disk = await LocalCatalogCache.instance.loadSeries();
-    if (disk != null && disk.isNotEmpty) {
-      _seriesCache.set(disk);
-      return disk;
-    }
+    if (disk != null && disk.isNotEmpty) return disk;
 
-    final res = await (_seriesRepo?.getSeries() ??
-        Future.value(const Err<List<Series>>(AppResultError('No repo'))));
-    final list = res.when(ok: (l) => l, err: (_) => <Series>[]);
-    if (list.isNotEmpty) _seriesCache.set(list);
-    return list;
+    final res =
+        await (_seriesRepo?.getSeries() ??
+            Future.value(const Err<List<Series>>(AppResultError('No repo'))));
+    return res.when(ok: (items) => items, err: (_) => <Series>[]);
   }
 
   /// Early-exit name filter; offloads large catalogs to a background isolate.
@@ -212,8 +164,14 @@ class SearchController extends StateNotifier<SearchState> {
       return _filterSync(items, query, nameOf);
     }
 
-    final names = items.map((e) => nameOf(e).toLowerCase()).toList(growable: false);
-    final indices = await compute(_matchNameIndices, <Object>[names, query, _resultLimit]);
+    final names = items
+        .map((e) => nameOf(e).toLowerCase())
+        .toList(growable: false);
+    final indices = await compute(_matchNameIndices, <Object>[
+      names,
+      query,
+      _resultLimit,
+    ]);
     return [for (final i in indices) items[i]];
   }
 
@@ -237,13 +195,6 @@ class SearchController extends StateNotifier<SearchState> {
     _debounceTimer?.cancel();
     state = const SearchState();
   }
-
-  /// Explicitly invalidate catalog caches (e.g. after a pull-to-refresh).
-  void invalidateCaches() {
-    _channelCache.invalidate();
-    _movieCache.invalidate();
-    _seriesCache.invalidate();
-  }
 }
 
 List<int> _matchNameIndices(List<Object> args) {
@@ -261,9 +212,9 @@ List<int> _matchNameIndices(List<Object> args) {
 }
 
 final searchControllerProvider =
-    StateNotifierProvider<SearchController, SearchState>((ref) {
-  final liveRepo = ref.watch(liveRepositoryProvider);
-  final vodRepo = ref.watch(vodRepositoryProvider);
-  final seriesRepo = ref.watch(seriesRepositoryProvider);
-  return SearchController(liveRepo, vodRepo, seriesRepo);
-});
+    StateNotifierProvider.autoDispose<SearchController, SearchState>((ref) {
+      final liveRepo = ref.watch(liveRepositoryProvider);
+      final vodRepo = ref.watch(vodRepositoryProvider);
+      final seriesRepo = ref.watch(seriesRepositoryProvider);
+      return SearchController(liveRepo, vodRepo, seriesRepo);
+    });

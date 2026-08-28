@@ -20,6 +20,7 @@ import 'package:iptv/features/home/widgets/cards/movie_card.dart';
 import 'package:iptv/features/home/widgets/cards/series_card.dart';
 import 'package:iptv/features/home/widgets/home_hero_banner.dart';
 import 'package:iptv/features/home/widgets/home_section_row.dart';
+import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
@@ -48,10 +49,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.bg0,
-      body: _HomeContent(),
-    );
+    return const Scaffold(backgroundColor: AppColors.bg0, body: _HomeContent());
   }
 }
 
@@ -67,7 +65,8 @@ class _HomeContent extends ConsumerWidget {
     final sessionAsync = ref.watch(sessionProvider);
     final homeState = ref.watch(homeControllerProvider);
 
-    final hasContent = homeState.heroItem != null ||
+    final hasContent =
+        homeState.heroItem != null ||
         homeState.continueWatching.isNotEmpty ||
         homeState.liveChannels.isNotEmpty ||
         homeState.favorites.isNotEmpty ||
@@ -83,21 +82,38 @@ class _HomeContent extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const HugeIcon(icon: AppIcons.error, color: AppColors.error, size: 48),
+            const HugeIcon(
+              icon: AppIcons.error,
+              color: AppColors.error,
+              size: 48,
+            ),
             const SizedBox(height: 12),
             Text(
               context.l10n.homeEmptyPlaylist,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               context.l10n.homeCheckConnection,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: () => ref.read(homeControllerProvider.notifier).loadData(forceRefresh: true),
-              icon: const HugeIcon(icon: AppIcons.refresh, size: 18, color: Colors.black),
+              onPressed: () => ref
+                  .read(homeControllerProvider.notifier)
+                  .loadData(forceRefresh: true),
+              icon: const HugeIcon(
+                icon: AppIcons.refresh,
+                size: 18,
+                color: Colors.black,
+              ),
               label: Text(context.l10n.actionTryAgain),
             ),
           ],
@@ -111,37 +127,47 @@ class _HomeContent extends ConsumerWidget {
         subtitle: context.l10n.homeEmptyPlaylistSubtitle,
         icon: AppIcons.empty,
         actionLabel: context.l10n.actionRefresh,
-        onAction: () => ref.read(homeControllerProvider.notifier).loadData(forceRefresh: true),
+        onAction: () => ref
+            .read(homeControllerProvider.notifier)
+            .loadData(forceRefresh: true),
       );
     }
 
     return ResponsiveBuilder(
       builder: (context, size) => RefreshIndicator(
-        onRefresh: () => ref.read(homeControllerProvider.notifier).loadData(forceRefresh: true),
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+        onRefresh: () => ref
+            .read(homeControllerProvider.notifier)
+            .loadData(forceRefresh: true),
+        child: CustomScrollView(
           cacheExtent: 350,
-          children: [
+          slivers: [
             // 1. Full-Width Cinematic Hero Banner
             if (homeState.heroItem != null)
-              HomeHeroBanner(
-                item: homeState.heroItem!,
-                onPlay: () => _playHero(context, ref, homeState.heroItem!),
-                onSecondaryAction: () => _handleHeroSecondary(context, homeState.heroItem!),
-                secondaryActionLabel: homeState.heroItem!.type == HeroItemType.live
-                    ? context.l10n.homeTvGuide
-                    : context.l10n.homeAllMovies,
+              SliverToBoxAdapter(
+                child: RepaintBoundary(
+                  key: const ValueKey('home-hero'),
+                  child: HomeHeroBanner(
+                    item: homeState.heroItem!,
+                    onPlay: () => _playHero(context, ref, homeState.heroItem!),
+                    onSecondaryAction: () =>
+                        _handleHeroSecondary(context, homeState.heroItem!),
+                    secondaryActionLabel:
+                        homeState.heroItem!.type == HeroItemType.live
+                        ? context.l10n.homeTvGuide
+                        : context.l10n.homeAllMovies,
+                  ),
+                ),
               ),
 
-            // Content Rows with comfortable horizontal margins
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 2. Continue Watching (Prominently featured immediately below Hero banner)
-                  if (homeState.continueWatching.isNotEmpty) ...[
-                    HomeSectionRow<WatchHistoryEntry>(
+            if (homeState.continueWatching.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  child: RepaintBoundary(
+                    key: const ValueKey('home-continue-watching'),
+                    child: HomeSectionRow<WatchHistoryEntry>(
                       title: context.l10n.labelContinueWatching,
                       icon: AppIcons.history,
                       onSeeAll: () => context.push(Routes.history),
@@ -152,12 +178,21 @@ class _HomeContent extends ConsumerWidget {
                         onTap: () => _playHistory(context, ref, entry),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
+                  ),
+                ),
+              ),
+            if (homeState.continueWatching.isNotEmpty)
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
 
-                  // 3. Featured Movies
-                  if (homeState.featuredMovies.isNotEmpty) ...[
-                    HomeSectionRow<Movie>(
+            if (homeState.featuredMovies.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  child: RepaintBoundary(
+                    key: const ValueKey('home-featured-movies'),
+                    child: HomeSectionRow<Movie>(
                       title: context.l10n.homeFeaturedMovies,
                       icon: AppIcons.movies,
                       onSeeAll: () => context.push(Routes.movies),
@@ -168,12 +203,21 @@ class _HomeContent extends ConsumerWidget {
                         onTap: () => _playMovie(context, ref, movie),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
+                  ),
+                ),
+              ),
+            if (homeState.featuredMovies.isNotEmpty)
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
 
-                  // 4. Popular Series
-                  if (homeState.popularSeries.isNotEmpty) ...[
-                    HomeSectionRow<Series>(
+            if (homeState.popularSeries.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  child: RepaintBoundary(
+                    key: const ValueKey('home-popular-series'),
+                    child: HomeSectionRow<Series>(
                       title: context.l10n.homePopularSeries,
                       icon: AppIcons.series,
                       onSeeAll: () => context.push(Routes.series),
@@ -181,15 +225,24 @@ class _HomeContent extends ConsumerWidget {
                       height: 195,
                       itemBuilder: (context, series, _) => SeriesCard(
                         series: series,
-                        onTap: () => context.push(Routes.series),
+                        onTap: () => showSeriesDetailsModal(context, series),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
+                  ),
+                ),
+              ),
+            if (homeState.popularSeries.isNotEmpty)
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
 
-                  // 5. Sports Channels
-                  if (homeState.sportsChannels.isNotEmpty) ...[
-                    HomeSectionRow<Channel>(
+            if (homeState.sportsChannels.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  child: RepaintBoundary(
+                    key: const ValueKey('home-sports-channels'),
+                    child: HomeSectionRow<Channel>(
                       title: context.l10n.homeSportsChannels,
                       icon: AppIcons.sports,
                       onSeeAll: () => context.push(Routes.live),
@@ -200,12 +253,21 @@ class _HomeContent extends ConsumerWidget {
                         onTap: () => _playChannel(context, ref, channel),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
+                  ),
+                ),
+              ),
+            if (homeState.sportsChannels.isNotEmpty)
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
 
-                  // 6. News Channels
-                  if (homeState.newsChannels.isNotEmpty) ...[
-                    HomeSectionRow<Channel>(
+            if (homeState.newsChannels.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  child: RepaintBoundary(
+                    key: const ValueKey('home-news-channels'),
+                    child: HomeSectionRow<Channel>(
                       title: context.l10n.homeNewsChannels,
                       icon: AppIcons.news,
                       onSeeAll: () => context.push(Routes.live),
@@ -216,12 +278,21 @@ class _HomeContent extends ConsumerWidget {
                         onTap: () => _playChannel(context, ref, channel),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
+                  ),
+                ),
+              ),
+            if (homeState.newsChannels.isNotEmpty)
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
 
-                  // 7. Favorites (Only shown if favorites exist)
-                  if (homeState.favorites.isNotEmpty) ...[
-                    HomeSectionRow<Favorite>(
+            if (homeState.favorites.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  child: RepaintBoundary(
+                    key: const ValueKey('home-favorites'),
+                    child: HomeSectionRow<Favorite>(
                       title: context.l10n.labelFavorites,
                       icon: AppIcons.favorites,
                       onSeeAll: () => context.push(Routes.favorites),
@@ -239,10 +310,11 @@ class _HomeContent extends ConsumerWidget {
                         onTap: () => _playFavorite(context, ref, fav),
                       ),
                     ),
-                  ],
-                ],
+                  ),
+                ),
               ),
-            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
           ],
         ),
       ),
@@ -276,14 +348,16 @@ class _HomeContent extends ConsumerWidget {
       streamId: channel.streamId,
     );
 
-    ref.read(playerControllerProvider.notifier).load(
-      LiveSource(
-        channelId: channel.streamId,
-        channelName: channel.name,
-        url: streamUrl,
-        logoUrl: channel.streamIcon,
-      ),
-    );
+    ref
+        .read(playerControllerProvider.notifier)
+        .load(
+          LiveSource(
+            channelId: channel.streamId,
+            channelName: channel.name,
+            url: streamUrl,
+            logoUrl: channel.streamIcon,
+          ),
+        );
 
     context.push(Routes.player);
   }
@@ -300,20 +374,25 @@ class _HomeContent extends ConsumerWidget {
       extension: movie.containerExtension ?? 'mp4',
     );
 
-    ref.read(playerControllerProvider.notifier).load(
-      VodSource(
-        url: streamUrl,
-        title: movie.name,
-        movieId: movie.streamId,
-        posterUrl: movie.streamIcon,
-      ),
-    );
+    ref
+        .read(playerControllerProvider.notifier)
+        .load(
+          VodSource(
+            url: streamUrl,
+            title: movie.name,
+            movieId: movie.streamId,
+            posterUrl: movie.streamIcon,
+          ),
+        );
 
     context.push(Routes.player);
   }
 
-
-  void _playHistory(BuildContext context, WidgetRef ref, WatchHistoryEntry entry) {
+  void _playHistory(
+    BuildContext context,
+    WidgetRef ref,
+    WatchHistoryEntry entry,
+  ) {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
@@ -328,15 +407,17 @@ class _HomeContent extends ConsumerWidget {
         password: session.password,
         streamId: entry.itemId,
       );
-      ref.read(playerControllerProvider.notifier).load(
-        VodSource(
-          url: streamUrl,
-          title: entry.name,
-          movieId: entry.itemId,
-          posterUrl: entry.imageUrl,
-          startAt: startAt,
-        ),
-      );
+      ref
+          .read(playerControllerProvider.notifier)
+          .load(
+            VodSource(
+              url: streamUrl,
+              title: entry.name,
+              movieId: entry.itemId,
+              posterUrl: entry.imageUrl,
+              startAt: startAt,
+            ),
+          );
     } else if (entry.type == WatchHistoryType.episode) {
       final streamUrl = XtreamRemoteDataSource.buildSeriesStreamUrl(
         serverUrl: session.serverUrl,
@@ -344,15 +425,17 @@ class _HomeContent extends ConsumerWidget {
         password: session.password,
         streamId: entry.itemId,
       );
-      ref.read(playerControllerProvider.notifier).load(
-        EpisodeSource(
-          url: streamUrl,
-          title: entry.name,
-          episodeId: entry.itemId,
-          posterUrl: entry.imageUrl,
-          startAt: startAt,
-        ),
-      );
+      ref
+          .read(playerControllerProvider.notifier)
+          .load(
+            EpisodeSource(
+              url: streamUrl,
+              title: entry.name,
+              episodeId: entry.itemId,
+              posterUrl: entry.imageUrl,
+              startAt: startAt,
+            ),
+          );
     } else {
       final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
         serverUrl: session.serverUrl,
@@ -360,19 +443,20 @@ class _HomeContent extends ConsumerWidget {
         password: session.password,
         streamId: entry.itemId,
       );
-      ref.read(playerControllerProvider.notifier).load(
-        LiveSource(
-          url: streamUrl,
-          channelName: entry.name,
-          channelId: entry.itemId,
-          logoUrl: entry.imageUrl,
-        ),
-      );
+      ref
+          .read(playerControllerProvider.notifier)
+          .load(
+            LiveSource(
+              url: streamUrl,
+              channelName: entry.name,
+              channelId: entry.itemId,
+              logoUrl: entry.imageUrl,
+            ),
+          );
     }
 
     context.push(Routes.player);
   }
-
 
   void _playFavorite(BuildContext context, WidgetRef ref, Favorite fav) {
     final session = ref.read(sessionProvider).valueOrNull;
@@ -385,14 +469,16 @@ class _HomeContent extends ConsumerWidget {
         password: session.password,
         streamId: fav.itemId,
       );
-      ref.read(playerControllerProvider.notifier).load(
-        PlayerSource.vod(
-          url: streamUrl,
-          title: fav.name,
-          movieId: fav.itemId,
-          posterUrl: fav.imageUrl,
-        ),
-      );
+      ref
+          .read(playerControllerProvider.notifier)
+          .load(
+            PlayerSource.vod(
+              url: streamUrl,
+              title: fav.name,
+              movieId: fav.itemId,
+              posterUrl: fav.imageUrl,
+            ),
+          );
       context.push(Routes.player);
     } else if (fav.type == FavoriteType.channel) {
       final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
@@ -401,14 +487,16 @@ class _HomeContent extends ConsumerWidget {
         password: session.password,
         streamId: fav.itemId,
       );
-      ref.read(playerControllerProvider.notifier).load(
-        PlayerSource.live(
-          url: streamUrl,
-          title: fav.name,
-          channelId: fav.itemId,
-          logoUrl: fav.imageUrl,
-        ),
-      );
+      ref
+          .read(playerControllerProvider.notifier)
+          .load(
+            PlayerSource.live(
+              url: streamUrl,
+              title: fav.name,
+              channelId: fav.itemId,
+              logoUrl: fav.imageUrl,
+            ),
+          );
       context.push(Routes.player);
     } else {
       context.push(Routes.series);

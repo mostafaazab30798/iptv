@@ -6,6 +6,7 @@ import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
+import 'package:iptv/app/theme/app_motion.dart';
 import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
@@ -85,22 +86,24 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
       extension: movie.containerExtension ?? 'mp4',
     );
 
-    ref.read(playerControllerProvider.notifier).load(
-      VodSource(
-        movieId: movie.streamId,
-        title: movie.name,
-        url: streamUrl,
-        posterUrl: movie.streamIcon,
-      ),
-    );
+    ref
+        .read(playerControllerProvider.notifier)
+        .load(
+          VodSource(
+            movieId: movie.streamId,
+            title: movie.name,
+            url: streamUrl,
+            posterUrl: movie.streamIcon,
+          ),
+        );
 
     context.push(Routes.player);
   }
 
   @override
   Widget build(BuildContext context) {
-    final moviesState = ref.watch(moviesControllerProvider);
-    final isCategorySelected = _selectedCategory != null || _isAllMoviesSelected;
+    final isCategorySelected =
+        _selectedCategory != null || _isAllMoviesSelected;
 
     return PopScope(
       canPop: !isCategorySelected,
@@ -112,10 +115,10 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
       child: Scaffold(
         backgroundColor: AppColors.bg0,
         body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
+          duration: MotionPolicy.of(context).standard,
           child: isCategorySelected
-              ? _buildMoviesGridView(moviesState)
-              : _buildCategoriesHub(moviesState),
+              ? _MoviesGridConsumer(builder: _buildMoviesGridView)
+              : _MoviesCategoriesConsumer(builder: _buildCategoriesHub),
         ),
       ),
     );
@@ -137,7 +140,10 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
               icon: AppIcons.movies,
             )
           : ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
               cacheExtent: 350,
               itemCount: categories.length + 1,
               separatorBuilder: (_, index) => const SizedBox(height: 8),
@@ -182,10 +188,15 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
           builder: (context, constraints) {
             final isCompact = constraints.maxWidth < 600;
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
               decoration: const BoxDecoration(
                 color: AppColors.bg1,
-                border: Border(bottom: BorderSide(color: AppColors.border, width: 0.8)),
+                border: Border(
+                  bottom: BorderSide(color: AppColors.border, width: 0.8),
+                ),
               ),
               child: Row(
                 children: [
@@ -193,25 +204,44 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                     IconButton(
                       onPressed: _onBack,
                       tooltip: context.l10n.labelCategories,
-                      icon: HugeIcon(icon: backIcon, size: 14, color: AppColors.accent),
+                      icon: HugeIcon(
+                        icon: backIcon,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
                       style: IconButton.styleFrom(
                         backgroundColor: AppColors.accent.withAlpha(25),
                         padding: const EdgeInsets.all(8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     )
                   else
                     TextButton.icon(
                       onPressed: _onBack,
-                      icon: HugeIcon(icon: backIcon, size: 14, color: AppColors.accent),
+                      icon: HugeIcon(
+                        icon: backIcon,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
                       label: Text(
                         context.l10n.labelCategories,
-                        style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                       style: TextButton.styleFrom(
                         backgroundColor: AppColors.accent.withAlpha(25),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   const SizedBox(width: 8),
@@ -233,14 +263,21 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.bg3,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             '${moviesState.filteredMovies.length}',
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -260,22 +297,41 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                           return TextField(
                             controller: _movieSearchController,
                             onChanged: (q) {
-                              ref.read(moviesControllerProvider.notifier).search(q);
+                              ref
+                                  .read(moviesControllerProvider.notifier)
+                                  .search(q);
                             },
                             style: const TextStyle(fontSize: 12),
                             decoration: InputDecoration(
-                              hintText: isCompact ? context.l10n.actionSearch : context.l10n.moviesSearchHint,
-                              prefixIcon: const HugeIcon(icon: AppIcons.search, size: 15, color: AppColors.textSecondary),
+                              hintText: isCompact
+                                  ? context.l10n.actionSearch
+                                  : context.l10n.moviesSearchHint,
+                              prefixIcon: const HugeIcon(
+                                icon: AppIcons.search,
+                                size: 15,
+                                color: AppColors.textSecondary,
+                              ),
                               suffixIcon: value.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const HugeIcon(icon: AppIcons.close, size: 13, color: AppColors.textSecondary),
+                                      icon: const HugeIcon(
+                                        icon: AppIcons.close,
+                                        size: 13,
+                                        color: AppColors.textSecondary,
+                                      ),
                                       onPressed: () {
                                         _movieSearchController.clear();
-                                        ref.read(moviesControllerProvider.notifier).search('');
+                                        ref
+                                            .read(
+                                              moviesControllerProvider.notifier,
+                                            )
+                                            .search('');
                                       },
                                     )
                                   : null,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 0,
+                              ),
                             ),
                           );
                         },
@@ -291,31 +347,83 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
           child: moviesState.isLoading
               ? const PosterGridSkeleton()
               : moviesState.filteredMovies.isEmpty
-                  ? EmptyState(
-                      title: context.l10n.moviesNoMoviesFound,
-                      subtitle: context.l10n.searchNoResultsSubtitle,
-                      icon: AppIcons.movies,
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      cacheExtent: 350,
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 170,
-                        childAspectRatio: 2 / 3,
-                        crossAxisSpacing: AppSpacing.md,
-                        mainAxisSpacing: AppSpacing.md,
-                      ),
-                      itemCount: moviesState.filteredMovies.length,
-                      itemBuilder: (context, i) {
-                        final movie = moviesState.filteredMovies[i];
-                        return _MovieGridCard(
-                          movie: movie,
-                          onTap: () => _playMovie(movie),
-                        );
-                      },
-                    ),
+              ? EmptyState(
+                  title: context.l10n.moviesNoMoviesFound,
+                  subtitle: context.l10n.searchNoResultsSubtitle,
+                  icon: AppIcons.movies,
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  cacheExtent: 350,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 170,
+                    childAspectRatio: 2 / 3,
+                    crossAxisSpacing: AppSpacing.md,
+                    mainAxisSpacing: AppSpacing.md,
+                  ),
+                  itemCount: moviesState.filteredMovies.length,
+                  itemBuilder: (context, i) {
+                    final movie = moviesState.filteredMovies[i];
+                    return _MovieGridCard(
+                      movie: movie,
+                      onTap: () => _playMovie(movie),
+                    );
+                  },
+                ),
         ),
       ],
+    );
+  }
+}
+
+class _MoviesCategoriesConsumer extends ConsumerWidget {
+  const _MoviesCategoriesConsumer({required this.builder});
+
+  final Widget Function(MoviesState state) builder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(
+      moviesControllerProvider.select(
+        (state) => (
+          categories: state.categories,
+          totalMovieCount: state.totalMovieCount,
+          categoryCounts: state.categoryCounts,
+          categoryLeadingLogos: state.categoryLeadingLogos,
+          isLoading: state.isLoading,
+        ),
+      ),
+    );
+    return builder(
+      MoviesState(
+        categories: state.categories,
+        totalMovieCount: state.totalMovieCount,
+        categoryCounts: state.categoryCounts,
+        categoryLeadingLogos: state.categoryLeadingLogos,
+        isLoading: state.isLoading,
+      ),
+    );
+  }
+}
+
+class _MoviesGridConsumer extends ConsumerWidget {
+  const _MoviesGridConsumer({required this.builder});
+
+  final Widget Function(MoviesState state) builder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(
+      moviesControllerProvider.select(
+        (state) =>
+            (filteredMovies: state.filteredMovies, isLoading: state.isLoading),
+      ),
+    );
+    return builder(
+      MoviesState(
+        filteredMovies: state.filteredMovies,
+        isLoading: state.isLoading,
+      ),
     );
   }
 }
@@ -352,7 +460,9 @@ class _MovieGridCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppRadius.card)),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(AppRadius.card),
+                ),
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -377,7 +487,10 @@ class _MovieGridCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${movie.releaseYear}',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                      ),
                     ),
                   ],
                 ],
@@ -398,11 +511,19 @@ class _MovieGridCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const HugeIcon(icon: AppIcons.star, color: AppColors.warning, size: 11),
+                    const HugeIcon(
+                      icon: AppIcons.star,
+                      color: AppColors.warning,
+                      size: 11,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       movie.rating!,
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),

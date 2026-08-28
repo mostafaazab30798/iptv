@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,16 +12,42 @@ import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/core/storage/database/app_database.dart';
 import 'package:iptv/core/storage/preferences_storage.dart';
 
-/// Bootstrap sequence:
-/// 1. Initialize Flutter bindings
-/// 2. Initialize MediaKit playback subsystem
-/// 3. Cap Flutter image cache (low-RAM aware)
-/// 4. Initialize logging
-/// 5. Initialize platform service
-/// 6. Initialize preferences
-/// 7. Open local database
-/// 8. Support all device orientations (portrait + landscape)
-/// 9. Launch app
+Future<void>? _postFrameInitialization;
+
+/// Initializes plugin-backed services after Flutter has rendered its first frame.
+Future<void> initializeAfterFirstFrame() {
+  return _postFrameInitialization ??= _initializeAfterFirstFrame();
+}
+
+Future<void> _initializeAfterFirstFrame() async {
+  await Future.wait<void>([
+    PlatformService.instance.initialize(),
+    PreferencesStorage.initialize(),
+  ]);
+
+  final platform = PlatformService.instance;
+  AppLogger.info(
+    'Platform: ${platform.platformType} lowRam=${DeviceMemory.isLowRamDevice}',
+    feature: 'bootstrap',
+  );
+
+  if (platform.isAndroid) {
+    await SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  if (platform.isAndroid || platform.isAndroidTv) {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  }
+
+  AppLogger.info('Post-frame initialization complete', feature: 'bootstrap');
+}
+
+/// Initializes the minimum synchronous services needed to render Flutter UI.
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
@@ -34,36 +62,11 @@ Future<void> bootstrap() async {
   AppLogger.initialize(verbose: kDebugMode);
   AppLogger.info('Bootstrap starting', feature: 'bootstrap');
 
-  // Platform detection.
-  await PlatformService.instance.initialize();
-  AppLogger.info(
-    'Platform: ${PlatformService.instance.platformType} lowRam=$lowRam',
-    feature: 'bootstrap',
-  );
-
-  // Preferences — non-sensitive settings.
-  await PreferencesStorage.initialize();
-
-  // Support both portrait and landscape orientations on mobile and tablet devices.
-  if (PlatformService.instance.isAndroid) {
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-  }
-
-  // Immersive mode on TV/Android.
-  if (PlatformService.instance.isAndroid || PlatformService.instance.isAndroidTv) {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  }
-
   // Open database — isolated so crash is caught before UI renders.
   final db = AppDatabase();
   AppLogger.info('Database opened', feature: 'bootstrap');
 
-  AppLogger.info('Bootstrap complete', feature: 'bootstrap');
+  AppLogger.info('Launching Flutter UI', feature: 'bootstrap');
 
   runApp(
     ProviderScope(

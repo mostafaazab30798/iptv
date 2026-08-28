@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv/app/bootstrap.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
@@ -32,6 +33,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _navigate() async {
+    await initializeAfterFirstFrame();
     await ref.read(sessionProvider.notifier).loadSession();
     if (!mounted) return;
 
@@ -108,10 +110,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       fontWeight: FontWeight.w800,
                       letterSpacing: 10,
                       shadows: [
-                        Shadow(
-                          color: Color(0x9600E5FF),
-                          blurRadius: 16,
-                        ),
+                        Shadow(color: Color(0x9600E5FF), blurRadius: 16),
                       ],
                     ),
                   ),
@@ -126,9 +125,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   child: Shimmer(
                     baseColor: AppColors.bg3,
                     highlightColor: AppColors.accent,
-                    child: Container(
-                      color: AppColors.bg3,
-                    ),
+                    child: Container(color: AppColors.bg3),
                   ),
                 ),
               ),

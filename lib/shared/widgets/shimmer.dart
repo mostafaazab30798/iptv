@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/core/platform/device_memory.dart';
 
 /// Premium animated Shimmer container that drives a synchronized gradient sweep.
 /// Wraps any skeleton widgets (like [ShimmerBox]) to give them a modern shimmering effect.
@@ -29,10 +30,8 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    )..repeat();
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat();
   }
 
   @override
@@ -43,30 +42,37 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.enabled) return widget.child;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (!widget.enabled || reduceMotion || DeviceMemory.isLowRamDevice) {
+      return widget.child;
+    }
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return ShaderMask(
-          blendMode: BlendMode.srcATop,
-          shaderCallback: (bounds) {
-            return LinearGradient(
-              begin: const Alignment(-1.0, -0.3),
-              end: const Alignment(1.0, 0.3),
-              colors: [
-                widget.baseColor,
-                widget.highlightColor,
-                widget.baseColor,
-              ],
-              stops: const [0.0, 0.5, 1.0],
-              transform: _SlidingGradientTransform(slidePercent: _controller.value),
-            ).createShader(bounds);
-          },
-          child: child,
-        );
-      },
-      child: widget.child,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return ShaderMask(
+            blendMode: BlendMode.srcATop,
+            shaderCallback: (bounds) {
+              return LinearGradient(
+                begin: const Alignment(-1.0, -0.3),
+                end: const Alignment(1.0, 0.3),
+                colors: [
+                  widget.baseColor,
+                  widget.highlightColor,
+                  widget.baseColor,
+                ],
+                stops: const [0.0, 0.5, 1.0],
+                transform: _SlidingGradientTransform(
+                  slidePercent: _controller.value,
+                ),
+              ).createShader(bounds);
+            },
+            child: child,
+          );
+        },
+        child: widget.child,
+      ),
     );
   }
 }
@@ -111,7 +117,9 @@ class ShimmerBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? AppColors.bg2,
         shape: shape,
-        borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(borderRadius),
+        borderRadius: shape == BoxShape.circle
+            ? null
+            : BorderRadius.circular(borderRadius),
       ),
     );
   }

@@ -50,8 +50,9 @@ class MoviesState {
   }) {
     return MoviesState(
       categories: categories ?? this.categories,
-      selectedCategoryId:
-          clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
+      selectedCategoryId: clearCategory
+          ? null
+          : (selectedCategoryId ?? this.selectedCategoryId),
       filteredMovies: filteredMovies ?? this.filteredMovies,
       totalMovieCount: totalMovieCount ?? this.totalMovieCount,
       categoryCounts: categoryCounts ?? this.categoryCounts,
@@ -105,10 +106,7 @@ class MoviesController extends StateNotifier<MoviesState> {
         forceRefresh: forceRefresh,
       );
 
-      final movies = movieResult.when(
-        ok: (m) => m,
-        err: (_) => <Movie>[],
-      );
+      final movies = movieResult.when(ok: (m) => m, err: (_) => <Movie>[]);
 
       _catalog = movies;
 
@@ -165,7 +163,9 @@ class MoviesController extends StateNotifier<MoviesState> {
     state = state.copyWith(
       selectedCategoryId: categoryId,
       searchQuery: '',
-      filteredMovies: _catalog.where((m) => m.categoryId == categoryId).toList(),
+      filteredMovies: _catalog
+          .where((m) => m.categoryId == categoryId)
+          .toList(),
       isLoading: false,
     );
   }
@@ -202,8 +202,8 @@ class MoviesController extends StateNotifier<MoviesState> {
     final base = state.selectedCategoryId == null
         ? _catalog
         : _catalog
-            .where((m) => m.categoryId == state.selectedCategoryId)
-            .toList();
+              .where((m) => m.categoryId == state.selectedCategoryId)
+              .toList();
 
     if (query.isEmpty) {
       if (epoch != _searchEpoch) return;
@@ -214,8 +214,10 @@ class MoviesController extends StateNotifier<MoviesState> {
     final List<Movie> filtered;
     if (base.length > 1500) {
       final names = [for (final m in base) m.name];
-      final indexes =
-          await compute(_filterNameIndexes, (names, query.toLowerCase()));
+      final indexes = await compute(_filterNameIndexes, (
+        names,
+        query.toLowerCase(),
+      ));
       if (epoch != _searchEpoch) return;
       filtered = [for (final i in indexes) base[i]];
     } else {
@@ -239,8 +241,7 @@ List<int> _filterNameIndexes((List<String> names, String query) args) {
 }
 
 final moviesControllerProvider =
-    StateNotifierProvider<MoviesController, MoviesState>((ref) {
-  ref.keepAlive();
-  final repo = ref.watch(vodRepositoryProvider);
-  return MoviesController(repo);
-});
+    StateNotifierProvider.autoDispose<MoviesController, MoviesState>((ref) {
+      final repo = ref.watch(vodRepositoryProvider);
+      return MoviesController(repo);
+    });

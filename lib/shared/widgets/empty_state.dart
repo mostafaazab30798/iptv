@@ -10,16 +10,22 @@ class EmptyState extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.eyebrow,
+    this.illustration,
     this.icon = AppIcons.empty,
     this.actionLabel,
     this.onAction,
+    this.secondaryAction,
   });
 
   final String title;
   final String? subtitle;
+  final String? eyebrow;
+  final Widget? illustration;
   final dynamic icon;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final Widget? secondaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -29,10 +35,31 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            icon is IconData
-                ? Icon(icon as IconData, size: 56, color: AppColors.textDisabled)
-                : HugeIcon(icon: icon as List<List<dynamic>>, size: 56, color: AppColors.textDisabled),
+            illustration ??
+                (icon is IconData
+                    ? Icon(
+                        icon as IconData,
+                        size: 56,
+                        color: AppColors.textDisabled,
+                      )
+                    : HugeIcon(
+                        icon: icon as List<List<dynamic>>,
+                        size: 56,
+                        color: AppColors.textDisabled,
+                      )),
             const SizedBox(height: AppSpacing.md),
+            if (eyebrow != null) ...[
+              Text(
+                eyebrow!,
+                style: const TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
             Text(
               title,
               style: const TextStyle(
@@ -55,10 +82,11 @@ class EmptyState extends StatelessWidget {
             ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.lg),
-              ElevatedButton(
-                onPressed: onAction,
-                child: Text(actionLabel!),
-              ),
+              ElevatedButton(onPressed: onAction, child: Text(actionLabel!)),
+            ],
+            if (secondaryAction != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              secondaryAction!,
             ],
           ],
         ),
