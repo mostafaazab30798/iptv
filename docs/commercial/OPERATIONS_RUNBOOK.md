@@ -19,11 +19,12 @@ gpg --symmetric --cipher-algo AES256 "hope-tv-$(date -u +%Y%m%d).dump"
 
 Store ciphertext off-project (encrypted object storage or password manager vault attachment).
 
-### Release artifacts (R2)
+### Release artifacts (GitHub Releases)
 
-- Enable object versioning or lifecycle rules on the private R2 bucket.
-- Retain at least the last three published stable builds per platform.
-- Never expose public object URLs; downloads flow through the download gateway.
+- Protect the `main` branch and restrict who can run production release workflows.
+- Retain at least the last three published stable releases per platform.
+- Keep each GitHub asset, Supabase `object_key`, file size, and SHA-256 digest consistent.
+- Revoke a compromised Supabase release row and remove or replace the corresponding GitHub asset.
 
 ## 2. Restore drill (required before production launch)
 
@@ -63,7 +64,7 @@ Store ciphertext off-project (encrypted object storage or password manager vault
 | Webhook backlog | `pendingWebhooks` > 50 | Inspect `private.webhook_events`, replay failed events |
 | Due deletions | `dueDeletions` > 0 for 24h | Run deletion processor manually; verify `CRON_SECRET` |
 | Entitlement denials | Spike by app version | Check release regression, clock skew, signing keys |
-| Download auth abuse | Token failures > 100/hr | Review gateway logs, revoke abusive accounts |
+| Download auth abuse | Authorization failures > 100/hr | Review Supabase `downloads` logs and account activity |
 | Analytics rejection rate | > 5% ingest failures | Validate client schema version, property allowlist |
 
 Wire alerts to the owner on-call channel before general availability.
@@ -89,7 +90,7 @@ Exercise with staging credentials only:
 
 - Auth OTP request/verify (rate-limited)
 - `entitlement`, `trial-activate`, `analytics-batch`
-- `downloads` + download gateway authorize
+- `downloads` authorization + GitHub release URL resolution
 - Billing webhook replay (when provider configured)
 
 Record p95 latency and error rates; block launch if any critical path exceeds agreed SLOs.

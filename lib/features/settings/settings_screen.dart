@@ -11,9 +11,33 @@ import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/features/auth/auth_controller.dart';
+import 'package:iptv/features/updates/update_controller.dart';
 import 'package:iptv/features/updates/update_dialog.dart';
 
 import 'package:iptv/shared/extensions/context_extensions.dart';
+
+String _updateStatusLabel(BuildContext context, UpdateState state) {
+  final l10n = context.l10n;
+  switch (state.status) {
+    case UpdateFlowStatus.checking:
+      return l10n.updateStatusChecking;
+    case UpdateFlowStatus.available:
+      return l10n.updateStatusAvailable;
+    case UpdateFlowStatus.upToDate:
+      return l10n.updateStatusUpToDate;
+    case UpdateFlowStatus.unsupported:
+      return l10n.updateStatusUnsupported;
+    case UpdateFlowStatus.notConfigured:
+      return l10n.updateStatusNotConfigured;
+    case UpdateFlowStatus.error:
+      return l10n.updateStatusError;
+    case UpdateFlowStatus.idle:
+    case UpdateFlowStatus.launching:
+      return state.updateAvailable
+          ? l10n.updateStatusAvailable
+          : l10n.updateStatusUpToDate;
+  }
+}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -23,10 +47,15 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.bg1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
         title: Text(
           context.l10n.settingsConfirmSignOut,
-          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
           context.l10n.settingsConfirmSignOutMessage,
@@ -35,7 +64,10 @@ class SettingsScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(context.l10n.actionCancel, style: const TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              context.l10n.actionCancel,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
@@ -88,9 +120,22 @@ class SettingsScreen extends ConsumerWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
-                    leading: const HugeIcon(icon: AppIcons.dns, color: AppColors.accent, size: 22),
-                    title: Text(session.serverUrl, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-                    subtitle: Text('${context.l10n.settingsUser}: ${session.username}', style: const TextStyle(color: AppColors.textSecondary)),
+                    leading: const HugeIcon(
+                      icon: AppIcons.dns,
+                      color: AppColors.accent,
+                      size: 22,
+                    ),
+                    title: Text(
+                      session.serverUrl,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${context.l10n.settingsUser}: ${session.username}',
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                 ],
               ),
@@ -123,12 +168,22 @@ class SettingsScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
-                  leading: const HugeIcon(icon: AppIcons.user, color: AppColors.accent, size: 22),
+                  leading: const HugeIcon(
+                    icon: AppIcons.user,
+                    color: AppColors.accent,
+                    size: 22,
+                  ),
                   title: Text(
                     context.l10n.accountTitle,
-                    style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                  ),
                   onTap: () => context.push(Routes.account),
                 ),
                 const SizedBox(height: 6),
@@ -137,11 +192,24 @@ class SettingsScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
-                  leading: const HugeIcon(icon: AppIcons.logout, color: AppColors.error, size: 22),
-                  title: Text(context.l10n.actionSignOut, style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                  leading: const HugeIcon(
+                    icon: AppIcons.logout,
+                    color: AppColors.error,
+                    size: 22,
+                  ),
+                  title: Text(
+                    context.l10n.actionSignOut,
+                    style: const TextStyle(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   subtitle: Text(
                     context.l10n.settingsSignOutIptvHint,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                   onTap: () => _signOut(context, ref),
                 ),
@@ -167,15 +235,26 @@ class SettingsScreen extends ConsumerWidget {
                       style: TextStyle(color: AppColors.textPrimary),
                     ),
                     subtitle: Text(
-                      ref.watch(updateProvider).updateAvailable
-                          ? 'Update available'
-                          : 'HOPE TV ${AppConstants.appVersion}',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      _updateStatusLabel(context, ref.watch(updateProvider)),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                     onTap: () async {
-                      await ref.read(updateProvider.notifier).checkForUpdates();
+                      await ref
+                          .read(updateProvider.notifier)
+                          .checkForUpdates(force: true);
                       if (context.mounted) {
-                        await showUpdateDialogIfNeeded(context, ref);
+                        final updateState = ref.read(updateProvider);
+                        if (updateState.status == UpdateFlowStatus.error &&
+                            updateState.errorMessage != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(updateState.errorMessage!)),
+                          );
+                        } else {
+                          await showUpdateDialogIfNeeded(context, ref);
+                        }
                       }
                     },
                   ),
@@ -200,10 +279,16 @@ class SettingsScreen extends ConsumerWidget {
                       fit: BoxFit.contain,
                     ),
                   ),
-                  title: Text(context.l10n.settingsVersion, style: const TextStyle(color: AppColors.textPrimary)),
+                  title: Text(
+                    context.l10n.settingsVersion,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                  ),
                   trailing: Text(
                     AppConstants.appVersion,
-                    style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -260,11 +345,27 @@ class _LanguageOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       tileColor: AppColors.bg1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-      title: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       trailing: selected
-          ? const HugeIcon(icon: AppIcons.checkCircle, color: AppColors.accent, size: 20)
-          : const HugeIcon(icon: AppIcons.circle, color: AppColors.textDisabled, size: 20),
+          ? const HugeIcon(
+              icon: AppIcons.checkCircle,
+              color: AppColors.accent,
+              size: 20,
+            )
+          : const HugeIcon(
+              icon: AppIcons.circle,
+              color: AppColors.textDisabled,
+              size: 20,
+            ),
       onTap: onTap,
     );
   }

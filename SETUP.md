@@ -60,6 +60,18 @@ flutter run -d <tv-device-id>
 flutter run -d chrome
 ```
 
+### Production domain, email, and Supabase
+
+For the `hope-tv.site` Cloudflare routes, turboSMTP sender authentication,
+Supabase Auth URLs, SMTP fields, and the launch verification checklist, see
+[`docs/commercial/DOMAIN_EMAIL_SUPABASE_SETUP.md`](docs/commercial/DOMAIN_EMAIL_SUPABASE_SETUP.md).
+
+Separate operational guides:
+
+- Owner actions: [`docs/commercial/OWNER_DOMAIN_EMAIL_BACKEND_RUNBOOK.md`](docs/commercial/OWNER_DOMAIN_EMAIL_BACKEND_RUNBOOK.md)
+- LLM/code-agent instructions: [`docs/commercial/LLM_AGENT_DOMAIN_EMAIL_BACKEND_INSTRUCTIONS.md`](docs/commercial/LLM_AGENT_DOMAIN_EMAIL_BACKEND_INSTRUCTIONS.md)
+- Lovable public website prompt: [`docs/commercial/LOVABLE_PUBLIC_WEBSITE_MASTER_PROMPT.md`](docs/commercial/LOVABLE_PUBLIC_WEBSITE_MASTER_PROMPT.md)
+
 ---
 
 ## Code Quality & Verification

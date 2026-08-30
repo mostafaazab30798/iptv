@@ -13,9 +13,8 @@ flowchart TB
     PG[(PostgreSQL plus RLS)]
     EF[Edge Functions]
   end
-  subgraph edge [Release edge]
-    DL[download_gateway]
-    R2[(Private R2)]
+  subgraph releases [Release delivery]
+    GH[GitHub Releases]
   end
   subgraph existing [Existing unchanged]
     IPTV[Root worker.js IPTV proxy]
@@ -27,8 +26,8 @@ flowchart TB
   Portal -->|Checkout later| EF
   EF --> PG
   Auth --> PG
-  Portal -->|Authorize download later| EF
-  DL -->|Verify token stream object| R2
+  Flutter -->|Authorize download| EF
+  EF -->|Resolve registered release URL| GH
   Flutter --> LocalCreds
   Flutter -->|Streams only| IPTV
 ```
@@ -41,7 +40,7 @@ flowchart TB
 | Trial and subscription state | High | PostgreSQL via Edge Functions |
 | Entitlement signing private key | Critical | Backend secrets only |
 | IPTV provider credentials | Critical | Flutter secure storage only |
-| Release binaries | High | Private R2 + download gateway |
+| Release binary integrity | High | GitHub Releases + signed manifest + SHA-256 |
 | Billing provider secrets | Critical | Deferred; Edge Function secrets when configured |
 
 ## Primary threats and mitigations
@@ -53,12 +52,12 @@ flowchart TB
 | Clock rollback extends access | Trusted server time; lease expiry; deny when integrity fails |
 | Cross-account data read | Deny-by-default RLS; RLS tests |
 | Service-role leak in client | Never ship service-role; audit client artifacts later |
-| Commercial secrets in IPTV Worker | Isolated download gateway + Edge Functions (ADR 0004) |
+| Commercial secrets in IPTV Worker | Supabase Edge Functions own authorization; GitHub/Supabase secrets never enter the IPTV Worker |
 | Checkout without provider | NotConfigured BillingProvider fails closed |
 | Analytics leaks IPTV URLs/credentials | Allowlisted events; strip forbidden properties (Phase 5) |
 | Account deletion incomplete | Grace-period workflow; processor finalizes anonymization; auth user removed after SQL finalize |
 | Retention drift | `private.data_retention_policies` + scheduled `purge_expired_raw_data_v1` |
-| Public release URLs | Private R2; short-lived tokens when automation lands |
+| Public release asset tampering | Protected release workflow, signed manifests, stored SHA-256, stable signing identities |
 | WebView / in-app card capture | Forbidden; external browser only when billing exists |
 
 ## Trust boundaries
@@ -66,7 +65,7 @@ flowchart TB
 1. **Device** — untrusted; binaries can be patched. Server remains authority.
 2. **Flutter / portal** — hold only publishable Supabase key + public verification keys.
 3. **Edge Functions (service role)** — trusted for mutations; least privilege per function.
-4. **Download gateway** — trusts Supabase JWKS / short-lived download tokens; private R2 binding.
+4. **GitHub Releases** — owns artifact hosting; Supabase owns release metadata and download authorization.
 5. **IPTV proxy** — untrusted for commercial data; must remain free of control-plane secrets.
 
 ## Out of scope for Phase 1

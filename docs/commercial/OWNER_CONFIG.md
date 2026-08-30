@@ -12,16 +12,16 @@ Aligned with `MASTER_SUBSCRIPTION_ANALYTICS_AGENT_PLAN.md` Section 0 and Section
 | Legacy dashboard scaffold | `admin-dashboard/` (minimal Vite app; superseded by hope-tv-insights) | Deprecated |
 | Owner dashboard backend | Supabase Edge Function `admin-api` (no service-role in browser) | Confirmed |
 | Commercial backend | Supabase Auth + PostgreSQL + Edge Functions | Confirmed |
-| Release storage / delivery | Private Cloudflare R2 + isolated download Worker | Confirmed |
+| Release storage / delivery | GitHub Releases + Supabase release metadata | Confirmed and implemented in `.github/workflows/release.yml` |
 | Temporary customer website | Available `*.pages.dev` name | Free staging path; exact name unresolved |
 | Temporary owner dashboard | `https://hope-tv.mostafaazab3024.workers.dev` | Confirmed and configured in Supabase CORS |
-| Temporary download endpoint | Generated `*.workers.dev` | Free staging path |
 | Temporary API endpoint | `https://<project-ref>.supabase.co` | Free staging path |
-| Production website domain | `PLACEHOLDER_WEBSITE_DOMAIN` | Required before paid production |
-| Production API / custom domain | `PLACEHOLDER_API_DOMAIN` | Optional; unresolved |
-| Portal origin | `https://hope-tv.mostafaazab3024.workers.dev` | Current shared browser origin configured through `PORTAL_ORIGIN` |
-| Admin dashboard origin | `https://hope-tv.mostafaazab3024.workers.dev` | Confirmed; exact origin has no trailing slash |
-| Android application ID | Proposed `com.hopetv.iptvplayer` | **Unconfirmed** — do not change `com.example.iptv` until owner approves |
+| Production website domain | `https://hope-tv.site` (`www` redirects to apex) | Confirmed; DNS resolves on Cloudflare (2026-08-30) |
+| Production admin dashboard | `https://admin.hope-tv.site` | Resolves; keep `workers.dev` fallback during cutover |
+| Production API / custom domain | `https://api.hope-tv.site` | Optional; keep Supabase project URL until its custom-domain add-on is enabled |
+| Portal origin | `https://admin.hope-tv.site` | Production `PORTAL_ORIGIN`; exact origin has no trailing slash |
+| Admin dashboard origin | `https://admin.hope-tv.site` | Production target; exact origin has no trailing slash |
+| Android application ID | `com.hopetv.iptvplayer` | Set in Gradle for production release builds |
 | Windows publisher identity | `PLACEHOLDER_WINDOWS_PUBLISHER` | Unresolved |
 | Merchant country / entity | `PLACEHOLDER_MERCHANT_ENTITY` | Unresolved |
 | Payment provider | `PLACEHOLDER_PAYMENT_PROVIDER` | Unresolved — NotConfigured provider fails closed |
@@ -35,14 +35,19 @@ Aligned with `MASTER_SUBSCRIPTION_ANALYTICS_AGENT_PLAN.md` Section 0 and Section
 | Entitlement signing key ID | `entitlement-prod-2026-08-29-01` | Production Ed25519 key configured in Supabase |
 | Entitlement public key (hex) | `64eb26d19dafdd3a1ffd3e0c7a5998554579a5e967215c334a194e5638023952` | Non-secret; embed through `ENTITLEMENT_PUBLIC_KEYS_JSON` |
 | Trial duration (new trials) | `7` days | Server-authoritative; snapshot on activation |
-| Email delivery provider | `PLACEHOLDER_EMAIL_PROVIDER` | Unresolved |
-| Support contact email | `PLACEHOLDER_SUPPORT_EMAIL` | Unresolved |
-| Support contact URL | `PLACEHOLDER_SUPPORT_URL` | Unresolved |
+| Email delivery provider | turboSMTP through Supabase Custom SMTP | Confirmed; credentials remain in Supabase only |
+| Auth sender email | `no-reply@auth.hope-tv.site` | Confirmed target; verify the sending domain in turboSMTP first |
+| Android release signing | Generated locally; uploaded as `ANDROID_KEYSTORE_*` GitHub secrets | Ready for CI (backup passwords file is gitignored under `android/keystore/`) |
+| Client entitlement verify key | Embedded via `ENTITLEMENT_PUBLIC_KEYS_JSON` secret + workflow default | Set |
+| Client portal origin | `PORTAL_ORIGIN=https://admin.hope-tv.site` | Set in GitHub secrets |
+| Release manifest public keys | `RELEASE_PUBLIC_KEYS_JSON` | Ed25519 `release-prod-2026-08-30-01` configured in Supabase + GitHub |
+| Support contact email | `support@hope-tv.site` | Confirmed address; mailbox/forwarder still owner-operated |
+| Support contact URL | `mailto:support@hope-tv.site` | Confirmed |
 | Supabase region | `ap-southeast-1` | Confirmed from linked project |
 | Supabase project (local) | local CLI stack | See LOCAL_DEV.md |
 | Supabase project (staging) | `PLACEHOLDER_SUPABASE_STAGING_PROJECT` | Unresolved |
 | Supabase project (production) | `otmovtxevvuxbsrmurkb` (`iptv`) | Linked; paid plan with backups required before paying users |
-| Distribution mode | **Manual** until Phase 6 | APK / Windows installer by hand |
+| Distribution mode | GitHub Actions → GitHub Releases | Automated for Android and Windows |
 
 ## Environments
 

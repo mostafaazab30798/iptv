@@ -2,7 +2,7 @@
   "name": "hope-tv-download-gateway",
   "version": "0.1.0",
   "private": true,
-  "description": "Isolated Cloudflare Worker for HOPE TV private R2 release delivery. No IPTV proxy secrets.",
+  "description": "Deprecated R2 download Worker scaffold; production uses GitHub Releases.",
   "type": "module",
   "scripts": {
     "test": "node --experimental-strip-types --test src/auth.test.ts src/handler.test.ts",

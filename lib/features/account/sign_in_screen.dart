@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/features/account/account_auth_errors.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
@@ -32,10 +35,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           .requestOtp(_emailController.text);
       if (!mounted) return;
       context.go(Routes.verifyCode);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      final message =
-          ref.read(appAccountSessionProvider).errorMessage ?? l10n.accountOtpSendFailed;
+      final message = accountAuthErrorMessage(
+        l10n,
+        e,
+        fallback: l10n.accountOtpSendFailed,
+      );
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }

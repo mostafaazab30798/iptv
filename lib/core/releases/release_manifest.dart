@@ -51,7 +51,8 @@ class ReleaseManifest {
       fileSize: (json['fileSize'] as num?)?.toInt(),
       sha256: json['sha256'] as String? ?? '',
       downloadAuthorizationPath:
-          json['downloadAuthorizationPath'] as String? ?? '/v1/downloads/authorize',
+          json['downloadAuthorizationPath'] as String? ??
+          '/v1/downloads/authorize',
       publishedAt: json['publishedAt'] as String? ?? '',
       releaseNotesEn: json['releaseNotesEn'] as String?,
       releaseNotesAr: json['releaseNotesAr'] as String?,
@@ -61,22 +62,22 @@ class ReleaseManifest {
   }
 
   Map<String, dynamic> toUnsignedJson() => {
-        'schemaVersion': schemaVersion,
-        'platform': platform,
-        'architecture': architecture,
-        'channel': channel,
-        'version': version,
-        'buildNumber': buildNumber,
-        'minimumSupportedVersion': minimumSupportedVersion,
-        'mandatory': mandatory,
-        'fileSize': fileSize,
-        'sha256': sha256,
-        'downloadAuthorizationPath': downloadAuthorizationPath,
-        'publishedAt': publishedAt,
-        'releaseNotesEn': releaseNotesEn,
-        'releaseNotesAr': releaseNotesAr,
-        'keyId': keyId,
-      };
+    'schemaVersion': schemaVersion,
+    'platform': platform,
+    'architecture': architecture,
+    'channel': channel,
+    'version': version,
+    'buildNumber': buildNumber,
+    'minimumSupportedVersion': minimumSupportedVersion,
+    'mandatory': mandatory,
+    'fileSize': fileSize,
+    'sha256': sha256,
+    'downloadAuthorizationPath': downloadAuthorizationPath,
+    'publishedAt': publishedAt,
+    'releaseNotesEn': releaseNotesEn,
+    'releaseNotesAr': releaseNotesAr,
+    'keyId': keyId,
+  };
 
   String canonicalJson() => jsonEncode(_sortKeys(toUnsignedJson()));
 
@@ -95,11 +96,15 @@ class ReleaseCheckResult {
     required this.updateAvailable,
     this.releaseId,
     this.manifest,
+    this.installedBuildNumber,
+    this.unsupportedPlatform = false,
   });
 
   final bool updateAvailable;
   final String? releaseId;
   final ReleaseManifest? manifest;
+  final int? installedBuildNumber;
+  final bool unsupportedPlatform;
 }
 
 class DownloadAuthorization {
@@ -117,7 +122,8 @@ class DownloadAuthorization {
     return DownloadAuthorization(
       downloadUrl: json['downloadUrl'] as String? ?? '',
       expiresAt: DateTime.parse(
-        json['expiresAt'] as String? ?? DateTime.now().toUtc().toIso8601String(),
+        json['expiresAt'] as String? ??
+            DateTime.now().toUtc().toIso8601String(),
       ),
       releaseId: json['releaseId'] as String? ?? '',
     );

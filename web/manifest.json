@@ -1,12 +1,12 @@
 {
-    "name": "HOPE IPTV",
-    "short_name": "HOPE IPTV",
+    "name": "HOPE TV",
+    "short_name": "HOPE TV",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#0B0E14",
+    "theme_color": "#0B0E14",
+    "description": "HOPE TV — مشاهدة وإدارة محتوى IPTV على الويب وأجهزة التلفاز.",
+    "orientation": "landscape-primary",
     "prefer_related_applications": false,
     "icons": [
         {

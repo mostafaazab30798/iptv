@@ -668,3 +668,4 @@ Return a final report containing:
 11. Safe next action.
 
 Never claim completion when billing-provider selection, production secrets, deployment approval, or an acceptance gate remains unresolved.
+> **Release delivery update:** GitHub Releases replaced the planned private-R2/download-gateway design. See `docs/commercial/adr/0008-github-releases.md`; R2 references below are historical.

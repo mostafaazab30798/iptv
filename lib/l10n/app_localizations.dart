@@ -1439,7 +1439,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountCodeInvalid.
   ///
   /// In en, this message translates to:
-  /// **'Enter the code from your email.'**
+  /// **'Enter the 6-digit code from your email.'**
   String get accountCodeInvalid;
 
   /// No description provided for @accountVerifyAction.
@@ -1453,6 +1453,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid or expired code.'**
   String get accountOtpVerifyFailed;
+
+  /// No description provided for @accountResendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code'**
+  String get accountResendCode;
+
+  /// No description provided for @accountResendCooldown.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend in {seconds}s'**
+  String accountResendCooldown(int seconds);
+
+  /// No description provided for @accountOtpResent.
+  ///
+  /// In en, this message translates to:
+  /// **'A new code was sent to your email.'**
+  String get accountOtpResent;
+
+  /// No description provided for @accountOtpRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Wait a moment and try again.'**
+  String get accountOtpRateLimited;
+
+  /// No description provided for @accountOtpSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in session expired. Request a new code.'**
+  String get accountOtpSessionExpired;
+
+  /// No description provided for @accountDeviceLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Device limit reached. Revoke an old device from Account > Devices.'**
+  String get accountDeviceLimitReached;
 
   /// No description provided for @accountStatusLabel.
   ///
@@ -1681,6 +1717,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Subscription website is not configured yet.'**
   String get subscriptionPortalNotConfigured;
+
+  /// No description provided for @updateAvailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available'**
+  String get updateAvailableTitle;
+
+  /// No description provided for @updateAvailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'HOPE TV {version} is available ({size}).'**
+  String updateAvailableBody(String version, String size);
+
+  /// No description provided for @updateRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update required'**
+  String get updateRequiredTitle;
+
+  /// No description provided for @updateRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Install HOPE TV {version} to continue.'**
+  String updateRequiredBody(String version);
+
+  /// No description provided for @updateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get updateLater;
+
+  /// No description provided for @updateDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download update'**
+  String get updateDownload;
+
+  /// No description provided for @updateExitApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit app'**
+  String get updateExitApp;
+
+  /// No description provided for @updateSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to download this update.'**
+  String get updateSignInRequired;
+
+  /// No description provided for @updateLaunchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the download link.'**
+  String get updateLaunchFailed;
+
+  /// No description provided for @updateStatusAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available'**
+  String get updateStatusAvailable;
+
+  /// No description provided for @updateStatusUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to date'**
+  String get updateStatusUpToDate;
+
+  /// No description provided for @updateStatusUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates not supported on this platform'**
+  String get updateStatusUnsupported;
+
+  /// No description provided for @updateStatusNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Update service not configured'**
+  String get updateStatusNotConfigured;
+
+  /// No description provided for @updateStatusChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking for updates…'**
+  String get updateStatusChecking;
+
+  /// No description provided for @updateStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not check for updates'**
+  String get updateStatusError;
 }
 
 class _AppLocalizationsDelegate

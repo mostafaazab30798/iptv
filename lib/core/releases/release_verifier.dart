@@ -19,9 +19,9 @@ class ReleaseVerifier {
   ReleaseVerifier({
     Map<String, String>? ed25519PublicKeysById,
     String? hmacSecret,
-  })  : _ed25519PublicKeysById =
-            ed25519PublicKeysById ?? CommercialApiConfig.releasePublicKeys,
-        _hmacSecret = hmacSecret ?? CommercialApiConfig.releaseHmacVerifySecret;
+  }) : _ed25519PublicKeysById =
+           ed25519PublicKeysById ?? CommercialApiConfig.releasePublicKeys,
+       _hmacSecret = hmacSecret ?? CommercialApiConfig.releaseHmacVerifySecret;
 
   final Map<String, String> _ed25519PublicKeysById;
   final String? _hmacSecret;
@@ -39,7 +39,9 @@ class ReleaseVerifier {
     var verified = false;
 
     final pubHex = _ed25519PublicKeysById[manifest.keyId];
-    if (pubHex != null && pubHex.isNotEmpty && !pubHex.startsWith('PLACEHOLDER')) {
+    if (pubHex != null &&
+        pubHex.isNotEmpty &&
+        !pubHex.startsWith('PLACEHOLDER')) {
       final algorithm = Ed25519();
       final publicKey = SimplePublicKey(
         _hexToBytes(pubHex),
@@ -55,7 +57,11 @@ class ReleaseVerifier {
         _hmacSecret != null &&
         _hmacSecret.isNotEmpty &&
         !_hmacSecret.startsWith('PLACEHOLDER')) {
-      verified = _hmacSha256Verify(_hmacSecret, utf8.encode(payloadB64), signatureBytes);
+      verified = _hmacSha256Verify(
+        _hmacSecret,
+        utf8.encode(payloadB64),
+        signatureBytes,
+      );
     }
 
     if (!verified) {
@@ -73,8 +79,15 @@ class ReleaseVerifier {
     return digest.toLowerCase() == expectedSha256Hex.toLowerCase();
   }
 
-  bool _hmacSha256Verify(String secret, List<int> payload, List<int> signature) {
-    final digest = crypto.Hmac(crypto.sha256, utf8.encode(secret)).convert(payload);
+  bool _hmacSha256Verify(
+    String secret,
+    List<int> payload,
+    List<int> signature,
+  ) {
+    final digest = crypto.Hmac(
+      crypto.sha256,
+      utf8.encode(secret),
+    ).convert(payload);
     final expected = Uint8List.fromList(digest.bytes);
     if (expected.length != signature.length) return false;
     var diff = 0;

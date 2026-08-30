@@ -9,6 +9,7 @@ void main() {
   test('CommercialApiConfig treats placeholders as unconfigured', () {
     expect(CommercialApiConfig.isConfigured, isFalse);
     expect(CommercialApiConfig.productName, 'HOPE TV');
+    expect(CommercialApiConfig.subscriptionPortalUri, isNull);
   });
 
   test('AppAccountStatus parses wire values', () {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,11 +13,8 @@ class AccessRequiredScreen extends ConsumerWidget {
 
   Future<void> _openSubscribe(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
-    // Portal URL comes from remote config later; placeholder host rejected.
-    final uri = Uri.tryParse('https://PLACEHOLDER_PORTAL_ORIGIN');
-    if (uri == null ||
-        uri.host.contains('PLACEHOLDER') ||
-        uri.scheme != 'https') {
+    final uri = CommercialApiConfig.subscriptionPortalUri;
+    if (uri == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.subscriptionPortalNotConfigured)),
       );

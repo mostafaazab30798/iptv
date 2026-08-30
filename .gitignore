@@ -18,6 +18,10 @@ migrate_working_dir/
 !.env.example
 !**/.env.example
 !**/.dev.vars.example
+secrets/release-signing/
+android/key.properties
+android/keystore/
+*.keystore
 services/download_gateway/.dev.vars
 services/download_gateway/node_modules/
 services/download_gateway/.wrangler/

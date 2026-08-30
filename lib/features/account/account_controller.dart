@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/core/analytics/analytics_event.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/core/logging/app_logger.dart';
+import 'package:iptv/core/storage/preferences_storage.dart';
 import 'package:iptv/domain/entities/app_account.dart';
 import 'package:iptv/domain/repositories/analytics_repository.dart';
 import 'package:iptv/domain/repositories/app_account_repository.dart';
@@ -83,6 +84,8 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
         return;
       }
 
+      final restoredPendingEmail = _readPendingOtpEmail();
+
       _sub = _accounts.watchAccount().listen((account) {
         state = state.copyWith(
           loading: false,
@@ -99,9 +102,12 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
         configured: true,
         account: current,
         clearAccount: current == null,
+        pendingEmail: current == null ? restoredPendingEmail : null,
+        clearPendingEmail: current != null,
       );
 
       if (current != null) {
+        unawaited(_clearPendingOtpEmail());
         unawaited(_registerDeviceQuietly());
       }
     } catch (e) {
@@ -110,13 +116,37 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
     }
   }
 
+  String? _readPendingOtpEmail() {
+    try {
+      return PreferencesStorage.instance.pendingOtpEmail;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _persistPendingOtpEmail(String email) async {
+    try {
+      await PreferencesStorage.instance.setPendingOtpEmail(email);
+    } catch (e) {
+      AppLogger.error('Failed to persist pending OTP email: $e', feature: 'account');
+    }
+  }
+
+  Future<void> _clearPendingOtpEmail() async {
+    try {
+      await PreferencesStorage.instance.clearPendingOtpEmail();
+    } catch (_) {}
+  }
+
   Future<void> requestOtp(String email) async {
     state = state.copyWith(loading: true, clearError: true);
     try {
-      await _accounts.requestEmailOtp(email);
+      final normalized = email.trim().toLowerCase();
+      await _accounts.requestEmailOtp(normalized);
+      await _persistPendingOtpEmail(normalized);
       state = state.copyWith(
         loading: false,
-        pendingEmail: email.trim().toLowerCase(),
+        pendingEmail: normalized,
       );
     } catch (e) {
       state = state.copyWith(loading: false, errorMessage: e.toString());
@@ -124,14 +154,23 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
     }
   }
 
-  Future<void> verifyOtp(String token) async {
-    final email = state.pendingEmail;
+  Future<void> resendOtp() async {
+    final email = state.pendingEmail ?? _readPendingOtpEmail();
     if (email == null || email.isEmpty) {
       throw StateError('No pending email for OTP verification.');
     }
-    state = state.copyWith(loading: true, clearError: true);
+    await requestOtp(email);
+  }
+
+  Future<void> verifyOtp(String token) async {
+    final email = state.pendingEmail ?? _readPendingOtpEmail();
+    if (email == null || email.isEmpty) {
+      throw StateError('No pending email for OTP verification.');
+    }
+    state = state.copyWith(loading: true, clearError: true, pendingEmail: email);
     try {
       final account = await _accounts.verifyEmailOtp(email: email, token: token);
+      await _clearPendingOtpEmail();
       await _registerDeviceQuietly();
       state = state.copyWith(
         loading: false,
@@ -146,6 +185,7 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
 
   Future<void> signOut() async {
     await _accounts.signOut();
+    await _clearPendingOtpEmail();
     state = state.copyWith(clearAccount: true, clearPendingEmail: true);
   }
 

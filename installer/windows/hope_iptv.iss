@@ -6,11 +6,15 @@
 #ifndef MyAppVersion
   #define MyAppVersion "0.1.0"
 #endif
+#ifndef MyAppBuildNumber
+  #define MyAppBuildNumber "1"
+#endif
 
 [Setup]
 AppId={{A8F3C2E1-7B4D-4F9A-9C21-1E0A0B0C0D01}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion} (Build {#MyAppBuildNumber})
 AppPublisher=HOPE IPTV
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}

@@ -760,13 +760,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountCodeLabel => 'Verification code';
 
   @override
-  String get accountCodeInvalid => 'Enter the code from your email.';
+  String get accountCodeInvalid => 'Enter the 6-digit code from your email.';
 
   @override
   String get accountVerifyAction => 'Verify and continue';
 
   @override
   String get accountOtpVerifyFailed => 'Invalid or expired code.';
+
+  @override
+  String get accountResendCode => 'Resend code';
+
+  @override
+  String accountResendCooldown(int seconds) {
+    return 'Resend in ${seconds}s';
+  }
+
+  @override
+  String get accountOtpResent => 'A new code was sent to your email.';
+
+  @override
+  String get accountOtpRateLimited =>
+      'Too many attempts. Wait a moment and try again.';
+
+  @override
+  String get accountOtpSessionExpired =>
+      'Sign-in session expired. Request a new code.';
+
+  @override
+  String get accountDeviceLimitReached =>
+      'Device limit reached. Revoke an old device from Account > Devices.';
 
   @override
   String get accountStatusLabel => 'Status';
@@ -898,4 +921,54 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get subscriptionPortalNotConfigured =>
       'Subscription website is not configured yet.';
+
+  @override
+  String get updateAvailableTitle => 'Update available';
+
+  @override
+  String updateAvailableBody(String version, String size) {
+    return 'HOPE TV $version is available ($size).';
+  }
+
+  @override
+  String get updateRequiredTitle => 'Update required';
+
+  @override
+  String updateRequiredBody(String version) {
+    return 'Install HOPE TV $version to continue.';
+  }
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateDownload => 'Download update';
+
+  @override
+  String get updateExitApp => 'Exit app';
+
+  @override
+  String get updateSignInRequired => 'Sign in to download this update.';
+
+  @override
+  String get updateLaunchFailed => 'Could not open the download link.';
+
+  @override
+  String get updateStatusAvailable => 'Update available';
+
+  @override
+  String get updateStatusUpToDate => 'Up to date';
+
+  @override
+  String get updateStatusUnsupported =>
+      'Updates not supported on this platform';
+
+  @override
+  String get updateStatusNotConfigured => 'Update service not configured';
+
+  @override
+  String get updateStatusChecking => 'Checking for updates…';
+
+  @override
+  String get updateStatusError => 'Could not check for updates';
 }

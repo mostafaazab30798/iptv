@@ -21,6 +21,12 @@ class CommercialApiConfig {
     defaultValue: 'PLACEHOLDER_SUPABASE_ANON_KEY',
   );
 
+  /// Customer subscription / billing portal (e.g. https://hope-tv.site).
+  static const portalOrigin = String.fromEnvironment(
+    'PORTAL_ORIGIN',
+    defaultValue: 'PLACEHOLDER_PORTAL_ORIGIN',
+  );
+
   /// True only when dart-defines are real HTTPS project values.
   static bool get isConfigured {
     if (supabaseUrl.startsWith('PLACEHOLDER_')) return false;
@@ -32,6 +38,14 @@ class CommercialApiConfig {
   static String functionsBaseUrl(String functionName) {
     final base = supabaseUrl.replaceAll(RegExp(r'/+$'), '');
     return '$base/functions/v1/$functionName';
+  }
+
+  /// Parsed subscription portal URL, or null when not configured in this build.
+  static Uri? get subscriptionPortalUri {
+    if (portalOrigin.startsWith('PLACEHOLDER_')) return null;
+    final uri = Uri.tryParse(portalOrigin);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
+    return uri;
   }
 
   /// Optional local-only HMAC verify secret. Never set in production builds.

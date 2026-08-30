@@ -33,6 +33,7 @@ class PreferencesStorage {
   static const String _keyAuthServerUrl = 'auth_server_url';
   static const String _keyAuthUsername = 'auth_username';
   static const String _keyAuthPasswordEnc = 'auth_password_enc';
+  static const String _keyPendingOtpEmail = 'pending_otp_email';
 
   // ---------------------------------------------------------------------------
   // Auth identity (non-sensitive) — password must never be stored here.
@@ -65,6 +66,17 @@ class PreferencesStorage {
       _prefs.remove(_keyAuthPasswordEnc),
     ]);
   }
+
+  // ---------------------------------------------------------------------------
+  // App account OTP (non-secret — cleared after verification)
+  // ---------------------------------------------------------------------------
+
+  String? get pendingOtpEmail => _prefs.getString(_keyPendingOtpEmail);
+
+  Future<void> setPendingOtpEmail(String email) =>
+      _prefs.setString(_keyPendingOtpEmail, email.trim().toLowerCase());
+
+  Future<void> clearPendingOtpEmail() => _prefs.remove(_keyPendingOtpEmail);
 
   // ---------------------------------------------------------------------------
   // Locale

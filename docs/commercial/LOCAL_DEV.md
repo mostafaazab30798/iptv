@@ -7,7 +7,7 @@ Covers Phase 0–5 foundations. Billing remains deferred (Phase 4). Direct downl
 - [Supabase CLI](https://supabase.com/docs/guides/cli)
 - Docker (for local Postgres / Auth / Studio)
 - Deno (for Edge Function shared unit tests)
-- Node.js 22+ (for download gateway and admin dashboard)
+- Node.js 22+ (for the admin dashboard)
 
 ## Supabase
 
@@ -68,7 +68,7 @@ Production must use Ed25519 (`ENTITLEMENT_SIGNING_ALG=ed25519`) and embed public
 
 ## Owner admin dashboard (`hope-tv-insights`)
 
-**Default:** remote Supabase only — open [https://hope-tv.mostafaazab3024.workers.dev](https://hope-tv.mostafaazab3024.workers.dev) from any browser, or run the UI locally while still using the cloud backend:
+**Default:** remote Supabase only — the production target is [https://admin.hope-tv.site](https://admin.hope-tv.site). Until DNS cutover completes, use the temporary [workers.dev deployment](https://hope-tv.mostafaazab3024.workers.dev), or run the UI locally while still using the cloud backend:
 
 ```bash
 cd hope-tv-insights
@@ -99,32 +99,18 @@ values ('<your-auth-user-uuid>', 'owner', 'active');
 
 See [admin-dashboard/README.md](../../admin-dashboard/README.md) and [adr/0006-owner-admin-dashboard.md](./adr/0006-owner-admin-dashboard.md).
 
-## Download gateway (isolated)
+## GitHub Releases
 
-```bash
-cd services/download_gateway
-cp .dev.vars.example .dev.vars
-npm install
-npm test
-npx wrangler dev
-```
+Android and Windows artifacts are built by `.github/workflows/release.yml`, published to GitHub Releases, and registered in Supabase `release_versions`. Public repositories need no download secret. If the repository becomes private, configure a contents-read `GITHUB_PAT` in Supabase Edge Function secrets only.
 
-Gateway secrets (Worker / `.dev.vars`, never in Git):
+Supabase Edge Function secrets for signed update manifests:
 
-- `DOWNLOAD_TOKEN_HMAC_SECRET` — must match Supabase Edge Functions
-- `GATEWAY_SERVICE_SECRET` — must match Supabase `download-consume`
-- `DOWNLOAD_CONSUME_URL` — Supabase `download-consume` function URL
-
-Supabase Edge Function secrets for Phase 6:
-
-- `DOWNLOAD_GATEWAY_BASE_URL` — public gateway origin
 - `RELEASE_SIGNING_HMAC_SECRET` / Ed25519 keys — manifest signing on publish
 
 Serve functions:
 
 ```bash
 supabase functions serve downloads
-supabase functions serve download-consume
 ```
 
 Flutter update check (optional dev verify secret):
@@ -138,7 +124,7 @@ flutter run \
 
 See [RELEASE_SIGNING.md](./RELEASE_SIGNING.md).
 
-Do **not** point this Worker at the root IPTV Worker configuration.
+The `services/download_gateway` R2 Worker is a deprecated scaffold and is not part of the production path.
 
 ## What stays unchanged / deferred
 

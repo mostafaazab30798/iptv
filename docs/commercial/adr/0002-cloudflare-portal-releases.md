@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0008](./0008-github-releases.md) for release delivery. The Cloudflare portal decision remains accepted.
 
 ## Context
 

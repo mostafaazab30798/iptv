@@ -123,7 +123,8 @@ class HomeController extends StateNotifier<HomeState> {
   bool _isFetching = false;
 
   Future<void> loadData({bool forceRefresh = false}) async {
-    if (_liveRepo == null) return;
+    final liveRepo = _liveRepo;
+    if (liveRepo == null) return;
     if (_isFetching && !forceRefresh) return;
     _isFetching = true;
 
@@ -162,7 +163,7 @@ class HomeController extends StateNotifier<HomeState> {
       final liveTask = () async {
         try {
           final channelsRes =
-              await _liveRepo!.getChannels(forceRefresh: forceRefresh);
+              await liveRepo.getChannels(forceRefresh: forceRefresh);
           final channels =
               channelsRes.when(ok: (c) => c, err: (_) => <Channel>[]);
           if (channels.isEmpty) return;

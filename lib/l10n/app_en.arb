@@ -344,9 +344,20 @@
     }
   },
   "accountCodeLabel": "Verification code",
-  "accountCodeInvalid": "Enter the code from your email.",
+  "accountCodeInvalid": "Enter the 6-digit code from your email.",
   "accountVerifyAction": "Verify and continue",
   "accountOtpVerifyFailed": "Invalid or expired code.",
+  "accountResendCode": "Resend code",
+  "accountResendCooldown": "Resend in {seconds}s",
+  "@accountResendCooldown": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "accountOtpResent": "A new code was sent to your email.",
+  "accountOtpRateLimited": "Too many attempts. Wait a moment and try again.",
+  "accountOtpSessionExpired": "Sign-in session expired. Request a new code.",
+  "accountDeviceLimitReached": "Device limit reached. Revoke an old device from Account > Devices.",
   "accountStatusLabel": "Status",
   "accountUnknown": "Unknown",
   "accountSignOut": "Sign out of HOPE TV",
@@ -405,5 +416,32 @@
   },
   "accessRequiredRefresh": "Refresh access",
   "accessRequiredSubscribe": "Subscribe on our website",
-  "subscriptionPortalNotConfigured": "Subscription website is not configured yet."
+  "subscriptionPortalNotConfigured": "Subscription website is not configured yet.",
+
+  "updateAvailableTitle": "Update available",
+  "updateAvailableBody": "HOPE TV {version} is available ({size}).",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "version": { "type": "String" },
+      "size": { "type": "String" }
+    }
+  },
+  "updateRequiredTitle": "Update required",
+  "updateRequiredBody": "Install HOPE TV {version} to continue.",
+  "@updateRequiredBody": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "updateLater": "Later",
+  "updateDownload": "Download update",
+  "updateExitApp": "Exit app",
+  "updateSignInRequired": "Sign in to download this update.",
+  "updateLaunchFailed": "Could not open the download link.",
+  "updateStatusAvailable": "Update available",
+  "updateStatusUpToDate": "Up to date",
+  "updateStatusUnsupported": "Updates not supported on this platform",
+  "updateStatusNotConfigured": "Update service not configured",
+  "updateStatusChecking": "Checking for updates…",
+  "updateStatusError": "Could not check for updates"
 }

@@ -22,13 +22,27 @@ class App extends ConsumerStatefulWidget {
   ConsumerState<App> createState() => _AppState();
 }
 
-class _AppState extends ConsumerState<App> {
+class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_initialize());
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_onAppResumed());
+    }
   }
 
   Future<void> _initialize() async {
@@ -36,6 +50,22 @@ class _AppState extends ConsumerState<App> {
     if (!mounted) return;
     ref.read(localeProvider.notifier).refreshFromStorage();
     await _syncAnalytics(ref.read(appAccountSessionProvider));
+    if (CommercialApiConfig.isConfigured) {
+      await ref.read(updateProvider.notifier).checkForUpdates(silent: true);
+    }
+  }
+
+  Future<void> _onAppResumed() async {
+    if (!CommercialApiConfig.isConfigured) return;
+    final updateState = ref.read(updateProvider);
+    if (updateState.isMandatoryBlocking) {
+      await ref.read(updateProvider.notifier).checkForUpdates(force: true);
+      if (mounted) {
+        await showUpdateDialogIfNeeded(context, ref, mandatoryOnly: true);
+      }
+      return;
+    }
+    await ref.read(updateProvider.notifier).checkForUpdates(silent: true);
   }
 
   Future<void> _syncAnalytics(AppAccountSessionState session) async {
@@ -46,7 +76,15 @@ class _AppState extends ConsumerState<App> {
       final deviceId = await deviceRepo.currentDeviceId();
       await analytics.start(deviceId: deviceId);
       await analytics.track(AnalyticsEventName.sessionStarted);
-      await ref.read(updateProvider.notifier).checkForUpdates(silent: true);
+
+      final updateState = ref.read(updateProvider);
+      if (updateState.pendingDownloadAfterSignIn &&
+          updateState.updateAvailable) {
+        ref.read(updateProvider.notifier).clearPendingDownloadAfterSignIn();
+        if (mounted) {
+          await showUpdateDialogIfNeeded(context, ref);
+        }
+      }
     } else {
       await analytics.stop();
     }

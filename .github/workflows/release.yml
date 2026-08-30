@@ -1,8 +1,6 @@
 name: Release Android & Windows
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       channel:
@@ -19,6 +17,14 @@ on:
         required: false
         default: false
         type: boolean
+      release_notes_en:
+        description: "English release notes (optional)"
+        required: false
+        type: string
+      release_notes_ar:
+        description: "Arabic release notes (optional)"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -26,6 +32,10 @@ permissions:
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  DEFAULT_PORTAL_ORIGIN: https://admin.hope-tv.site
+  DEFAULT_ENTITLEMENT_PUBLIC_KEYS_JSON: '{"entitlement-prod-2026-08-29-01":"64eb26d19dafdd3a1ffd3e0c7a5998554579a5e967215c334a194e5638023952"}'
 
 jobs:
   version:
@@ -37,34 +47,53 @@ jobs:
       tag_name: ${{ steps.meta.outputs.tag_name }}
       channel: ${{ steps.meta.outputs.channel }}
       mandatory: ${{ steps.meta.outputs.mandatory }}
+      release_notes_en: ${{ steps.meta.outputs.release_notes_en }}
+      release_notes_ar: ${{ steps.meta.outputs.release_notes_ar }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Read version and build number from pubspec.yaml
         id: meta
         run: |
+          set -euo pipefail
           RAW_VERSION=$(grep -E '^version:' pubspec.yaml | head -1 | sed -E 's/version:[[:space:]]*//')
           VERSION=$(echo "$RAW_VERSION" | cut -d'+' -f1)
-          BUILD_NUM=$(echo "$RAW_VERSION" | grep '+' | cut -d'+' -f2 || echo "")
+          BUILD_NUM=$(echo "$RAW_VERSION" | cut -d'+' -f2)
           if [ -z "$BUILD_NUM" ]; then
-            BUILD_NUM="${{ github.run_number }}"
+            echo "::error::pubspec.yaml must use major.minor.patch+build (e.g. 0.1.0+1)."
+            exit 1
+          fi
+          if ! echo "$BUILD_NUM" | grep -Eq '^[0-9]+$'; then
+            echo "::error::Build number must be a positive integer in pubspec.yaml."
+            exit 1
           fi
 
           CHANNEL="${{ github.event.inputs.channel || 'stable' }}"
           MANDATORY="${{ github.event.inputs.mandatory_update || 'false' }}"
-          TAG_NAME="v${VERSION}"
+          TAG_NAME="v${VERSION}-build.${BUILD_NUM}"
+          NOTES_EN="${{ github.event.inputs.release_notes_en }}"
+          NOTES_AR="${{ github.event.inputs.release_notes_ar }}"
+
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "::error::Tag ${TAG_NAME} already exists. Bump pubspec build number before releasing."
+            exit 1
+          fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "build_number=${BUILD_NUM}" >> "$GITHUB_OUTPUT"
           echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
           echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
           echo "mandatory=${MANDATORY}" >> "$GITHUB_OUTPUT"
+          echo "release_notes_en=${NOTES_EN}" >> "$GITHUB_OUTPUT"
+          echo "release_notes_ar=${NOTES_AR}" >> "$GITHUB_OUTPUT"
 
           echo "Extracted: Version=${VERSION}, Build=${BUILD_NUM}, Tag=${TAG_NAME}, Channel=${CHANNEL}"
 
   build-android:
-    name: Build & Publish Android Release
+    name: Build Android Release
     needs: version
     runs-on: ubuntu-latest
     steps:
@@ -89,24 +118,69 @@ jobs:
       - name: Run commercial validation tests
         run: flutter test test/commercial/
 
-      - name: Build split release APKs
+      - name: Decode Android release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::Missing Android signing secrets. Run scripts/android/create_release_keystore.ps1 -UploadSecrets"
+            exit 1
+          fi
+          mkdir -p android/keystore
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/keystore/hope-tv-release.jks
+          ALIAS="${ANDROID_KEY_ALIAS:-hope_tv}"
+          {
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+            echo "keyAlias=$ALIAS"
+            echo "storeFile=../keystore/hope-tv-release.jks"
+          } > android/key.properties
+
+      - name: Build arm64 release APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PORTAL_ORIGIN: ${{ secrets.PORTAL_ORIGIN }}
+          ENTITLEMENT_PUBLIC_KEYS_JSON: ${{ secrets.ENTITLEMENT_PUBLIC_KEYS_JSON }}
+          RELEASE_PUBLIC_KEYS_JSON: ${{ secrets.RELEASE_PUBLIC_KEYS_JSON }}
         run: |
-          BUILD_ARGS="--release --split-per-abi"
-          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
-            BUILD_ARGS="$BUILD_ARGS --dart-define=SUPABASE_URL=$SUPABASE_URL --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY secrets are required for production builds."
+            exit 1
           fi
-          flutter build apk $BUILD_ARGS
 
-      - name: Prepare Android artifact & compute metadata
+          PORTAL="${PORTAL_ORIGIN:-$DEFAULT_PORTAL_ORIGIN}"
+          ENTITLEMENT_KEYS="${ENTITLEMENT_PUBLIC_KEYS_JSON:-$DEFAULT_ENTITLEMENT_PUBLIC_KEYS_JSON}"
+
+          BUILD_ARGS=(
+            --release
+            --target-platform android-arm64
+            "--dart-define=SUPABASE_URL=${SUPABASE_URL}"
+            "--dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+            "--dart-define=PORTAL_ORIGIN=${PORTAL}"
+            "--dart-define=ENTITLEMENT_PUBLIC_KEYS_JSON=${ENTITLEMENT_KEYS}"
+          )
+          if [ -n "${RELEASE_PUBLIC_KEYS_JSON:-}" ]; then
+            BUILD_ARGS+=("--dart-define=RELEASE_PUBLIC_KEYS_JSON=${RELEASE_PUBLIC_KEYS_JSON}")
+          else
+            echo "::error::RELEASE_PUBLIC_KEYS_JSON secret is required for production release builds."
+            exit 1
+          fi
+
+          flutter build apk "${BUILD_ARGS[@]}"
+
+      - name: Prepare Android artifact metadata
         id: artifact
         run: |
+          set -euo pipefail
           mkdir -p dist/android
           TARGET_FILE="dist/android/HOPE_IPTV.apk"
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$TARGET_FILE"
-          
+          cp build/app/outputs/flutter-apk/app-release.apk "$TARGET_FILE"
+
           FILE_SIZE=$(stat -c%s "$TARGET_FILE")
           SHA256_HASH=$(sha256sum "$TARGET_FILE" | awk '{print $1}')
 
@@ -115,64 +189,15 @@ jobs:
           echo "file_size=${FILE_SIZE}" >> "$GITHUB_OUTPUT"
           echo "sha256=${SHA256_HASH}" >> "$GITHUB_OUTPUT"
 
-          echo "Android APK: size=${FILE_SIZE} bytes, sha256=${SHA256_HASH}"
-
-      - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ needs.version.outputs.tag_name }}
-          name: HOPE TV ${{ needs.version.outputs.tag_name }}
-          draft: false
-          prerelease: ${{ needs.version.outputs.channel != 'stable' }}
-          body: |
-            ## HOPE TV Release ${{ needs.version.outputs.version }} (Build ${{ needs.version.outputs.build_number }})
-            
-            - **Channel**: `${{ needs.version.outputs.channel }}`
-            - **Commit**: `${{ github.sha }}`
-            
-            ### Artifacts
-            - **Android APK (arm64-v8a)**: `HOPE_IPTV.apk`
-              - SHA-256: `${{ steps.artifact.outputs.sha256 }}`
-              - Size: `${{ steps.artifact.outputs.file_size }} bytes`
-          files: ${{ steps.artifact.outputs.file_path }}
-          fail_on_unmatched_files: true
-
-      - name: Register Android release in Supabase
-        if: env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != ''
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          OBJECT_KEY="https://github.com/${{ github.repository }}/releases/download/${{ needs.version.outputs.tag_name }}/${{ steps.artifact.outputs.file_name }}"
-          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-          PAYLOAD=$(cat <<EOF
-          {
-            "platform": "android",
-            "architecture": "arm64-v8a",
-            "channel": "${{ needs.version.outputs.channel }}",
-            "version": "${{ needs.version.outputs.version }}",
-            "build_number": ${{ needs.version.outputs.build_number }},
-            "object_key": "${OBJECT_KEY}",
-            "file_size_bytes": ${{ steps.artifact.outputs.file_size }},
-            "sha256": "${{ steps.artifact.outputs.sha256 }}",
-            "mandatory_update": ${{ needs.version.outputs.mandatory }},
-            "published_at": "${NOW}"
-          }
-          EOF
-          )
-
-          curl -s -X POST "${SUPABASE_URL}/rest/v1/release_versions" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Content-Type: application/json" \
-            -H "Prefer: resolution=merge-duplicates" \
-            -d "$PAYLOAD"
-
-          echo "Registered Android release in Supabase database."
+          name: android-release
+          path: dist/android/HOPE_IPTV.apk
+          if-no-files-found: error
 
   build-windows:
-    name: Build & Publish Windows Release
+    name: Build Windows Release
     needs: version
     runs-on: windows-latest
     steps:
@@ -195,13 +220,33 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PORTAL_ORIGIN: ${{ secrets.PORTAL_ORIGIN }}
+          ENTITLEMENT_PUBLIC_KEYS_JSON: ${{ secrets.ENTITLEMENT_PUBLIC_KEYS_JSON }}
+          RELEASE_PUBLIC_KEYS_JSON: ${{ secrets.RELEASE_PUBLIC_KEYS_JSON }}
+          DEFAULT_PORTAL_ORIGIN: ${{ env.DEFAULT_PORTAL_ORIGIN }}
+          DEFAULT_ENTITLEMENT_PUBLIC_KEYS_JSON: ${{ env.DEFAULT_ENTITLEMENT_PUBLIC_KEYS_JSON }}
         shell: pwsh
         run: |
-          $buildArgs = @("--release")
-          if ($env:SUPABASE_URL -and $env:SUPABASE_ANON_KEY) {
-            $buildArgs += "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL)"
-            $buildArgs += "--dart-define=SUPABASE_ANON_KEY=$($env:SUPABASE_ANON_KEY)"
+          if (-not $env:SUPABASE_URL -or -not $env:SUPABASE_ANON_KEY) {
+            throw "SUPABASE_URL and SUPABASE_ANON_KEY secrets are required for production builds."
           }
+
+          $portal = if ($env:PORTAL_ORIGIN) { $env:PORTAL_ORIGIN } else { $env:DEFAULT_PORTAL_ORIGIN }
+          $entitlementKeys = if ($env:ENTITLEMENT_PUBLIC_KEYS_JSON) { $env:ENTITLEMENT_PUBLIC_KEYS_JSON } else { $env:DEFAULT_ENTITLEMENT_PUBLIC_KEYS_JSON }
+
+          $buildArgs = @(
+            "--release",
+            "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL)",
+            "--dart-define=SUPABASE_ANON_KEY=$($env:SUPABASE_ANON_KEY)",
+            "--dart-define=PORTAL_ORIGIN=$portal",
+            "--dart-define=ENTITLEMENT_PUBLIC_KEYS_JSON=$entitlementKeys"
+          )
+          if ($env:RELEASE_PUBLIC_KEYS_JSON) {
+            $buildArgs += "--dart-define=RELEASE_PUBLIC_KEYS_JSON=$($env:RELEASE_PUBLIC_KEYS_JSON)"
+          } else {
+            throw "RELEASE_PUBLIC_KEYS_JSON secret is required for production release builds."
+          }
+
           flutter build windows @buildArgs
 
       - name: Install Inno Setup
@@ -210,14 +255,13 @@ jobs:
       - name: Compile Windows Installer
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path dist\windows | Out-Null
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) {
             $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
           }
-          & $iscc "/DMyAppVersion=${{ needs.version.outputs.version }}" "installer\windows\hope_iptv.iss"
+          & $iscc "/DMyAppVersion=${{ needs.version.outputs.version }}" "/DMyAppBuildNumber=${{ needs.version.outputs.build_number }}" "installer\windows\hope_iptv.iss"
 
-      - name: Prepare Windows artifact & compute metadata
+      - name: Prepare Windows artifact metadata
         id: artifact
         shell: pwsh
         run: |
@@ -236,47 +280,153 @@ jobs:
           echo "file_size=$size" >> $env:GITHUB_OUTPUT
           echo "sha256=$hash" >> $env:GITHUB_OUTPUT
 
-          Write-Host "Windows Installer: size=$size bytes, sha256=$hash"
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: dist/windows/HOPE_IPTV_Setup.exe
+          if-no-files-found: error
 
-      - name: Publish to GitHub Releases
+  publish:
+    name: Publish Release & Register Metadata
+    needs: [version, build-android, build-windows]
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release
+          path: dist/android
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: dist/windows
+
+      - name: Compute artifact metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          ANDROID_FILE="dist/android/HOPE_IPTV.apk"
+          WINDOWS_FILE="dist/windows/HOPE_IPTV_Setup.exe"
+          ANDROID_SIZE=$(stat -c%s "$ANDROID_FILE")
+          ANDROID_SHA=$(sha256sum "$ANDROID_FILE" | awk '{print $1}')
+          WINDOWS_SIZE=$(stat -c%s "$WINDOWS_FILE")
+          WINDOWS_SHA=$(sha256sum "$WINDOWS_FILE" | awk '{print $1}')
+          echo "android_size=${ANDROID_SIZE}" >> "$GITHUB_OUTPUT"
+          echo "android_sha=${ANDROID_SHA}" >> "$GITHUB_OUTPUT"
+          echo "windows_size=${WINDOWS_SIZE}" >> "$GITHUB_OUTPUT"
+          echo "windows_sha=${WINDOWS_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release with both assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version.outputs.tag_name }}
           name: HOPE TV ${{ needs.version.outputs.tag_name }}
           draft: false
           prerelease: ${{ needs.version.outputs.channel != 'stable' }}
-          files: ${{ steps.artifact.outputs.file_path }}
+          body: |
+            ## HOPE TV Release ${{ needs.version.outputs.version }} (Build ${{ needs.version.outputs.build_number }})
+
+            - **Channel**: `${{ needs.version.outputs.channel }}`
+            - **Mandatory**: `${{ needs.version.outputs.mandatory }}`
+            - **Commit**: `${{ github.sha }}`
+
+            ### Artifacts
+            - **Android APK (arm64-v8a)**: `HOPE_IPTV.apk`
+              - SHA-256: `${{ steps.meta.outputs.android_sha }}`
+            - **Windows installer (x64)**: `HOPE_IPTV_Setup.exe`
+              - SHA-256: `${{ steps.meta.outputs.windows_sha }}`
+          files: |
+            dist/android/HOPE_IPTV.apk
+            dist/windows/HOPE_IPTV_Setup.exe
           fail_on_unmatched_files: true
 
-      - name: Register Windows release in Supabase
-        if: env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != ''
+      - name: Register releases in Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        shell: pwsh
         run: |
-          $objectKey = "https://github.com/${{ github.repository }}/releases/download/${{ needs.version.outputs.tag_name }}/${{ steps.artifact.outputs.file_name }}"
-          $now = [DateTime]::UtcNow.ToString("o")
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required to publish release metadata."
+            exit 1
+          fi
 
-          $payload = @{
-            platform = "windows"
-            architecture = "x64"
-            channel = "${{ needs.version.outputs.channel }}"
-            version = "${{ needs.version.outputs.version }}"
-            build_number = [int]"${{ needs.version.outputs.build_number }}"
-            object_key = $objectKey
-            file_size_bytes = [long]"${{ steps.artifact.outputs.file_size }}"
-            sha256 = "${{ steps.artifact.outputs.sha256 }}"
-            mandatory_update = [bool]::Parse("${{ needs.version.outputs.mandatory }}")
-            published_at = $now
-          } | ConvertTo-Json
+          TAG="${{ needs.version.outputs.tag_name }}"
+          CHANNEL="${{ needs.version.outputs.channel }}"
+          VERSION="${{ needs.version.outputs.version }}"
+          BUILD="${{ needs.version.outputs.build_number }}"
+          MANDATORY="${{ needs.version.outputs.mandatory }}"
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          REPO="${{ github.repository }}"
+          NOTES_EN="${{ needs.version.outputs.release_notes_en }}"
+          NOTES_AR="${{ needs.version.outputs.release_notes_ar }}"
 
-          $headers = @{
-            "apikey" = $env:SUPABASE_SERVICE_ROLE_KEY
-            "Authorization" = "Bearer $($env:SUPABASE_SERVICE_ROLE_KEY)"
-            "Content-Type" = "application/json"
-            "Prefer" = "resolution=merge-duplicates"
-          }
+          ANDROID_URL="https://github.com/${REPO}/releases/download/${TAG}/HOPE_IPTV.apk"
+          WINDOWS_URL="https://github.com/${REPO}/releases/download/${TAG}/HOPE_IPTV_Setup.exe"
 
-          Invoke-RestMethod -Uri "$($env:SUPABASE_URL)/rest/v1/release_versions" -Method Post -Headers $headers -Body $payload
-          Write-Host "Registered Windows release in Supabase database."
+          PAYLOAD=$(jq -n \
+            --arg channel "$CHANNEL" \
+            --arg version "$VERSION" \
+            --argjson build "$BUILD" \
+            --arg android_url "$ANDROID_URL" \
+            --arg windows_url "$WINDOWS_URL" \
+            --argjson android_size "${{ steps.meta.outputs.android_size }}" \
+            --argjson windows_size "${{ steps.meta.outputs.windows_size }}" \
+            --arg android_sha "${{ steps.meta.outputs.android_sha }}" \
+            --arg windows_sha "${{ steps.meta.outputs.windows_sha }}" \
+            --arg now "$NOW" \
+            --arg notes_en "$NOTES_EN" \
+            --arg notes_ar "$NOTES_AR" \
+            --argjson mandatory "$([ "$MANDATORY" = "true" ] && echo true || echo false)" \
+            '[
+              {
+                platform: "android",
+                architecture: "arm64-v8a",
+                channel: $channel,
+                version: $version,
+                build_number: $build,
+                object_key: $android_url,
+                file_size_bytes: $android_size,
+                sha256: $android_sha,
+                mandatory_update: $mandatory,
+                published_at: $now,
+                release_notes_en: (if $notes_en == "" then null else $notes_en end),
+                release_notes_ar: (if $notes_ar == "" then null else $notes_ar end)
+              },
+              {
+                platform: "windows",
+                architecture: "x64",
+                channel: $channel,
+                version: $version,
+                build_number: $build,
+                object_key: $windows_url,
+                file_size_bytes: $windows_size,
+                sha256: $windows_sha,
+                mandatory_update: $mandatory,
+                published_at: $now,
+                release_notes_en: (if $notes_en == "" then null else $notes_en end),
+                release_notes_ar: (if $notes_ar == "" then null else $notes_ar end)
+              }
+            ]')
+
+          RESPONSE=$(curl --fail-with-body -sS -X POST \
+            "${SUPABASE_URL}/rest/v1/release_versions?on_conflict=platform,channel,version,architecture" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=representation" \
+            -d "$PAYLOAD")
+
+          ROW_COUNT=$(echo "$RESPONSE" | jq 'length')
+          if [ "$ROW_COUNT" != "2" ]; then
+            echo "::error::Expected 2 Supabase rows, got ${ROW_COUNT}. Response: ${RESPONSE}"
+            exit 1
+          fi
+
+          echo "$RESPONSE" | jq -e '.[] | select(.platform=="android" and .architecture=="arm64-v8a" and .build_number=='"$BUILD"')' >/dev/null
+          echo "$RESPONSE" | jq -e '.[] | select(.platform=="windows" and .architecture=="x64" and .build_number=='"$BUILD"')' >/dev/null
+          echo "Registered Android and Windows releases in Supabase."

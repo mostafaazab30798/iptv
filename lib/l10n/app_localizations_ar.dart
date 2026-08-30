@@ -770,13 +770,36 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accountCodeLabel => 'رمز التحقق';
 
   @override
-  String get accountCodeInvalid => 'أدخل الرمز من بريدك الإلكتروني.';
+  String get accountCodeInvalid => 'أدخل الرمز المكوّن من 6 أرقام من بريدك.';
 
   @override
   String get accountVerifyAction => 'تحقق ومتابعة';
 
   @override
   String get accountOtpVerifyFailed => 'رمز غير صالح أو منتهٍ.';
+
+  @override
+  String get accountResendCode => 'إعادة إرسال الرمز';
+
+  @override
+  String accountResendCooldown(int seconds) {
+    return 'إعادة الإرسال خلال $seconds ث';
+  }
+
+  @override
+  String get accountOtpResent => 'تم إرسال رمز جديد إلى بريدك.';
+
+  @override
+  String get accountOtpRateLimited =>
+      'محاولات كثيرة. انتظر قليلاً ثم حاول مجدداً.';
+
+  @override
+  String get accountOtpSessionExpired =>
+      'انتهت جلسة تسجيل الدخول. اطلب رمزاً جديداً.';
+
+  @override
+  String get accountDeviceLimitReached =>
+      'تم بلوغ حد الأجهزة. ألغِ جهازاً قديماً من الحساب > الأجهزة.';
 
   @override
   String get accountStatusLabel => 'الحالة';
@@ -905,4 +928,53 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get subscriptionPortalNotConfigured => 'موقع الاشتراك غير مُعد بعد.';
+
+  @override
+  String get updateAvailableTitle => 'تحديث متاح';
+
+  @override
+  String updateAvailableBody(String version, String size) {
+    return 'HOPE TV $version متاح ($size).';
+  }
+
+  @override
+  String get updateRequiredTitle => 'التحديث مطلوب';
+
+  @override
+  String updateRequiredBody(String version) {
+    return 'ثبّت HOPE TV $version للمتابعة.';
+  }
+
+  @override
+  String get updateLater => 'لاحقاً';
+
+  @override
+  String get updateDownload => 'تنزيل التحديث';
+
+  @override
+  String get updateExitApp => 'إغلاق التطبيق';
+
+  @override
+  String get updateSignInRequired => 'سجّل الدخول لتنزيل هذا التحديث.';
+
+  @override
+  String get updateLaunchFailed => 'تعذّر فتح رابط التنزيل.';
+
+  @override
+  String get updateStatusAvailable => 'تحديث متاح';
+
+  @override
+  String get updateStatusUpToDate => 'محدّث';
+
+  @override
+  String get updateStatusUnsupported => 'التحديثات غير مدعومة على هذه المنصة';
+
+  @override
+  String get updateStatusNotConfigured => 'خدمة التحديث غير مُعدّة';
+
+  @override
+  String get updateStatusChecking => 'جاري البحث عن تحديثات…';
+
+  @override
+  String get updateStatusError => 'تعذّر التحقق من التحديثات';
 }

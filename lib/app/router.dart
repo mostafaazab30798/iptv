@@ -77,15 +77,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       final iptvAsync = ref.read(sessionProvider);
       final entitlement = ref.read(entitlementProvider);
       final commercialOn = CommercialApiConfig.isConfigured;
-
-      if (commercialOn && appAccount.loading) {
-        return Routes.splash;
-      }
-
-      if (iptvAsync.isLoading) {
-        return Routes.splash;
-      }
-
       final appSignedIn = appAccount.isSignedIn;
       final iptvAuthed = iptvAsync.valueOrNull?.isValid ?? false;
 
@@ -107,16 +98,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           if (!isOnboarding) return Routes.onboarding;
         }
         if (appSignedIn && iptvAuthed && !onAccountRoute && !onAppAuthRoute) {
-          // Soft gate: while loading entitlement, allow cached path; deny premium routes when known denied.
-          if (!entitlement.loading &&
-              entitlement.entitlement != null &&
-              !entitlement.allowsPremium &&
-              !onAccessRequired) {
-            return Routes.accessRequired;
+          if (entitlement.allowsPremium) {
+            if (onAccessRequired) return Routes.home;
+            return null;
           }
-          if (onAccessRequired && entitlement.allowsPremium) {
-            return Routes.home;
-          }
+          // Allow navigation while entitlement is still loading.
+          if (entitlement.loading) return null;
+          // Fail closed: deny when entitlement is missing or explicitly denied.
+          if (!onAccessRequired) return Routes.accessRequired;
         }
         return null;
       }

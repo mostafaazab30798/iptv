@@ -10,10 +10,29 @@ import {
 
 const CONTROL_PLANE_VERSION = "0.2.0-phase6";
 
+const VALID_PLATFORMS = new Set(["android", "windows"]);
+const VALID_CHANNELS = new Set(["stable", "beta", "internal"]);
+const VALID_ARCHITECTURES = new Set(["arm64-v8a", "x64"]);
+
 function serviceClient() {
   return createClient(getSupabaseUrl(), getServiceRoleKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+function parseBuildNumber(raw: string | null): number {
+  if (raw == null || raw.trim() === "") {
+    throw new AppError("invalid_build_number", "buildNumber is required.", 400);
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) {
+    throw new AppError(
+      "invalid_build_number",
+      "buildNumber must be a non-negative integer.",
+      400,
+    );
+  }
+  return value;
 }
 
 Deno.serve(async (req) => {
@@ -29,15 +48,24 @@ Deno.serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const platform = (url.searchParams.get("platform") ?? "android") as
-      | "android"
-      | "windows";
-    const channel = (url.searchParams.get("channel") ?? "stable") as
-      | "stable"
-      | "beta"
-      | "internal";
-    const currentBuild = Number(url.searchParams.get("buildNumber") ?? "0");
-    const architecture = url.searchParams.get("architecture") ?? "universal";
+    const platform = url.searchParams.get("platform") ?? "";
+    const channel = url.searchParams.get("channel") ?? "stable";
+    const architecture = url.searchParams.get("architecture") ?? "";
+    const currentBuild = parseBuildNumber(url.searchParams.get("buildNumber"));
+
+    if (!VALID_PLATFORMS.has(platform)) {
+      throw new AppError("invalid_platform", "Unsupported platform.", 400);
+    }
+    if (!VALID_CHANNELS.has(channel)) {
+      throw new AppError("invalid_channel", "Unsupported release channel.", 400);
+    }
+    if (!VALID_ARCHITECTURES.has(architecture)) {
+      throw new AppError(
+        "invalid_architecture",
+        "Unsupported architecture.",
+        400,
+      );
+    }
 
     const client = serviceClient();
     const { data: rows, error } = await client.rpc("latest_release_for_platform", {
@@ -54,12 +82,12 @@ Deno.serve(async (req) => {
     let updateAvailable = false;
     let manifest = null;
 
-    if (release) {
-      updateAvailable = Number(release.build_number) > currentBuild;
+    if (release && Number(release.build_number) > currentBuild) {
+      updateAvailable = true;
       const body = buildManifestBody({
-        platform,
+        platform: platform as "android" | "windows",
         architecture: release.architecture ?? architecture,
-        channel,
+        channel: channel as "stable" | "beta" | "internal",
         version: release.version,
         buildNumber: Number(release.build_number),
         minimumSupportedVersion: release.minimum_supported_prior_version,
@@ -81,15 +109,16 @@ Deno.serve(async (req) => {
           : "";
         manifest = { ...body, keyId, signature };
       } else {
-        try {
-          manifest = await signReleaseManifest(body);
-        } catch {
-          manifest = body;
-        }
+        manifest = await signReleaseManifest(body);
       }
     }
 
-    logInfo(correlationId, "version_check", { platform, updateAvailable });
+    logInfo(correlationId, "version_check", {
+      platform,
+      architecture,
+      currentBuild,
+      updateAvailable,
+    });
 
     return jsonOk(
       {
@@ -98,9 +127,10 @@ Deno.serve(async (req) => {
         controlPlaneVersion: CONTROL_PLANE_VERSION,
         platform,
         channel,
+        architecture,
         currentBuildNumber: currentBuild,
         updateAvailable,
-        releaseId: release?.id ?? null,
+        releaseId: updateAvailable ? release?.id ?? null : null,
         manifest,
       },
       correlationId,

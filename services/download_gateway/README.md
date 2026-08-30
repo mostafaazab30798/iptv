@@ -1,12 +1,12 @@
 # HOPE TV download gateway
 
-Isolated Cloudflare Worker that streams **private R2** release objects after verifying a short-lived download token.
+Legacy Cloudflare Worker scaffold for an abandoned private-R2 release design.
 
 This service is intentionally separate from the repository root IPTV proxy (`worker.js` / root `wrangler.toml`). Do not add Supabase service-role keys, billing secrets, or IPTV credentials here.
 
 ## Status
 
-Phase 6: authorized R2 streaming, single-use download tokens, signed update manifests, and Flutter update UX.
+**Deprecated / not deployed.** Production artifacts are published by GitHub Actions to GitHub Releases. Supabase `downloads` returns the GitHub release URL directly. See [`docs/commercial/adr/0008-github-releases.md`](../../docs/commercial/adr/0008-github-releases.md).
 
 ## Local development
 
@@ -30,4 +30,4 @@ npx wrangler dev
 Set only in Cloudflare / `.dev.vars` (gitignored):
 
 - `DOWNLOAD_TOKEN_HMAC_SECRET` — HMAC for opaque download tokens
-- R2 binding `RELEASES` — private bucket name from `OWNER_CONFIG` placeholders
+- R2 binding `RELEASES` — placeholder only; not used by production

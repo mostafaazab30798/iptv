@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/features/account/account_auth_errors.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 
 class VerifyCodeScreen extends ConsumerStatefulWidget {
@@ -16,11 +20,46 @@ class VerifyCodeScreen extends ConsumerStatefulWidget {
 class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   final _codeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  static const _resendCooldownSeconds = 60;
+  int _resendSecondsRemaining = 0;
+  Timer? _resendTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensurePendingEmail());
+  }
+
+  void _ensurePendingEmail() {
+    final session = ref.read(appAccountSessionProvider);
+    final email = session.pendingEmail;
+    if (email == null || email.isEmpty) {
+      if (mounted) context.go(Routes.signIn);
+    }
+  }
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _codeController.dispose();
     super.dispose();
+  }
+
+  void _startResendCooldown() {
+    _resendTimer?.cancel();
+    setState(() => _resendSecondsRemaining = _resendCooldownSeconds);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_resendSecondsRemaining <= 1) {
+        timer.cancel();
+        setState(() => _resendSecondsRemaining = 0);
+      } else {
+        setState(() => _resendSecondsRemaining -= 1);
+      }
+    });
   }
 
   Future<void> _submit() async {
@@ -35,10 +74,37 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       } else {
         context.go(Routes.onboarding);
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      final message =
-          ref.read(appAccountSessionProvider).errorMessage ?? l10n.accountOtpVerifyFailed;
+      final message = accountAuthErrorMessage(
+        l10n,
+        e,
+        fallback: l10n.accountOtpVerifyFailed,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _resend() async {
+    if (_resendSecondsRemaining > 0) return;
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      await ref.read(appAccountSessionProvider.notifier).resendOtp();
+      if (!mounted) return;
+      _startResendCooldown();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.accountOtpResent)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final message = accountAuthErrorMessage(
+        l10n,
+        e,
+        fallback: l10n.accountOtpSendFailed,
+      );
+      if (e is StateError) {
+        context.go(Routes.signIn);
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }
@@ -48,6 +114,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
     final l10n = AppLocalizations.of(context)!;
     final session = ref.watch(appAccountSessionProvider);
     final email = session.pendingEmail ?? '';
+    final canResend = !session.loading && _resendSecondsRemaining == 0;
 
     return Scaffold(
       backgroundColor: AppColors.bg0,
@@ -71,17 +138,30 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      l10n.accountVerifySubtitle(email),
+                      email.isEmpty
+                          ? l10n.accountOtpSessionExpired
+                          : l10n.accountVerifySubtitle(email),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _codeController,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: l10n.accountCodeLabel),
+                      maxLength: 6,
+                      autofillHints: const [AutofillHints.oneTimeCode],
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            letterSpacing: 8,
+                          ),
+                      decoration: InputDecoration(
+                        labelText: l10n.accountCodeLabel,
+                        counterText: '',
+                      ),
                       validator: (value) {
-                        final v = value?.trim() ?? '';
-                        if (v.length < 4) return l10n.accountCodeInvalid;
+                        if (!isValidEmailOtpCode(value ?? '')) {
+                          return l10n.accountCodeInvalid;
+                        }
                         return null;
                       },
                     ),
@@ -95,6 +175,15 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : Text(l10n.accountVerifyAction),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: canResend ? _resend : null,
+                      child: Text(
+                        _resendSecondsRemaining > 0
+                            ? l10n.accountResendCooldown(_resendSecondsRemaining)
+                            : l10n.accountResendCode,
+                      ),
                     ),
                   ],
                 ),

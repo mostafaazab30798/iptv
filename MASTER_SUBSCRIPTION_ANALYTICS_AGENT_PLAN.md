@@ -1642,3 +1642,4 @@ The first implementation task should be **Phase 0 plus the non-production portio
 8. Do not integrate a production billing provider or change Flutter routing until the Phase 1 gate passes.
 
 This order makes Supabase PostgreSQL the commercial source of truth while keeping release delivery and the existing IPTV proxy isolated from authentication and billing authority.
+> **Release delivery update:** GitHub Releases replaced the planned private-R2/download-gateway design. For current behavior, see `docs/commercial/adr/0008-github-releases.md`; R2 sections below are retained as historical planning context only.

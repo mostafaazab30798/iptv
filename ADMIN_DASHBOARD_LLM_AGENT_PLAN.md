@@ -1436,3 +1436,4 @@ The first dashboard task is **Phase 0 and the read-only portion of Phase 1**:
 7. Do not create owner mutations or deploy the dashboard until read-only authorization and metrics pass their gate.
 
 This order prevents the UI from defining business metrics independently and prevents administrative mutation capability from appearing before server-side authorization is proven.
+> **Release delivery update:** GitHub Releases replaced the planned private-R2/download-gateway design. See `docs/commercial/adr/0008-github-releases.md`; R2 references below are historical.

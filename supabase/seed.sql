@@ -27,11 +27,11 @@ values (
     'deviceLimit', 3,
     'gracePeriodHours', 72,
     'offlineLeaseHours', 24,
-    'portalUrl', 'PLACEHOLDER_PORTAL_ORIGIN',
-    'supportEmail', 'PLACEHOLDER_SUPPORT_EMAIL',
-    'supportUrl', 'PLACEHOLDER_SUPPORT_URL',
+    'portalUrl', 'https://hope-tv.site',
+    'supportEmail', 'support@hope-tv.site',
+    'supportUrl', 'mailto:support@hope-tv.site',
     'billingConfigured', false,
-    'distributionMode', 'manual',
+    'distributionMode', 'github_releases',
     'analyticsEnabled', true,
     'minimumSupportedVersion', '0.1.0',
     'features', jsonb_build_object(
@@ -46,7 +46,8 @@ values (
 )
 on conflict (version) do nothing;
 
--- Unpublished release metadata stub (publish via admin dashboard; object in private R2).
+-- Unpublished release metadata stub. Production CI replaces object_key with the
+-- corresponding public GitHub Releases asset URL before publishing.
 insert into public.release_versions (
   platform,
   architecture,
@@ -67,12 +68,12 @@ values (
   'stable',
   '0.1.0',
   1,
-  'releases/android/hope-tv-0.1.0.apk',
+  'https://github.com/mostafaazab30798/iptv/releases/download/v0.1.0/HOPE_IPTV.apk',
   null,
   'PLACEHOLDER_SHA256_DIGEST',
   '0.0.0',
   false,
-  'Initial HOPE TV Android release (metadata only until R2 object uploaded).',
+  'Initial HOPE TV Android release metadata for GitHub Releases.',
   null
 )
 on conflict (platform, channel, version, architecture) do nothing;

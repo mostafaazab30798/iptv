@@ -1,6 +1,13 @@
-name = "iptv"
+name = "hope-tv-site"
 main = "worker.js"
 compatibility_date = "2024-09-23"
+
+# Production custom domains. Cloudflare can activate these routes only after
+# hope-tv.site is added as a zone and its registrar nameservers are delegated.
+routes = [
+  { pattern = "hope-tv.site", custom_domain = true },
+  { pattern = "www.hope-tv.site", custom_domain = true },
+]
 
 [assets]
 directory = "./build/web"

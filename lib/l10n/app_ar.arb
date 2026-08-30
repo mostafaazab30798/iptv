@@ -324,9 +324,20 @@
     }
   },
   "accountCodeLabel": "رمز التحقق",
-  "accountCodeInvalid": "أدخل الرمز من بريدك الإلكتروني.",
+  "accountCodeInvalid": "أدخل الرمز المكوّن من 6 أرقام من بريدك.",
   "accountVerifyAction": "تحقق ومتابعة",
   "accountOtpVerifyFailed": "رمز غير صالح أو منتهٍ.",
+  "accountResendCode": "إعادة إرسال الرمز",
+  "accountResendCooldown": "إعادة الإرسال خلال {seconds} ث",
+  "@accountResendCooldown": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "accountOtpResent": "تم إرسال رمز جديد إلى بريدك.",
+  "accountOtpRateLimited": "محاولات كثيرة. انتظر قليلاً ثم حاول مجدداً.",
+  "accountOtpSessionExpired": "انتهت جلسة تسجيل الدخول. اطلب رمزاً جديداً.",
+  "accountDeviceLimitReached": "تم بلوغ حد الأجهزة. ألغِ جهازاً قديماً من الحساب > الأجهزة.",
   "accountStatusLabel": "الحالة",
   "accountUnknown": "غير معروف",
   "accountSignOut": "تسجيل الخروج من HOPE TV",
@@ -385,5 +396,32 @@
   },
   "accessRequiredRefresh": "تحديث الوصول",
   "accessRequiredSubscribe": "اشترك عبر موقعنا",
-  "subscriptionPortalNotConfigured": "موقع الاشتراك غير مُعد بعد."
+  "subscriptionPortalNotConfigured": "موقع الاشتراك غير مُعد بعد.",
+
+  "updateAvailableTitle": "تحديث متاح",
+  "updateAvailableBody": "HOPE TV {version} متاح ({size}).",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "version": { "type": "String" },
+      "size": { "type": "String" }
+    }
+  },
+  "updateRequiredTitle": "التحديث مطلوب",
+  "updateRequiredBody": "ثبّت HOPE TV {version} للمتابعة.",
+  "@updateRequiredBody": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "updateLater": "لاحقاً",
+  "updateDownload": "تنزيل التحديث",
+  "updateExitApp": "إغلاق التطبيق",
+  "updateSignInRequired": "سجّل الدخول لتنزيل هذا التحديث.",
+  "updateLaunchFailed": "تعذّر فتح رابط التنزيل.",
+  "updateStatusAvailable": "تحديث متاح",
+  "updateStatusUpToDate": "محدّث",
+  "updateStatusUnsupported": "التحديثات غير مدعومة على هذه المنصة",
+  "updateStatusNotConfigured": "خدمة التحديث غير مُعدّة",
+  "updateStatusChecking": "جاري البحث عن تحديثات…",
+  "updateStatusError": "تعذّر التحقق من التحديثات"
 }

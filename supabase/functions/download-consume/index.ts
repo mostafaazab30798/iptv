@@ -1,8 +1,8 @@
 /**
  * download-consume — kept for compatibility but now a no-op redirect.
  *
- * With Supabase Storage, the signed URL is returned directly by the `downloads`
- * function and the client fetches the file from Supabase Storage's CDN directly.
+ * With GitHub Releases, the URL is returned directly by the `downloads`
+ * function and the client fetches the release asset from GitHub's CDN.
  * There is no separate gateway hop, so this function is not needed in the
  * primary flow. It is retained in case a future download audit trail is added.
  */
@@ -18,8 +18,8 @@ Deno.serve(async (req) => {
     const preflight = handleOptions(req);
     if (preflight) return preflight;
 
-    // This endpoint is retired. The `downloads` function now returns a Supabase
-    // Storage signed URL directly. Clients that call this endpoint should be
+    // This endpoint is retired. The `downloads` function now returns a GitHub
+    // Releases URL directly. Clients that call this endpoint should be
     // updated to use the URL from the `downloads` response instead.
     throw new AppError(
       "endpoint_retired",

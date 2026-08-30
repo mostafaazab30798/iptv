@@ -1,5 +1,6 @@
 /**
- * Opaque download tokens shared between Supabase Edge Functions and the download gateway.
+ * Legacy opaque download tokens for the deprecated R2 download gateway.
+ * Production downloads use GitHub Releases and do not import this module.
  * Format: v1.<base64url(json)>.<base64url(hmac-sha256)>
  */
 
