@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/core/analytics/analytics_event.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
@@ -9,6 +10,15 @@ import 'package:iptv/domain/entities/app_account.dart';
 import 'package:iptv/domain/repositories/analytics_repository.dart';
 import 'package:iptv/domain/repositories/app_account_repository.dart';
 import 'package:iptv/domain/repositories/device_repository.dart';
+
+/// Local-only auth walkthrough for UI development and screenshot testing.
+///
+/// Release/profile builds can never enable this bypass. Pass
+/// `--dart-define=DEBUG_AUTH_PREVIEW=false` when a debug build must exercise
+/// the real Supabase/Resend flow.
+const bool debugEmailOtpPreviewEnabled =
+    kDebugMode &&
+    bool.fromEnvironment('DEBUG_AUTH_PREVIEW', defaultValue: true);
 
 class AppAccountSessionState {
   const AppAccountSessionState({
@@ -71,7 +81,9 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
        super(
          AppAccountSessionState(
            loading: true,
-           configured: accountRepository.isCommercialConfigured,
+           configured:
+               debugEmailOtpPreviewEnabled ||
+               accountRepository.isCommercialConfigured,
          ),
        ) {
     _bootstrap();
@@ -85,6 +97,16 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
   Future<void> _bootstrap() async {
     state = state.copyWith(loading: true, clearError: true);
     try {
+      if (debugEmailOtpPreviewEnabled) {
+        state = state.copyWith(
+          loading: false,
+          configured: true,
+          clearAccount: true,
+          pendingEmail: _readPendingOtpEmail(),
+        );
+        return;
+      }
+
       await _accounts.initialize();
 
       if (!CommercialApiConfig.isConfigured) {
@@ -157,6 +179,16 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
     state = state.copyWith(loading: true, clearError: true);
     try {
       final normalized = email.trim().toLowerCase();
+      if (debugEmailOtpPreviewEnabled) {
+        await _persistPendingOtpEmail(normalized);
+        state = state.copyWith(
+          loading: false,
+          configured: true,
+          pendingEmail: normalized,
+        );
+        return;
+      }
+
       await _accounts.requestEmailOtp(normalized);
       await _persistPendingOtpEmail(normalized);
       state = state.copyWith(loading: false, pendingEmail: normalized);
@@ -185,6 +217,26 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
       pendingEmail: email,
     );
     try {
+      if (debugEmailOtpPreviewEnabled) {
+        if (!RegExp(r'^\d{6}$').hasMatch(token.trim())) {
+          throw const FormatException('Debug OTP must contain six digits.');
+        }
+        final account = AppAccount(
+          id: 'debug-auth-preview-user',
+          status: AppAccountStatus.active,
+          email: email,
+          lastLoginAt: DateTime.now().toUtc(),
+        );
+        await _clearPendingOtpEmail();
+        state = state.copyWith(
+          loading: false,
+          configured: true,
+          account: account,
+          clearPendingEmail: true,
+        );
+        return;
+      }
+
       final account = await _accounts.verifyEmailOtp(
         email: email,
         token: token,
@@ -203,7 +255,9 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
   }
 
   Future<void> signOut() async {
-    await _accounts.signOut();
+    if (!debugEmailOtpPreviewEnabled) {
+      await _accounts.signOut();
+    }
     await _clearPendingOtpEmail();
     state = state.copyWith(clearAccount: true, clearPendingEmail: true);
   }

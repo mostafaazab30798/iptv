@@ -91,29 +91,29 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!))
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Text(l10n.accountDeviceLimitLabel(_limit)),
-                    const SizedBox(height: 12),
-                    ..._devices.map((device) {
-                      final active = device.isActive;
-                      return ListTile(
-                        title: Text(device.displayName),
-                        subtitle: Text(
-                          '${device.platform} · ${active ? l10n.accountDeviceActive : l10n.accountDeviceRevoked}',
-                        ),
-                        trailing: active
-                            ? IconButton(
-                                icon: const Icon(Icons.logout),
-                                onPressed: () => _revoke(device),
-                              )
-                            : null,
-                      );
-                    }),
-                  ],
-                ),
+          ? Center(child: Text(_error!))
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(l10n.accountDeviceLimitLabel(_limit)),
+                const SizedBox(height: 12),
+                ..._devices.map((device) {
+                  final active = device.isActive;
+                  return ListTile(
+                    title: Text(device.displayName),
+                    subtitle: Text(
+                      '${device.platform} · ${active ? l10n.accountDeviceActive : l10n.accountDeviceRevoked}',
+                    ),
+                    trailing: active
+                        ? IconButton(
+                            icon: const Icon(Icons.logout),
+                            onPressed: () => _revoke(device),
+                          )
+                        : null,
+                  );
+                }),
+              ],
+            ),
     );
   }
 }

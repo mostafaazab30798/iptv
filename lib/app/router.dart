@@ -5,6 +5,7 @@ import 'package:iptv/app/providers.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/features/subscription/access_required_screen.dart';
 import 'package:iptv/features/account/account_screen.dart';
+import 'package:iptv/features/account/account_controller.dart';
 import 'package:iptv/features/account/devices_screen.dart';
 import 'package:iptv/features/account/sign_in_screen.dart';
 import 'package:iptv/features/account/verify_code_screen.dart';
@@ -76,14 +77,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final appAccount = ref.read(appAccountSessionProvider);
       final iptvAsync = ref.read(sessionProvider);
       final entitlement = ref.read(entitlementProvider);
-      final commercialOn = CommercialApiConfig.isConfigured;
+      final commercialOn =
+          CommercialApiConfig.isConfigured || debugEmailOtpPreviewEnabled;
       final appSignedIn = appAccount.isSignedIn;
       final iptvAuthed = iptvAsync.valueOrNull?.isValid ?? false;
 
-      final onAppAuthRoute =
-          loc == Routes.signIn || loc == Routes.verifyCode;
-      final onAccountRoute =
-          loc == Routes.account || loc == Routes.devices;
+      final onAppAuthRoute = loc == Routes.signIn || loc == Routes.verifyCode;
+      final onAccountRoute = loc == Routes.account || loc == Routes.devices;
       final onAccessRequired = loc == Routes.accessRequired;
 
       if (commercialOn) {
@@ -156,7 +156,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => _fade(const SearchScreen()),
       ),
       ShellRoute(
-        builder: (context, state, child) => AppShell(state: state, child: child),
+        builder: (context, state, child) =>
+            AppShell(state: state, child: child),
         routes: [
           GoRoute(
             path: Routes.home,

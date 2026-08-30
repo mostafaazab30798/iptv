@@ -36,6 +36,18 @@ This guide describes how to run and verify the IPTV Flutter application across s
 
 ## Running on Target Platforms
 
+### Debug authentication preview
+
+Flutter debug builds use a local email/OTP walkthrough by default. No Supabase
+request or email is sent: enter any valid email address, then any six digits.
+Release and profile builds always use the real backend.
+
+To exercise the real backend from a debug build, disable the preview explicitly:
+
+```bash
+flutter run -d <device-id> --dart-define=DEBUG_AUTH_PREVIEW=false
+```
+
 ### 1. Windows (Desktop)
 ```bash
 flutter run -d windows

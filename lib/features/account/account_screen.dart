@@ -32,7 +32,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       _deletionError = null;
     });
     try {
-      final status = await ref.read(appAccountRepositoryProvider).deletionStatus();
+      final status = await ref
+          .read(appAccountRepositoryProvider)
+          .deletionStatus();
       if (mounted) {
         setState(() {
           _deletionStatus = status;
@@ -51,7 +53,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
   Future<void> _confirmDeleteAccount() async {
     final l10n = AppLocalizations.of(context)!;
-    final acknowledgeSubscription = await showDialog<bool>(
+    final acknowledgeSubscription =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: Text(l10n.accountDeleteTitle),
@@ -73,7 +76,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     if (!acknowledgeSubscription || !mounted) return;
 
     final controller = TextEditingController();
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: Text(l10n.accountDeleteConfirmTitle),
@@ -111,15 +115,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     if (!confirmed || !mounted) return;
 
     try {
-      await ref.read(appAccountRepositoryProvider).requestDeletion(
+      await ref
+          .read(appAccountRepositoryProvider)
+          .requestDeletion(
             confirmation: controller.text.trim(),
             acknowledgeSubscriptionLoss: true,
           );
       await ref.read(entitlementProvider.notifier).clear();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.accountDeleteScheduled)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.accountDeleteScheduled)));
         context.go(Routes.signIn);
       }
     } on CommercialApiException catch (e) {
@@ -127,12 +133,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       final message = e.code == 'active_subscription'
           ? l10n.accountDeleteActiveSubscription
           : e.message;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.accountDeleteFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.accountDeleteFailed)));
     }
   }
 
@@ -143,15 +151,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       await _loadDeletionStatus();
       await ref.read(appAccountRepositoryProvider).refreshProfile();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.accountDeleteCanceled)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.accountDeleteCanceled)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.accountDeleteCancelFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.accountDeleteCancelFailed)));
       }
     }
   }
@@ -186,9 +194,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 l10n.accountDeleteStatusFailed,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
             )
           else if (_deletionStatus?.isPending == true &&
@@ -207,7 +215,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     const SizedBox(height: 8),
                     Text(
                       l10n.accountDeletePendingBody(
-                        _deletionStatus!.request!.scheduledFor.toLocal().toString(),
+                        _deletionStatus!.request!.scheduledFor
+                            .toLocal()
+                            .toString(),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -242,9 +252,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           const SizedBox(height: 8),
           Text(
             l10n.accountDeleteSectionBody,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 12),
           if (_deletionStatus?.isPending != true)
@@ -259,9 +269,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           const SizedBox(height: 12),
           Text(
             l10n.accountIptvSeparateHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),

@@ -9,12 +9,12 @@ import 'package:iptv/domain/repositories/app_account_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppAccountRepositoryImpl implements AppAccountRepository {
-  AppAccountRepositoryImpl({
-    CommercialEdgeFunctionsClient? edgeClient,
-  }) : _edge = edgeClient ?? CommercialEdgeFunctionsClient();
+  AppAccountRepositoryImpl({CommercialEdgeFunctionsClient? edgeClient})
+    : _edge = edgeClient ?? CommercialEdgeFunctionsClient();
 
   final CommercialEdgeFunctionsClient _edge;
   final _controller = StreamController<AppAccount?>.broadcast();
+  static const _authRequestTimeout = Duration(seconds: 20);
   StreamSubscription<AuthState>? _authSub;
   AppAccount? _cached;
 
@@ -42,7 +42,10 @@ class AppAccountRepositoryImpl implements AppAccountRepository {
         final account = await refreshProfile();
         _controller.add(account);
       } catch (e) {
-        AppLogger.error('Profile refresh on auth change failed: $e', feature: 'account');
+        AppLogger.error(
+          'Profile refresh on auth change failed: $e',
+          feature: 'account',
+        );
         final fallback = _accountFromSession(data.session!);
         _cached = fallback;
         _controller.add(fallback);
@@ -72,10 +75,15 @@ class AppAccountRepositoryImpl implements AppAccountRepository {
   Future<void> requestEmailOtp(String email) async {
     _ensureConfigured();
     final normalized = email.trim().toLowerCase();
-    await SupabaseClientFactory.client.auth.signInWithOtp(
-      email: normalized,
-      shouldCreateUser: true,
-    );
+    await SupabaseClientFactory.client.auth
+        .signInWithOtp(email: normalized, shouldCreateUser: true)
+        .timeout(
+          _authRequestTimeout,
+          onTimeout: () => throw TimeoutException(
+            'Email OTP request timed out after '
+            '${_authRequestTimeout.inSeconds} seconds.',
+          ),
+        );
     AppLogger.info('App account OTP requested', feature: 'account');
   }
 
@@ -85,11 +93,19 @@ class AppAccountRepositoryImpl implements AppAccountRepository {
     required String token,
   }) async {
     _ensureConfigured();
-    final response = await SupabaseClientFactory.client.auth.verifyOTP(
-      email: email.trim().toLowerCase(),
-      token: token.trim(),
-      type: OtpType.email,
-    );
+    final response = await SupabaseClientFactory.client.auth
+        .verifyOTP(
+          email: email.trim().toLowerCase(),
+          token: token.trim(),
+          type: OtpType.email,
+        )
+        .timeout(
+          _authRequestTimeout,
+          onTimeout: () => throw TimeoutException(
+            'Email OTP verification timed out after '
+            '${_authRequestTimeout.inSeconds} seconds.',
+          ),
+        );
     final session = response.session;
     if (session == null) {
       throw StateError('OTP verification did not return a session.');
@@ -143,7 +159,10 @@ class AppAccountRepositoryImpl implements AppAccountRepository {
         return account;
       }
     } catch (e) {
-      AppLogger.error('me() failed, using session claims: $e', feature: 'account');
+      AppLogger.error(
+        'me() failed, using session claims: $e',
+        feature: 'account',
+      );
     }
 
     final account = _accountFromSession(session);
@@ -224,7 +243,8 @@ class AppAccountRepositoryImpl implements AppAccountRepository {
       request = AccountDeletionRequest(
         id: map['id'] as String,
         status: AccountDeletionRequestStatus.fromWire(map['status'] as String?),
-        scheduledFor: DateTime.tryParse(map['scheduledFor'] as String? ?? '') ??
+        scheduledFor:
+            DateTime.tryParse(map['scheduledFor'] as String? ?? '') ??
             DateTime.now().toUtc(),
         hasActiveSubscription: map['hasActiveSubscription'] == true,
         graceDays: 14,

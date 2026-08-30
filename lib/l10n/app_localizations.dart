@@ -1379,14 +1379,62 @@ abstract class AppLocalizations {
   /// No description provided for @accountSignInTitle.
   ///
   /// In en, this message translates to:
-  /// **'Sign in to HOPE TV'**
+  /// **'Sign in'**
   String get accountSignInTitle;
 
   /// No description provided for @accountSignInSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Enter your email to receive a one-time sign-in code. This is separate from your IPTV provider login.'**
+  /// **'Enter your email and we\'ll send a one-time code. No password needed.'**
   String get accountSignInSubtitle;
+
+  /// No description provided for @accountSignInStep.
+  ///
+  /// In en, this message translates to:
+  /// **'01 · EMAIL'**
+  String get accountSignInStep;
+
+  /// No description provided for @accountVerifyStep.
+  ///
+  /// In en, this message translates to:
+  /// **'02 · VERIFY'**
+  String get accountVerifyStep;
+
+  /// No description provided for @accountBrandTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'One secure step to every channel, movie, and live match.'**
+  String get accountBrandTagline;
+
+  /// No description provided for @accountPrivacyReassurance.
+  ///
+  /// In en, this message translates to:
+  /// **'We only use your email to verify it\'s you — never shared, never sold.'**
+  String get accountPrivacyReassurance;
+
+  /// No description provided for @accountEmailHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'No password needed — we\'ll email you a secure code.'**
+  String get accountEmailHelperText;
+
+  /// No description provided for @accountSendingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending code…'**
+  String get accountSendingCode;
+
+  /// No description provided for @accountSlowNetworkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This is taking a little longer than usual…'**
+  String get accountSlowNetworkHint;
+
+  /// No description provided for @accountDebugOtpPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug preview — no email is sent. Enter any valid email and use any 6 digits.'**
+  String get accountDebugOtpPreview;
 
   /// No description provided for @accountNotConfigured.
   ///
@@ -1409,7 +1457,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountSendCode.
   ///
   /// In en, this message translates to:
-  /// **'Send code'**
+  /// **'Continue'**
   String get accountSendCode;
 
   /// No description provided for @accountOtpSendFailed.
@@ -1421,7 +1469,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountVerifyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Enter code'**
+  /// **'Enter your code'**
   String get accountVerifyTitle;
 
   /// No description provided for @accountVerifySubtitle.
@@ -1436,6 +1484,12 @@ abstract class AppLocalizations {
   /// **'Verification code'**
   String get accountCodeLabel;
 
+  /// No description provided for @accountCodeFieldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code sent to your email'**
+  String get accountCodeFieldHint;
+
   /// No description provided for @accountCodeInvalid.
   ///
   /// In en, this message translates to:
@@ -1447,6 +1501,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verify and continue'**
   String get accountVerifyAction;
+
+  /// No description provided for @accountVerifyingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying…'**
+  String get accountVerifyingCode;
+
+  /// No description provided for @accountOtpVerifiedConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get accountOtpVerifiedConfirmation;
+
+  /// No description provided for @accountEditEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit email'**
+  String get accountEditEmail;
+
+  /// No description provided for @accountOtpNewestCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only your most recently requested code will work.'**
+  String get accountOtpNewestCodeHint;
+
+  /// No description provided for @accountResendHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your spam folder if it hasn\'t arrived.'**
+  String get accountResendHint;
 
   /// No description provided for @accountOtpVerifyFailed.
   ///

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:iptv/core/commercial/commercial_edge_functions_client.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,9 +10,15 @@ String accountAuthErrorMessage(
   Object error, {
   required String fallback,
 }) {
+  if (error is TimeoutException) {
+    return l10n.errorNetwork;
+  }
+
   if (error is AuthException) {
     final msg = error.message.toLowerCase();
-    if (msg.contains('rate') || msg.contains('too many') || msg.contains('over_email_send_rate_limit')) {
+    if (msg.contains('rate') ||
+        msg.contains('too many') ||
+        msg.contains('over_email_send_rate_limit')) {
       return l10n.accountOtpRateLimited;
     }
     if (msg.contains('expired') ||
@@ -46,7 +54,9 @@ String accountAuthErrorMessage(
   if (raw.contains('device_limit_reached')) {
     return l10n.accountDeviceLimitReached;
   }
-  if (raw.contains('network') || raw.contains('socket') || raw.contains('connection')) {
+  if (raw.contains('network') ||
+      raw.contains('socket') ||
+      raw.contains('connection')) {
     return l10n.errorNetwork;
   }
 
@@ -54,4 +64,5 @@ String accountAuthErrorMessage(
 }
 
 /// Validates a six-digit email OTP token.
-bool isValidEmailOtpCode(String value) => RegExp(r'^\d{6}$').hasMatch(value.trim());
+bool isValidEmailOtpCode(String value) =>
+    RegExp(r'^\d{6}$').hasMatch(value.trim());

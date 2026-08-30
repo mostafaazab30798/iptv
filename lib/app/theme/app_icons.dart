@@ -21,7 +21,8 @@ abstract final class AppIcons {
   static const List<List<dynamic>> historyAlt = HugeIcons.strokeRoundedTime02;
 
   static const List<List<dynamic>> settings = HugeIcons.strokeRoundedSettings02;
-  static const List<List<dynamic>> settingsAlt = HugeIcons.strokeRoundedSettings01;
+  static const List<List<dynamic>> settingsAlt =
+      HugeIcons.strokeRoundedSettings01;
 
   static const List<List<dynamic>> search = HugeIcons.strokeRoundedSearch01;
   static const List<List<dynamic>> clear = HugeIcons.strokeRoundedCancel01;
@@ -29,47 +30,69 @@ abstract final class AppIcons {
   static const List<List<dynamic>> refresh = HugeIcons.strokeRoundedRefresh;
   static const List<List<dynamic>> filter = HugeIcons.strokeRoundedFilter;
   static const List<List<dynamic>> sort = HugeIcons.strokeRoundedSorting01;
-  static const List<List<dynamic>> moreVert = HugeIcons.strokeRoundedMoreVertical;
-  static const List<List<dynamic>> moreHoriz = HugeIcons.strokeRoundedMoreHorizontal;
+  static const List<List<dynamic>> moreVert =
+      HugeIcons.strokeRoundedMoreVertical;
+  static const List<List<dynamic>> moreHoriz =
+      HugeIcons.strokeRoundedMoreHorizontal;
   static const List<List<dynamic>> check = HugeIcons.strokeRoundedTick01;
   static const List<List<dynamic>> checkSimple = HugeIcons.strokeRoundedTick02;
 
   // --- Arrows & Navigation ---
-  static const List<List<dynamic>> arrowBack = HugeIcons.strokeRoundedArrowLeft01;
-  static const List<List<dynamic>> arrowForward = HugeIcons.strokeRoundedArrowRight01;
-  static const List<List<dynamic>> arrowDown = HugeIcons.strokeRoundedArrowDown01;
+  static const List<List<dynamic>> arrowBack =
+      HugeIcons.strokeRoundedArrowLeft01;
+  static const List<List<dynamic>> arrowForward =
+      HugeIcons.strokeRoundedArrowRight01;
+  static const List<List<dynamic>> arrowDown =
+      HugeIcons.strokeRoundedArrowDown01;
   static const List<List<dynamic>> arrowUp = HugeIcons.strokeRoundedArrowUp01;
-  static const List<List<dynamic>> chevronRight = HugeIcons.strokeRoundedArrowRight01;
-  static const List<List<dynamic>> chevronLeft = HugeIcons.strokeRoundedArrowLeft01;
+  static const List<List<dynamic>> chevronRight =
+      HugeIcons.strokeRoundedArrowRight01;
+  static const List<List<dynamic>> chevronLeft =
+      HugeIcons.strokeRoundedArrowLeft01;
 
   // --- Media & Player Controls ---
   static const List<List<dynamic>> play = HugeIcons.strokeRoundedPlay;
   static const List<List<dynamic>> pause = HugeIcons.strokeRoundedPause;
   static const List<List<dynamic>> stop = HugeIcons.strokeRoundedStop;
   static const List<List<dynamic>> replay = HugeIcons.strokeRoundedRotateLeft01;
-  static const List<List<dynamic>> forward10 = HugeIcons.strokeRoundedGoForward10Sec;
-  static const List<List<dynamic>> replay10 = HugeIcons.strokeRoundedGoBackward10Sec;
-  static const List<List<dynamic>> fastForward = HugeIcons.strokeRoundedForward01;
-  static const List<List<dynamic>> fastRewind = HugeIcons.strokeRoundedBackward01;
+  static const List<List<dynamic>> forward10 =
+      HugeIcons.strokeRoundedGoForward10Sec;
+  static const List<List<dynamic>> replay10 =
+      HugeIcons.strokeRoundedGoBackward10Sec;
+  static const List<List<dynamic>> fastForward =
+      HugeIcons.strokeRoundedForward01;
+  static const List<List<dynamic>> fastRewind =
+      HugeIcons.strokeRoundedBackward01;
   static const List<List<dynamic>> next = HugeIcons.strokeRoundedNext;
   static const List<List<dynamic>> previous = HugeIcons.strokeRoundedPrevious;
-  static const List<List<dynamic>> volumeHigh = HugeIcons.strokeRoundedVolumeHigh;
+  static const List<List<dynamic>> volumeHigh =
+      HugeIcons.strokeRoundedVolumeHigh;
   static const List<List<dynamic>> volumeLow = HugeIcons.strokeRoundedVolumeLow;
-  static const List<List<dynamic>> volumeMute = HugeIcons.strokeRoundedVolumeMute01;
+  static const List<List<dynamic>> volumeMute =
+      HugeIcons.strokeRoundedVolumeMute01;
   static const List<List<dynamic>> brightness = HugeIcons.strokeRoundedSun01;
   static const List<List<dynamic>> subtitles = HugeIcons.strokeRoundedSubtitle;
-  static const List<List<dynamic>> audioTrack = HugeIcons.strokeRoundedMusicNote01;
-  static const List<List<dynamic>> aspectRatio = HugeIcons.strokeRoundedAspectRatio;
-  static const List<List<dynamic>> fullscreen = HugeIcons.strokeRoundedFullScreen;
-  static const List<List<dynamic>> exitFullscreen = HugeIcons.strokeRoundedArrowShrink02;
+  static const List<List<dynamic>> audioTrack =
+      HugeIcons.strokeRoundedMusicNote01;
+  static const List<List<dynamic>> aspectRatio =
+      HugeIcons.strokeRoundedAspectRatio;
+  static const List<List<dynamic>> fullscreen =
+      HugeIcons.strokeRoundedFullScreen;
+  static const List<List<dynamic>> exitFullscreen =
+      HugeIcons.strokeRoundedArrowShrink02;
   static const List<List<dynamic>> lock = HugeIcons.strokeRoundedLock;
-  static const List<List<dynamic>> unlock = HugeIcons.strokeRoundedCircleUnlock01;
-  static const List<List<dynamic>> speed = HugeIcons.strokeRoundedDashboardSpeed01;
-  static const List<List<dynamic>> tune = HugeIcons.strokeRoundedSlidersHorizontal;
-  static const List<List<dynamic>> waveform = HugeIcons.strokeRoundedAudioWave01;
+  static const List<List<dynamic>> unlock =
+      HugeIcons.strokeRoundedCircleUnlock01;
+  static const List<List<dynamic>> speed =
+      HugeIcons.strokeRoundedDashboardSpeed01;
+  static const List<List<dynamic>> tune =
+      HugeIcons.strokeRoundedSlidersHorizontal;
+  static const List<List<dynamic>> waveform =
+      HugeIcons.strokeRoundedAudioWave01;
   static const List<List<dynamic>> moon = HugeIcons.strokeRoundedMoon02;
   static const List<List<dynamic>> timer = HugeIcons.strokeRoundedTimer01;
-  static const List<List<dynamic>> timerOff = HugeIcons.strokeRoundedAlarmClockOff;
+  static const List<List<dynamic>> timerOff =
+      HugeIcons.strokeRoundedAlarmClockOff;
 
   // --- Categories & Genres ---
   static const List<List<dynamic>> sports = HugeIcons.strokeRoundedFootball;
@@ -86,11 +109,14 @@ abstract final class AppIcons {
   // --- Feedback & States ---
   static const List<List<dynamic>> error = HugeIcons.strokeRoundedAlertCircle;
   static const List<List<dynamic>> warning = HugeIcons.strokeRoundedAlert02;
-  static const List<List<dynamic>> info = HugeIcons.strokeRoundedInformationCircle;
+  static const List<List<dynamic>> info =
+      HugeIcons.strokeRoundedInformationCircle;
   static const List<List<dynamic>> empty = HugeIcons.strokeRoundedInbox;
-  static const List<List<dynamic>> imageFallback = HugeIcons.strokeRoundedImage01;
+  static const List<List<dynamic>> imageFallback =
+      HugeIcons.strokeRoundedImage01;
   static const List<List<dynamic>> memory = HugeIcons.strokeRoundedCpu;
-  static const List<List<dynamic>> analytics = HugeIcons.strokeRoundedAnalytics01;
+  static const List<List<dynamic>> analytics =
+      HugeIcons.strokeRoundedAnalytics01;
 
   // --- Settings & Actions ---
   static const List<List<dynamic>> server = HugeIcons.strokeRoundedCloudServer;
@@ -110,15 +136,24 @@ abstract final class AppIcons {
   static const List<List<dynamic>> palette = HugeIcons.strokeRoundedColors;
   static const List<List<dynamic>> viewList = HugeIcons.strokeRoundedListView;
   static const List<List<dynamic>> visibility = HugeIcons.strokeRoundedView;
-  static const List<List<dynamic>> visibilityOff = HugeIcons.strokeRoundedViewOff;
-  static const List<List<dynamic>> checkCircle = HugeIcons.strokeRoundedCheckmarkCircle01;
+  static const List<List<dynamic>> visibilityOff =
+      HugeIcons.strokeRoundedViewOff;
+  static const List<List<dynamic>> checkCircle =
+      HugeIcons.strokeRoundedCheckmarkCircle01;
   static const List<List<dynamic>> circle = HugeIcons.strokeRoundedCircle;
   static const List<List<dynamic>> searchOff = HugeIcons.strokeRoundedSearch01;
   static const List<List<dynamic>> paste = HugeIcons.strokeRoundedClipboard;
-  static const List<List<dynamic>> chevronDown = HugeIcons.strokeRoundedArrowDown01;
+  static const List<List<dynamic>> chevronDown =
+      HugeIcons.strokeRoundedArrowDown01;
   static const List<List<dynamic>> guide = HugeIcons.strokeRoundedCalendar03;
-  static const List<List<dynamic>> deleteSweep = HugeIcons.strokeRoundedDelete01;
+  static const List<List<dynamic>> deleteSweep =
+      HugeIcons.strokeRoundedDelete01;
   static const List<List<dynamic>> time = HugeIcons.strokeRoundedClock01;
+
+  // --- Authentication ---
+  static const List<List<dynamic>> mail = HugeIcons.strokeRoundedMail01;
+  static const List<List<dynamic>> securityCheck =
+      HugeIcons.strokeRoundedSecurityCheck;
 }
 
 /// Convenience widget wrapper for rendering HugeIcons

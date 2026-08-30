@@ -736,11 +736,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accountTitle => 'حساب HOPE TV';
 
   @override
-  String get accountSignInTitle => 'تسجيل الدخول إلى HOPE TV';
+  String get accountSignInTitle => 'تسجيل الدخول';
 
   @override
   String get accountSignInSubtitle =>
-      'أدخل بريدك الإلكتروني لتلقي رمز تسجيل الدخول لمرة واحدة. هذا منفصل عن تسجيل دخول مزود IPTV.';
+      'أدخل بريدك الإلكتروني وسنرسل رمزاً لمرة واحدة. لا حاجة لكلمة مرور.';
+
+  @override
+  String get accountSignInStep => '01 · البريد';
+
+  @override
+  String get accountVerifyStep => '02 · التحقق';
+
+  @override
+  String get accountBrandTagline =>
+      'خطوة أمان واحدة تفتح لك كل القنوات والأفلام والمباريات المباشرة.';
+
+  @override
+  String get accountPrivacyReassurance =>
+      'نستخدم بريدك الإلكتروني فقط للتحقق من هويتك — لا نشاركه أو نبيعه أبداً.';
+
+  @override
+  String get accountEmailHelperText =>
+      'لا حاجة لكلمة مرور — سنرسل لك رمزاً آمناً عبر البريد الإلكتروني.';
+
+  @override
+  String get accountSendingCode => 'جارٍ إرسال الرمز…';
+
+  @override
+  String get accountSlowNetworkHint => 'يستغرق هذا وقتاً أطول من المعتاد…';
+
+  @override
+  String get accountDebugOtpPreview =>
+      'معاينة التصحيح — لن يتم إرسال بريد. أدخل أي بريد صالح واستخدم أي 6 أرقام.';
 
   @override
   String get accountNotConfigured =>
@@ -753,13 +781,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accountEmailInvalid => 'أدخل بريداً إلكترونياً صالحاً.';
 
   @override
-  String get accountSendCode => 'إرسال الرمز';
+  String get accountSendCode => 'متابعة';
 
   @override
   String get accountOtpSendFailed => 'تعذر إرسال رمز تسجيل الدخول.';
 
   @override
-  String get accountVerifyTitle => 'أدخل الرمز';
+  String get accountVerifyTitle => 'أدخل رمزك';
 
   @override
   String accountVerifySubtitle(String email) {
@@ -770,10 +798,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accountCodeLabel => 'رمز التحقق';
 
   @override
+  String get accountCodeFieldHint =>
+      'أدخل الرمز المكوّن من 6 أرقام المرسل إلى بريدك الإلكتروني';
+
+  @override
   String get accountCodeInvalid => 'أدخل الرمز المكوّن من 6 أرقام من بريدك.';
 
   @override
   String get accountVerifyAction => 'تحقق ومتابعة';
+
+  @override
+  String get accountVerifyingCode => 'جارٍ التحقق…';
+
+  @override
+  String get accountOtpVerifiedConfirmation => 'تم التحقق';
+
+  @override
+  String get accountEditEmail => 'تعديل البريد الإلكتروني';
+
+  @override
+  String get accountOtpNewestCodeHint => 'يعمل فقط آخر رمز تم إرساله إليك.';
+
+  @override
+  String get accountResendHint =>
+      'تحقق من مجلد الرسائل غير المرغوب فيها إذا لم يصلك الرمز.';
 
   @override
   String get accountOtpVerifyFailed => 'رمز غير صالح أو منتهٍ.';

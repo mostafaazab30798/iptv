@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/features/account/account_auth_errors.dart';
 import 'package:iptv/features/account/account_controller.dart';
 import 'package:iptv/l10n/app_localizations.dart';
+import 'package:iptv/domain/repositories/analytics_repository.dart';
+import 'package:iptv/domain/repositories/app_account_repository.dart';
+import 'package:iptv/domain/repositories/device_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -39,6 +44,15 @@ void main() {
     expect(message, l10n.accountOtpSessionExpired);
   });
 
+  test('accountAuthErrorMessage maps OTP timeouts to network error', () {
+    final message = accountAuthErrorMessage(
+      l10n,
+      TimeoutException('Email OTP request timed out.'),
+      fallback: l10n.accountOtpSendFailed,
+    );
+    expect(message, l10n.errorNetwork);
+  });
+
   test('OTP verification waits for pending email restoration', () {
     expect(
       shouldLeaveOtpVerification(
@@ -63,4 +77,50 @@ void main() {
       isTrue,
     );
   });
+
+  test('debug OTP preview never calls the real backend', () async {
+    expect(debugEmailOtpPreviewEnabled, isTrue);
+    final controller = AppAccountController(
+      accountRepository: _NoBackendAccountRepository(),
+      deviceRepository: _NoBackendDeviceRepository(),
+      analyticsRepository: _NoBackendAnalyticsRepository(),
+    );
+    addTearDown(controller.dispose);
+
+    expect(controller.state.configured, isTrue);
+    expect(controller.state.loading, isFalse);
+
+    await controller.requestOtp('Viewer@Example.com');
+    expect(controller.state.pendingEmail, 'viewer@example.com');
+    expect(controller.state.isSignedIn, isFalse);
+
+    await controller.verifyOtp('123456');
+    expect(controller.state.isSignedIn, isTrue);
+    expect(controller.state.account?.id, 'debug-auth-preview-user');
+    expect(controller.state.account?.email, 'viewer@example.com');
+  });
+}
+
+class _NoBackendAccountRepository implements AppAccountRepository {
+  @override
+  bool get isCommercialConfigured => false;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw StateError('Debug preview attempted to call the account backend.');
+  }
+}
+
+class _NoBackendDeviceRepository implements DeviceRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw StateError('Debug preview attempted to call the device backend.');
+  }
+}
+
+class _NoBackendAnalyticsRepository implements AnalyticsRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw StateError('Debug preview attempted to call analytics.');
+  }
 }

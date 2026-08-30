@@ -726,11 +726,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountTitle => 'HOPE TV Account';
 
   @override
-  String get accountSignInTitle => 'Sign in to HOPE TV';
+  String get accountSignInTitle => 'Sign in';
 
   @override
   String get accountSignInSubtitle =>
-      'Enter your email to receive a one-time sign-in code. This is separate from your IPTV provider login.';
+      'Enter your email and we\'ll send a one-time code. No password needed.';
+
+  @override
+  String get accountSignInStep => '01 · EMAIL';
+
+  @override
+  String get accountVerifyStep => '02 · VERIFY';
+
+  @override
+  String get accountBrandTagline =>
+      'One secure step to every channel, movie, and live match.';
+
+  @override
+  String get accountPrivacyReassurance =>
+      'We only use your email to verify it\'s you — never shared, never sold.';
+
+  @override
+  String get accountEmailHelperText =>
+      'No password needed — we\'ll email you a secure code.';
+
+  @override
+  String get accountSendingCode => 'Sending code…';
+
+  @override
+  String get accountSlowNetworkHint =>
+      'This is taking a little longer than usual…';
+
+  @override
+  String get accountDebugOtpPreview =>
+      'Debug preview — no email is sent. Enter any valid email and use any 6 digits.';
 
   @override
   String get accountNotConfigured =>
@@ -743,13 +772,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountEmailInvalid => 'Enter a valid email address.';
 
   @override
-  String get accountSendCode => 'Send code';
+  String get accountSendCode => 'Continue';
 
   @override
   String get accountOtpSendFailed => 'Could not send the sign-in code.';
 
   @override
-  String get accountVerifyTitle => 'Enter code';
+  String get accountVerifyTitle => 'Enter your code';
 
   @override
   String accountVerifySubtitle(String email) {
@@ -760,10 +789,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountCodeLabel => 'Verification code';
 
   @override
+  String get accountCodeFieldHint =>
+      'Enter the 6-digit code sent to your email';
+
+  @override
   String get accountCodeInvalid => 'Enter the 6-digit code from your email.';
 
   @override
   String get accountVerifyAction => 'Verify and continue';
+
+  @override
+  String get accountVerifyingCode => 'Verifying…';
+
+  @override
+  String get accountOtpVerifiedConfirmation => 'Verified';
+
+  @override
+  String get accountEditEmail => 'Edit email';
+
+  @override
+  String get accountOtpNewestCodeHint =>
+      'Only your most recently requested code will work.';
+
+  @override
+  String get accountResendHint =>
+      'Check your spam folder if it hasn\'t arrived.';
 
   @override
   String get accountOtpVerifyFailed => 'Invalid or expired code.';
