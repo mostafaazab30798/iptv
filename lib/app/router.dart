@@ -5,7 +5,6 @@ import 'package:iptv/app/providers.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/features/subscription/access_required_screen.dart';
 import 'package:iptv/features/account/account_screen.dart';
-import 'package:iptv/features/account/account_controller.dart';
 import 'package:iptv/features/account/devices_screen.dart';
 import 'package:iptv/features/account/sign_in_screen.dart';
 import 'package:iptv/features/account/verify_code_screen.dart';
@@ -47,6 +46,63 @@ abstract final class Routes {
   static const player = '/player';
 }
 
+/// Resolves navigation from the two independent authentication layers.
+///
+/// A valid IPTV provider session is sufficient to use the IPTV app. HOPE TV
+/// account authentication is only required for account-management routes and
+/// must never turn a successful provider login into an access-denied screen.
+String? routeRedirectForSession({
+  required String location,
+  required bool iptvAuthenticated,
+  required bool appAccountSignedIn,
+  bool accessGateEnabled = false,
+  bool entitlementAllowsPremium = false,
+  bool entitlementLoading = false,
+}) {
+  final onAppAuthRoute =
+      location == Routes.signIn || location == Routes.verifyCode;
+  final onAccountRoute =
+      location == Routes.account || location == Routes.devices;
+  final onOnboarding = location == Routes.onboarding;
+  final onAccessRequired = location == Routes.accessRequired;
+
+  if (accessGateEnabled) {
+    if (!appAccountSignedIn && !onAppAuthRoute) return Routes.signIn;
+    if (appAccountSignedIn && onAppAuthRoute) {
+      return iptvAuthenticated ? Routes.home : Routes.onboarding;
+    }
+    if (appAccountSignedIn && !iptvAuthenticated && !onAccountRoute) {
+      return onOnboarding ? null : Routes.onboarding;
+    }
+    if (appAccountSignedIn &&
+        iptvAuthenticated &&
+        !onAccountRoute &&
+        !onAppAuthRoute) {
+      if (entitlementAllowsPremium) {
+        return onAccessRequired ? Routes.home : null;
+      }
+      if (entitlementLoading) return null;
+      return onAccessRequired ? null : Routes.accessRequired;
+    }
+    return null;
+  }
+
+  if (iptvAuthenticated) {
+    if (onAccountRoute && !appAccountSignedIn) return Routes.signIn;
+    if (onAppAuthRoute || onOnboarding || onAccessRequired) return Routes.home;
+    return null;
+  }
+
+  if (onAccountRoute) {
+    return appAccountSignedIn ? null : Routes.signIn;
+  }
+  if (onAppAuthRoute) {
+    return appAccountSignedIn ? Routes.onboarding : null;
+  }
+  if (onOnboarding) return null;
+  return Routes.onboarding;
+}
+
 // ---------------------------------------------------------------------------
 // Router provider
 // ---------------------------------------------------------------------------
@@ -59,9 +115,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(appAccountSessionProvider, (previous, next) {
     refresh.value++;
   });
-  ref.listen(entitlementProvider, (previous, next) {
-    refresh.value++;
-  });
+  if (CommercialApiConfig.accessGateEnabled) {
+    ref.listen(entitlementProvider, (previous, next) {
+      refresh.value++;
+    });
+  }
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -77,46 +135,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       final appAccount = ref.read(appAccountSessionProvider);
       final iptvAsync = ref.read(sessionProvider);
       final entitlement = ref.read(entitlementProvider);
-      final commercialOn =
-          CommercialApiConfig.isConfigured || debugEmailOtpPreviewEnabled;
-      final appSignedIn = appAccount.isSignedIn;
-      final iptvAuthed = iptvAsync.valueOrNull?.isValid ?? false;
-
-      final onAppAuthRoute = loc == Routes.signIn || loc == Routes.verifyCode;
-      final onAccountRoute = loc == Routes.account || loc == Routes.devices;
-      final onAccessRequired = loc == Routes.accessRequired;
-
-      if (commercialOn) {
-        if (!appSignedIn && !onAppAuthRoute) {
-          return Routes.signIn;
-        }
-        if (appSignedIn && onAppAuthRoute) {
-          return iptvAuthed ? Routes.home : Routes.onboarding;
-        }
-        if (appSignedIn && !iptvAuthed && !onAccountRoute) {
-          final isOnboarding = loc == Routes.onboarding;
-          if (!isOnboarding) return Routes.onboarding;
-        }
-        if (appSignedIn && iptvAuthed && !onAccountRoute && !onAppAuthRoute) {
-          if (entitlement.allowsPremium) {
-            if (onAccessRequired) return Routes.home;
-            return null;
-          }
-          // Allow navigation while entitlement is still loading.
-          if (entitlement.loading) return null;
-          // Fail closed: deny when entitlement is missing or explicitly denied.
-          if (!onAccessRequired) return Routes.accessRequired;
-        }
-        return null;
-      }
-
-      // Placeholders / commercial off: preserve IPTV-only gate.
-      final isOnboarding = loc == Routes.onboarding;
-      if (!iptvAuthed && !isOnboarding && !onAppAuthRoute && !onAccountRoute) {
-        return Routes.onboarding;
-      }
-
-      return null;
+      return routeRedirectForSession(
+        location: loc,
+        iptvAuthenticated: iptvAsync.valueOrNull?.isValid ?? false,
+        appAccountSignedIn: appAccount.isSignedIn,
+        accessGateEnabled: CommercialApiConfig.accessGateEnabled,
+        entitlementAllowsPremium: entitlement.allowsPremium,
+        entitlementLoading: entitlement.loading,
+      );
     },
     routes: [
       GoRoute(

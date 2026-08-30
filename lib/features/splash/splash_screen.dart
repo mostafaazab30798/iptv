@@ -7,6 +7,7 @@ import 'package:iptv/app/bootstrap.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/shared/widgets/shimmer.dart';
 
@@ -41,26 +42,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     await ref.read(sessionProvider.notifier).loadSession();
     if (!mounted) return;
 
-    // Wait briefly for app-account controller to finish loading when configured.
-    for (var i = 0; i < 40; i++) {
+    if (CommercialApiConfig.accessGateEnabled) {
+      // The commercial gate may be re-enabled in a future build. Only that
+      // build needs to wait for account bootstrap before choosing a route.
+      for (var i = 0; i < 40; i++) {
+        if (!ref.read(appAccountSessionProvider).loading) break;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        if (!mounted) return;
+      }
+
       final app = ref.read(appAccountSessionProvider);
-      if (!app.loading) break;
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      if (!mounted) return;
-    }
-
-    final app = ref.read(appAccountSessionProvider);
-    final iptv = ref.read(sessionProvider).valueOrNull;
-    final commercialOn = app.configured;
-
-    if (commercialOn && !app.isSignedIn) {
-      context.go(Routes.signIn);
-      return;
-    }
-
-    if (commercialOn && app.isSignedIn) {
+      if (!app.isSignedIn) {
+        context.go(Routes.signIn);
+        return;
+      }
       unawaited(ref.read(entitlementProvider.notifier).refresh());
     }
+
+    final iptv = ref.read(sessionProvider).valueOrNull;
 
     if (iptv != null && iptv.isValid) {
       context.go(Routes.home);

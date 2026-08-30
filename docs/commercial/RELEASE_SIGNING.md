@@ -87,6 +87,7 @@ Gradle reads `android/key.properties` when present; otherwise release builds fal
 | `SUPABASE_URL` | GitHub secret |
 | `SUPABASE_ANON_KEY` | GitHub secret |
 | `PORTAL_ORIGIN` | GitHub secret (default `https://admin.hope-tv.site`) |
+| `ACCESS_GATE_ENABLED` | Optional build argument, currently omitted (`false` by default). Set `true` only when commercial entitlement enforcement is intentionally reactivated. |
 | `ENTITLEMENT_PUBLIC_KEYS_JSON` | GitHub secret (prod key from OWNER_CONFIG) |
 | `RELEASE_PUBLIC_KEYS_JSON` | GitHub secret — required for in-app update verification once Edge Functions use Ed25519 |
 

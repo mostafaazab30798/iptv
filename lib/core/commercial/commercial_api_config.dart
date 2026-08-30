@@ -11,6 +11,13 @@ class CommercialApiConfig {
 
   static const productName = 'HOPE TV';
 
+  /// Commercial entitlement navigation is intentionally disabled for now.
+  /// Re-enable in a future build with `--dart-define=ACCESS_GATE_ENABLED=true`.
+  static const accessGateEnabled = bool.fromEnvironment(
+    'ACCESS_GATE_ENABLED',
+    defaultValue: false,
+  );
+
   static const supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
     defaultValue: 'PLACEHOLDER_SUPABASE_URL',

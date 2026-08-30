@@ -5,7 +5,7 @@ project_id = "hope-tv"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "analytics", "private", "graphql_public"]
+schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
@@ -60,13 +60,18 @@ enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true
 enable_anonymous_sign_ins = false
-minimum_password_length = 8
+minimum_password_length = 6
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = false
-secure_password_change = true
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1m"
 # Passwordless OTP / magic link. Hosted production Auth uses Resend through
 # Supabase Custom SMTP; credentials stay in hosted Auth settings.
 otp_length = 6
