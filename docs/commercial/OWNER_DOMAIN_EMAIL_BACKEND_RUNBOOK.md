@@ -1,6 +1,6 @@
 # HOPE TV — Owner setup runbook
 
-This file is for the project owner. It covers the actions that must be completed in Cloudflare, the domain registrar, turboSMTP, Supabase, and GitHub.
+This file is for the project owner. It covers the actions that must be completed in Cloudflare, Resend, Supabase, and GitHub.
 
 ## Final production architecture
 
@@ -10,7 +10,7 @@ This file is for the project owner. It covers the actions that must be completed
 | Canonical `www` address | `https://www.hope-tv.site` redirects to `https://hope-tv.site` |
 | Owner dashboard | `https://admin.hope-tv.site` |
 | Authentication and database | Supabase project `otmovtxevvuxbsrmurkb` |
-| Authentication email | turboSMTP through Supabase Custom SMTP |
+| Authentication email | Resend Free through Supabase Custom SMTP |
 | Authentication sender | `no-reply@auth.hope-tv.site` |
 | Support address | `support@hope-tv.site` |
 | Android and Windows downloads | GitHub Releases in `mostafaazab30798/iptv` |
@@ -22,25 +22,23 @@ Cloudflare R2 and `downloads.hope-tv.site` are not part of the production design
 
 Rechecked on 2026-08-30:
 
-- `hope-tv.site` resolves on Cloudflare (`200 OK` over HTTPS).
+- `hope-tv.site` resolves through Cloudflare, but currently serves a Hostinger parked page rather than the Flutter web application.
 - `admin.hope-tv.site` resolves and redirects to `/overview`.
-- `auth.hope-tv.site` resolves on Cloudflare (use for turboSMTP DNS records only; not a public web app).
+- `auth.hope-tv.site` resolves on Cloudflare (use as the authentication sending domain; it is not a public web app).
+- Resend MX, SPF, and DKIM records for `auth.hope-tv.site` were published in Cloudflare DNS and confirmed through Cloudflare's public resolver on 2026-08-30.
 - The existing dashboard Worker remains available at `https://hope-tv.mostafaazab3024.workers.dev`.
 - GitHub Actions secrets currently include: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PORTAL_ORIGIN`, `ENTITLEMENT_PUBLIC_KEYS_JSON`, and `ANDROID_KEYSTORE_*`.
-- Still owner-operated: turboSMTP domain verification, Supabase Custom SMTP, Magic Link template with `{{ .Token }}`, and `RELEASE_PUBLIC_KEYS_JSON` once release signing is Ed25519 in production.
+- Still owner-operated: confirming domain verification in Resend, creating the sending API key, entering it in Supabase Custom SMTP, copying the Magic Link template with `{{ .Token }}`, and an end-to-end delivery test.
 
 Recheck these conditions before making changes because external state may have changed.
 
-## 1. Activate the domain in Cloudflare
+## 1. Confirm the domain in Cloudflare
 
-1. Sign in to the Cloudflare account associated with `mostafaazab3024@gmail.com`.
-2. Select **Add a domain** and enter `hope-tv.site`.
-3. Choose the desired Cloudflare plan.
-4. Cloudflare will display two authoritative nameservers.
-5. Sign in to the registrar where `hope-tv.site` was purchased.
-6. Replace the registrar nameservers with the exact two Cloudflare nameservers.
-7. Wait until Cloudflare reports the zone as **Active**.
-8. Confirm that public NS resolution works before deploying either hostname.
+1. Sign in to the Cloudflare account that owns `hope-tv.site`.
+2. Confirm the zone remains **Active** on the Free plan.
+3. Confirm the registrar still uses the exact two authoritative Cloudflare nameservers.
+4. Review existing records before replacing the Hostinger parked page.
+5. Confirm public DNS resolution before deploying either hostname.
 
 Do not create arbitrary A records for Workers. Custom Worker domains create the required proxied DNS records through Cloudflare.
 
@@ -79,24 +77,18 @@ After deployment:
 
 Do not expose the dashboard at the apex `hope-tv.site` address.
 
-## 4. Configure the turboSMTP sending domain
+## 4. Configure Resend for sending
 
 Use `auth.hope-tv.site` for authentication email. This isolates authentication reputation from support or future marketing email.
 
-1. Sign in to turboSMTP.
-2. Add `auth.hope-tv.site` as a sending domain.
-3. Copy the exact SPF and DKIM records displayed by turboSMTP.
-4. Add those records in **Cloudflare → DNS**.
-5. Add a DMARC TXT record at `_dmarc.auth` in monitoring mode:
+1. Create a free account at Resend and open **Domains → Add Domain**.
+2. Add `auth.hope-tv.site`.
+3. Copy the exact MX/SPF and DKIM records Resend supplies into Cloudflare DNS; do not proxy mail records.
+4. Wait until Resend reports the domain verified.
+5. Create a sending-only Resend API key.
+6. Use `no-reply@auth.hope-tv.site` as the Supabase sender.
 
-```text
-v=DMARC1; p=none; adkim=s; aspf=s
-```
-
-6. Verify the sending domain inside turboSMTP.
-7. Use `no-reply@auth.hope-tv.site` as the Supabase sender.
-
-TXT records are DNS records and are never proxied. If turboSMTP displays values different from an online example, use the values from the turboSMTP account.
+Do not paste the API key into source code or chat. Enter it directly into the Supabase SMTP password field.
 
 ## 5. Configure Supabase Auth URLs
 
@@ -128,12 +120,12 @@ Use:
 |---|---|
 | Sender email | `no-reply@auth.hope-tv.site` |
 | Sender name | `HOPE TV` |
-| SMTP host | `pro.turbo-smtp.com`, or the EU host assigned by turboSMTP |
-| SMTP port | `587` |
-| SMTP username | turboSMTP Consumer Key |
-| SMTP password | turboSMTP Consumer Secret |
+| SMTP host | `smtp.resend.com` |
+| SMTP port | `587` (STARTTLS) |
+| SMTP username | `resend` |
+| SMTP password | Resend sending API key |
 
-The Consumer Secret must be entered directly into Supabase. Never place it in Git, Flutter dart-defines, Vite variables, GitHub workflow files, documentation, screenshots, or chat messages.
+The Resend API key must be entered directly into Supabase. Never place it in Git, Flutter dart-defines, Vite variables, GitHub workflow files, documentation, screenshots, or chat messages.
 
 After saving the SMTP settings:
 
@@ -202,7 +194,8 @@ Public GitHub release assets require no `GITHUB_PAT` in Supabase. If the reposit
 - [ ] `www.hope-tv.site` redirects to the canonical site.
 - [ ] `admin.hope-tv.site` loads the owner dashboard.
 - [ ] Supabase Site URL and redirects use the production domain.
-- [ ] turboSMTP verifies `auth.hope-tv.site`.
+- [x] Resend MX, SPF, and DKIM records are published in Cloudflare DNS.
+- [ ] Resend reports `auth.hope-tv.site` verified.
 - [ ] OTP messages arrive from `no-reply@auth.hope-tv.site`.
 - [ ] OTP messages pass SPF, DKIM, and DMARC.
 - [ ] The six-digit OTP signs a test user in successfully.
@@ -224,4 +217,3 @@ If the custom domain fails:
 3. Do not change or delete Supabase user data.
 4. Roll back only the affected Cloudflare Worker deployment.
 5. Keep GitHub Releases and Supabase release metadata unchanged unless the release itself is defective.
-

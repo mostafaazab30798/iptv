@@ -12,17 +12,16 @@ Production hostnames:
 | Optional Supabase custom domain | `https://api.hope-tv.site` |
 | Auth email sender | `no-reply@auth.hope-tv.site` |
 
-Never commit Cloudflare tokens, Supabase service-role keys, turboSMTP Consumer Secrets, or SMTP passwords.
+Never commit Cloudflare tokens, Resend API keys, Supabase service-role keys, or SMTP passwords.
 
-## 1. Activate DNS in Cloudflare
+## 1. Confirm DNS in Cloudflare
 
-The domain currently returns `NXDOMAIN`, and the connected Cloudflare account has no zone for `hope-tv.site`. Complete this before deploying custom-domain routes:
+The `hope-tv.site` Cloudflare zone is active. The apex currently serves a Hostinger parked page, so verify the zone and existing records before deploying custom-domain routes:
 
-1. In Cloudflare, choose **Add a domain** and enter `hope-tv.site`.
-2. Copy the two Cloudflare nameservers shown for the zone.
-3. At the registrar where the domain was purchased, replace the current nameservers with those two values.
-4. Wait until Cloudflare reports the zone as **Active**.
-5. Confirm that `NS`, `A/CNAME`, and HTTPS resolution work before removing any `workers.dev` fallback.
+1. Confirm Cloudflare reports the `hope-tv.site` zone as **Active**.
+2. Confirm the registrar still uses the two nameservers assigned by Cloudflare.
+3. Review existing DNS records before changing or removing the Hostinger parking records.
+4. Confirm that `NS`, `A/CNAME`, and HTTPS resolution work before removing any `workers.dev` fallback.
 
 Do not invent A records for Workers. Wrangler/Cloudflare creates the required proxied DNS records when a custom domain is attached.
 
@@ -44,17 +43,17 @@ Release artifacts do not need a Cloudflare hostname. GitHub Actions publishes An
 
 Keep `https://hope-tv.mostafaazab3024.workers.dev` available during cutover. Remove it from the Supabase CORS allowlist only after `admin.hope-tv.site` is verified.
 
-## 3. Authenticate the sending domain in turboSMTP
+## 3. Verify the sending domain in Resend
 
 Use the dedicated auth subdomain `auth.hope-tv.site` so authentication email reputation is isolated from support or future marketing email.
 
-1. In turboSMTP, add and verify `auth.hope-tv.site` as a sending domain.
-2. Add the exact SPF and DKIM records turboSMTP displays to the Cloudflare DNS zone.
-3. Add a DMARC TXT record at `_dmarc.auth` beginning with monitoring mode, for example `v=DMARC1; p=none; adkim=s; aspf=s`.
-4. Keep all email-authentication TXT records set to **DNS only**; TXT records are never proxied.
-5. Verify SPF, DKIM, and DMARC inside turboSMTP before enabling production Auth email.
+1. Create a free Resend account and open **Domains → Add Domain**.
+2. Add `auth.hope-tv.site` and choose a region appropriate for the application's users.
+3. Copy the exact DNS records Resend supplies into the `hope-tv.site` Cloudflare zone. Keep mail-related records DNS-only when Cloudflare offers a proxy toggle.
+4. Wait until Resend reports the domain as verified.
+5. Create a sending-only Resend API key and keep it only in Supabase hosted Auth settings; never put it in Flutter, GitHub Actions, a Worker, or a committed file.
 
-turboSMTP's normal SMTP endpoint is `pro.turbo-smtp.com` with authenticated submission on port `587`. EU accounts may be assigned `pro.eu.turbo-smtp.com`; always use the host shown in the account. The username is the turboSMTP Consumer Key and the password is its Consumer Secret.
+Resend's SMTP endpoint is `smtp.resend.com`. Use port `587` with STARTTLS, the literal username `resend`, and the Resend API key as the password. The free plan currently allows 100 messages per day and 3,000 per month, so monitor usage before production growth.
 
 ## 4. Configure hosted Supabase Auth
 
@@ -74,10 +73,10 @@ In Supabase project `otmovtxevvuxbsrmurkb`:
 - Enable custom SMTP: yes
 - Sender email: `no-reply@auth.hope-tv.site`
 - Sender name: `HOPE TV`
-- Host: the host assigned by turboSMTP, normally `pro.turbo-smtp.com`
+- Host: `smtp.resend.com`
 - Port: `587`
-- Username: turboSMTP Consumer Key
-- Password: turboSMTP Consumer Secret
+- Username: `resend`
+- Password: Resend sending API key
 
 Store these values only in Supabase Auth settings. They are not Edge Function secrets and must never be placed in Flutter, Vite, or GitHub build variables.
 
@@ -102,7 +101,7 @@ Redeploy the affected Edge Functions after changing secrets.
 
 1. Resolve the website and admin production hostnames over public DNS.
 2. Confirm valid HTTPS certificates and redirect `www` to the apex domain.
-3. Send an OTP to a non-owner test mailbox and verify the sender, SPF, DKIM, DMARC, and six-digit code.
+3. Send an OTP to a non-owner test mailbox and verify the sender, SPF, DKIM, DMARC, Resend delivery log, and six-digit code.
 4. Sign in to `admin.hope-tv.site` and confirm `admin-api` preflight responses allow that exact origin.
 5. Run the GitHub release workflow and confirm both assets and their Supabase `release_versions` rows use matching GitHub URLs and SHA-256 values.
 6. Remove the temporary `workers.dev` origin from CORS only after the new admin hostname passes all checks.

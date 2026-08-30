@@ -8,6 +8,7 @@ import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/features/account/account_auth_errors.dart';
+import 'package:iptv/features/account/account_controller.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 
 class VerifyCodeScreen extends ConsumerStatefulWidget {
@@ -32,8 +33,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
 
   void _ensurePendingEmail() {
     final session = ref.read(appAccountSessionProvider);
-    final email = session.pendingEmail;
-    if (email == null || email.isEmpty) {
+    if (shouldLeaveOtpVerification(session)) {
       if (mounted) context.go(Routes.signIn);
     }
   }
@@ -66,7 +66,9 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
     if (!_formKey.currentState!.validate()) return;
     final l10n = AppLocalizations.of(context)!;
     try {
-      await ref.read(appAccountSessionProvider.notifier).verifyOtp(_codeController.text);
+      await ref
+          .read(appAccountSessionProvider.notifier)
+          .verifyOtp(_codeController.text);
       if (!mounted) return;
       final iptv = ref.read(sessionProvider).valueOrNull;
       if (iptv != null && iptv.isValid) {
@@ -81,7 +83,9 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
         e,
         fallback: l10n.accountOtpVerifyFailed,
       );
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -92,9 +96,9 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       await ref.read(appAccountSessionProvider.notifier).resendOtp();
       if (!mounted) return;
       _startResendCooldown();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.accountOtpResent)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.accountOtpResent)));
     } catch (e) {
       if (!mounted) return;
       final message = accountAuthErrorMessage(
@@ -105,7 +109,9 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       if (e is StateError) {
         context.go(Routes.signIn);
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -113,6 +119,11 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final session = ref.watch(appAccountSessionProvider);
+    ref.listen(appAccountSessionProvider, (previous, next) {
+      if (previous?.loading == true && !next.loading) {
+        _ensurePendingEmail();
+      }
+    });
     final email = session.pendingEmail ?? '';
     final canResend = !session.loading && _resendSecondsRemaining == 0;
 
@@ -151,9 +162,9 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                       autofillHints: const [AutofillHints.oneTimeCode],
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            letterSpacing: 8,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(letterSpacing: 8),
                       decoration: InputDecoration(
                         labelText: l10n.accountCodeLabel,
                         counterText: '',
@@ -181,7 +192,9 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                       onPressed: canResend ? _resend : null,
                       child: Text(
                         _resendSecondsRemaining > 0
-                            ? l10n.accountResendCooldown(_resendSecondsRemaining)
+                            ? l10n.accountResendCooldown(
+                                _resendSecondsRemaining,
+                              )
                             : l10n.accountResendCode,
                       ),
                     ),

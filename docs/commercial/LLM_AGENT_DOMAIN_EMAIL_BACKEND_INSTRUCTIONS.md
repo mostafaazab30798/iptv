@@ -10,7 +10,7 @@ Maintain this production architecture:
 hope-tv.site              -> public Flutter web Worker
 admin.hope-tv.site        -> existing hope-tv owner-dashboard Worker
 Supabase                  -> Auth, PostgreSQL, RLS, Edge Functions, release metadata
-turboSMTP                 -> Supabase authentication email transport
+Resend Free               -> Supabase authentication email transport
 GitHub Releases           -> Android APK and Windows installer storage/delivery
 ```
 
@@ -45,10 +45,9 @@ Before modifying anything:
 
 Known snapshot on 2026-08-30:
 
-- The domain returned `NXDOMAIN`.
-- The connected Cloudflare account had no `hope-tv.site` zone.
+- The zone resolves through Cloudflare, but `hope-tv.site` returned a Hostinger parked page instead of the Flutter Worker.
 - Cloudflare contained a Worker named `hope-tv`.
-- Supabase CLI was linked locally but had no management access token.
+- Supabase CLI was authenticated and linked to project `otmovtxevvuxbsrmurkb`.
 
 ## Source-of-truth files
 
@@ -87,7 +86,7 @@ Never read into output, commit, log, or place in client code any of the followin
 
 - Supabase service-role key.
 - Supabase management access token.
-- turboSMTP Consumer Secret or SMTP password.
+- Resend API key or SMTP password.
 - GitHub PAT.
 - Cloudflare OAuth/access token.
 - Entitlement or release signing private keys.
@@ -137,7 +136,7 @@ The Flutter account flow uses `signInWithOtp` followed by `verifyOTP` with `OtpT
 
 Do not assume editing `supabase/config.toml` changes the hosted Supabase project. It controls local/CLI configuration. Hosted Auth settings require the Supabase dashboard, Management API, or an authenticated `supabase config push` workflow explicitly authorized by the owner.
 
-## turboSMTP changes
+## Resend SMTP changes
 
 Expected SMTP model:
 
@@ -145,16 +144,16 @@ Expected SMTP model:
 Sending domain: auth.hope-tv.site
 Sender: no-reply@auth.hope-tv.site
 Sender name: HOPE TV
-Host: pro.turbo-smtp.com or the account-specific EU host
-Port: 587
-Username: turboSMTP Consumer Key
-Password: turboSMTP Consumer Secret
+Host: smtp.resend.com
+Port: 587 (STARTTLS)
+Username: resend
+Password: Resend sending API key
 ```
 
 Rules:
 
-1. Use the SPF and DKIM records displayed in the owner's turboSMTP account.
-2. Do not hardcode account-specific DKIM values unless provided through an authorized secure channel.
+1. Verify the sending domain through Resend and add the exact DNS records it provides to Cloudflare.
+2. Do not hardcode account-specific DKIM values or API tokens.
 3. Begin DMARC in monitoring mode and tighten policy only after verified delivery.
 4. Keep authentication mail separate from marketing email.
 5. Never store SMTP credentials as Edge Function source code, Flutter variables, Vite variables, or committed `.env` files.
@@ -272,4 +271,3 @@ Every handoff must state:
 5. Any pre-existing warnings or dirty-worktree files preserved.
 6. Whether the custom domain is actually live or only prepared in repository configuration.
 7. Confirmation that GitHub Releases remains the binary delivery path and R2 was not introduced.
-

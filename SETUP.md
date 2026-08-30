@@ -62,7 +62,7 @@ flutter run -d chrome
 
 ### Production domain, email, and Supabase
 
-For the `hope-tv.site` Cloudflare routes, turboSMTP sender authentication,
+For the `hope-tv.site` Cloudflare routes, Resend sender authentication,
 Supabase Auth URLs, SMTP fields, and the launch verification checklist, see
 [`docs/commercial/DOMAIN_EMAIL_SUPABASE_SETUP.md`](docs/commercial/DOMAIN_EMAIL_SUPABASE_SETUP.md).
 

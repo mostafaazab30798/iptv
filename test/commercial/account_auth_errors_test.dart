@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/features/account/account_auth_errors.dart';
+import 'package:iptv/features/account/account_controller.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -36,5 +37,30 @@ void main() {
       fallback: l10n.accountOtpVerifyFailed,
     );
     expect(message, l10n.accountOtpSessionExpired);
+  });
+
+  test('OTP verification waits for pending email restoration', () {
+    expect(
+      shouldLeaveOtpVerification(
+        const AppAccountSessionState(loading: true, configured: true),
+      ),
+      isFalse,
+    );
+    expect(
+      shouldLeaveOtpVerification(
+        const AppAccountSessionState(
+          loading: false,
+          configured: true,
+          pendingEmail: 'viewer@example.com',
+        ),
+      ),
+      isFalse,
+    );
+    expect(
+      shouldLeaveOtpVerification(
+        const AppAccountSessionState(loading: false, configured: true),
+      ),
+      isTrue,
+    );
   });
 }

@@ -42,10 +42,22 @@ class AppAccountSessionState {
       configured: configured ?? this.configured,
       account: clearAccount ? null : (account ?? this.account),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      pendingEmail:
-          clearPendingEmail ? null : (pendingEmail ?? this.pendingEmail),
+      pendingEmail: clearPendingEmail
+          ? null
+          : (pendingEmail ?? this.pendingEmail),
     );
   }
+}
+
+/// Whether the OTP screen no longer has enough state to verify a code.
+///
+/// A loading session must remain on the screen because bootstrap may still
+/// restore [AppAccountSessionState.pendingEmail] from preferences.
+bool shouldLeaveOtpVerification(AppAccountSessionState state) {
+  final email = state.pendingEmail;
+  return !state.loading &&
+      !state.isSignedIn &&
+      (email == null || email.isEmpty);
 }
 
 class AppAccountController extends StateNotifier<AppAccountSessionState> {
@@ -53,15 +65,15 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
     required AppAccountRepository accountRepository,
     required DeviceRepository deviceRepository,
     required AnalyticsRepository analyticsRepository,
-  })  : _accounts = accountRepository,
-        _devices = deviceRepository,
-        _analytics = analyticsRepository,
-        super(
-          AppAccountSessionState(
-            loading: true,
-            configured: accountRepository.isCommercialConfigured,
-          ),
-        ) {
+  }) : _accounts = accountRepository,
+       _devices = deviceRepository,
+       _analytics = analyticsRepository,
+       super(
+         AppAccountSessionState(
+           loading: true,
+           configured: accountRepository.isCommercialConfigured,
+         ),
+       ) {
     _bootstrap();
   }
 
@@ -128,7 +140,10 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
     try {
       await PreferencesStorage.instance.setPendingOtpEmail(email);
     } catch (e) {
-      AppLogger.error('Failed to persist pending OTP email: $e', feature: 'account');
+      AppLogger.error(
+        'Failed to persist pending OTP email: $e',
+        feature: 'account',
+      );
     }
   }
 
@@ -144,10 +159,7 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
       final normalized = email.trim().toLowerCase();
       await _accounts.requestEmailOtp(normalized);
       await _persistPendingOtpEmail(normalized);
-      state = state.copyWith(
-        loading: false,
-        pendingEmail: normalized,
-      );
+      state = state.copyWith(loading: false, pendingEmail: normalized);
     } catch (e) {
       state = state.copyWith(loading: false, errorMessage: e.toString());
       rethrow;
@@ -167,9 +179,16 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
     if (email == null || email.isEmpty) {
       throw StateError('No pending email for OTP verification.');
     }
-    state = state.copyWith(loading: true, clearError: true, pendingEmail: email);
+    state = state.copyWith(
+      loading: true,
+      clearError: true,
+      pendingEmail: email,
+    );
     try {
-      final account = await _accounts.verifyEmailOtp(email: email, token: token);
+      final account = await _accounts.verifyEmailOtp(
+        email: email,
+        token: token,
+      );
       await _clearPendingOtpEmail();
       await _registerDeviceQuietly();
       state = state.copyWith(

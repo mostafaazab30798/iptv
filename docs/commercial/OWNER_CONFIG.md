@@ -16,7 +16,7 @@ Aligned with `MASTER_SUBSCRIPTION_ANALYTICS_AGENT_PLAN.md` Section 0 and Section
 | Temporary customer website | Available `*.pages.dev` name | Free staging path; exact name unresolved |
 | Temporary owner dashboard | `https://hope-tv.mostafaazab3024.workers.dev` | Confirmed and configured in Supabase CORS |
 | Temporary API endpoint | `https://<project-ref>.supabase.co` | Free staging path |
-| Production website domain | `https://hope-tv.site` (`www` redirects to apex) | Confirmed; DNS resolves on Cloudflare (2026-08-30) |
+| Production website domain | `https://hope-tv.site` (`www` redirects to apex) | DNS resolves on Cloudflare, but the apex currently serves a Hostinger parked page; deploy the Flutter Worker before launch |
 | Production admin dashboard | `https://admin.hope-tv.site` | Resolves; keep `workers.dev` fallback during cutover |
 | Production API / custom domain | `https://api.hope-tv.site` | Optional; keep Supabase project URL until its custom-domain add-on is enabled |
 | Portal origin | `https://admin.hope-tv.site` | Production `PORTAL_ORIGIN`; exact origin has no trailing slash |
@@ -35,8 +35,8 @@ Aligned with `MASTER_SUBSCRIPTION_ANALYTICS_AGENT_PLAN.md` Section 0 and Section
 | Entitlement signing key ID | `entitlement-prod-2026-08-29-01` | Production Ed25519 key configured in Supabase |
 | Entitlement public key (hex) | `64eb26d19dafdd3a1ffd3e0c7a5998554579a5e967215c334a194e5638023952` | Non-secret; embed through `ENTITLEMENT_PUBLIC_KEYS_JSON` |
 | Trial duration (new trials) | `7` days | Server-authoritative; snapshot on activation |
-| Email delivery provider | turboSMTP through Supabase Custom SMTP | Confirmed; credentials remain in Supabase only |
-| Auth sender email | `no-reply@auth.hope-tv.site` | Confirmed target; verify the sending domain in turboSMTP first |
+| Email delivery provider | Resend Free through Supabase Custom SMTP | Confirmed; 3,000 emails/month and 100/day, with the API key stored only in Supabase |
+| Auth sender email | `no-reply@auth.hope-tv.site` | Confirmed target; verify `auth.hope-tv.site` in Resend first |
 | Android release signing | Generated locally; uploaded as `ANDROID_KEYSTORE_*` GitHub secrets | Ready for CI (backup passwords file is gitignored under `android/keystore/`) |
 | Client entitlement verify key | Embedded via `ENTITLEMENT_PUBLIC_KEYS_JSON` secret + workflow default | Set |
 | Client portal origin | `PORTAL_ORIGIN=https://admin.hope-tv.site` | Set in GitHub secrets |

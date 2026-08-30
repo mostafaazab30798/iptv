@@ -67,7 +67,8 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 secure_password_change = true
-# Passwordless OTP / magic link — production SMTP configured later via OWNER_CONFIG placeholders.
+# Passwordless OTP / magic link. Hosted production Auth uses Resend through
+# Supabase Custom SMTP; credentials stay in hosted Auth settings.
 otp_length = 6
 otp_expiry = 3600
 
