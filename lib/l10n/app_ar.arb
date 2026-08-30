@@ -306,5 +306,84 @@
   "errorServer": "خطأ في الخادم. يُرجى المحاولة مرة أخرى.",
   "errorAuth": "بيانات اعتماد غير صحيحة. تحقق من بياناتك.",
   "errorPlayback": "البث غير متاح",
-  "errorUnknown": "حدث خطأ ما."
+  "errorUnknown": "حدث خطأ ما.",
+
+  "accountTitle": "حساب HOPE TV",
+  "accountSignInTitle": "تسجيل الدخول إلى HOPE TV",
+  "accountSignInSubtitle": "أدخل بريدك الإلكتروني لتلقي رمز تسجيل الدخول لمرة واحدة. هذا منفصل عن تسجيل دخول مزود IPTV.",
+  "accountNotConfigured": "لم يتم إعداد مصادقة الحساب في هذا البناء. عيّن SUPABASE_URL و SUPABASE_ANON_KEY.",
+  "accountEmailLabel": "البريد الإلكتروني",
+  "accountEmailInvalid": "أدخل بريداً إلكترونياً صالحاً.",
+  "accountSendCode": "إرسال الرمز",
+  "accountOtpSendFailed": "تعذر إرسال رمز تسجيل الدخول.",
+  "accountVerifyTitle": "أدخل الرمز",
+  "accountVerifySubtitle": "أرسلنا رمزاً إلى {email}",
+  "@accountVerifySubtitle": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "accountCodeLabel": "رمز التحقق",
+  "accountCodeInvalid": "أدخل الرمز من بريدك الإلكتروني.",
+  "accountVerifyAction": "تحقق ومتابعة",
+  "accountOtpVerifyFailed": "رمز غير صالح أو منتهٍ.",
+  "accountStatusLabel": "الحالة",
+  "accountUnknown": "غير معروف",
+  "accountSignOut": "تسجيل الخروج من HOPE TV",
+  "accountIptvSeparateHint": "تسجيل الخروج من HOPE TV لا يحذف بيانات مزود IPTV المحفوظة. استخدم الإعدادات لقطع اتصال خادم IPTV.",
+  "accountDevicesTitle": "الأجهزة",
+  "accountDeviceLimitLabel": "حد الأجهزة: {limit}",
+  "@accountDeviceLimitLabel": {
+    "placeholders": {
+      "limit": { "type": "int" }
+    }
+  },
+  "accountDeviceActive": "نشط",
+  "accountDeviceRevoked": "ملغى",
+  "accountRevokeDeviceTitle": "إلغاء الجهاز",
+  "accountRevokeDeviceMessage": "إزالة الوصول لـ \"{name}\"؟",
+  "@accountRevokeDeviceMessage": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "accountRevokeDeviceAction": "إلغاء",
+  "accountDeleteSectionTitle": "حذف الحساب",
+  "accountDeleteSectionBody": "حذف حساب HOPE TV والبيانات التجارية نهائياً بعد فترة سماح. بيانات مزود IPTV المحفوظة على هذا الجهاز لا تُحذف تلقائياً.",
+  "accountDeleteTitle": "حذف حساب HOPE TV؟",
+  "accountDeleteWarning": "سيتم جدولة حذف حسابك وأجهزتك والتحليلات الشخصية. يُفضّل إلغاء الاشتراك النشط أولاً. يمكنك إلغاء طلب الحذف خلال فترة السماح.",
+  "accountDeleteContinue": "متابعة",
+  "accountDeleteCancel": "إلغاء",
+  "accountDeleteConfirmTitle": "تأكيد الحذف",
+  "accountDeleteConfirmBody": "اكتب DELETE_MY_ACCOUNT أدناه للتأكيد. سيتم تسجيل خروجك من جميع الأجهزة.",
+  "accountDeleteConfirmLabel": "عبارة التأكيد",
+  "accountDeleteAction": "حذف حسابي",
+  "accountDeleteScheduled": "تم جدولة حذف الحساب. تم تسجيل خروجك.",
+  "accountDeleteFailed": "تعذر جدولة حذف الحساب.",
+  "accountDeleteActiveSubscription": "ألغِ اشتراكك أو أكّد فقدان الاشتراك قبل حذف الحساب.",
+  "accountDeletePendingTitle": "الحذف مجدول",
+  "accountDeletePendingBody": "سيُحذف حسابك بعد {date}. يمكنك إلغاء الطلب حتى ذلك الحين.",
+  "@accountDeletePendingBody": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "accountDeleteCancelRequest": "إلغاء طلب الحذف",
+  "accountDeleteCanceled": "تم إلغاء حذف الحساب.",
+  "accountDeleteCancelFailed": "تعذر إلغاء طلب الحذف.",
+  "accountDeleteStatusFailed": "تعذر تحميل حالة الحذف.",
+  "settingsSignOutIptvHint": "قطع اتصال مزود IPTV فقط",
+
+  "accessRequiredTitle": "الوصول مطلوب",
+  "accessRequiredHeadline": "وصول HOPE TV غير نشط",
+  "accessRequiredBody": "قد تكون الفترة التجريبية قد انتهت، أو يحتاج اشتراكك إلى متابعة. حدّث الوصول بعد الاتصال، أو اشترك عبر موقعنا.",
+  "accessRequiredReason": "الحالة: {reason}",
+  "@accessRequiredReason": {
+    "placeholders": {
+      "reason": { "type": "String" }
+    }
+  },
+  "accessRequiredRefresh": "تحديث الوصول",
+  "accessRequiredSubscribe": "اشترك عبر موقعنا",
+  "subscriptionPortalNotConfigured": "موقع الاشتراك غير مُعد بعد."
 }

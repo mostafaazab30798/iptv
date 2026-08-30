@@ -721,4 +721,181 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorUnknown => 'Something went wrong.';
+
+  @override
+  String get accountTitle => 'HOPE TV Account';
+
+  @override
+  String get accountSignInTitle => 'Sign in to HOPE TV';
+
+  @override
+  String get accountSignInSubtitle =>
+      'Enter your email to receive a one-time sign-in code. This is separate from your IPTV provider login.';
+
+  @override
+  String get accountNotConfigured =>
+      'Commercial auth is not configured in this build. Set SUPABASE_URL and SUPABASE_ANON_KEY dart-defines.';
+
+  @override
+  String get accountEmailLabel => 'Email';
+
+  @override
+  String get accountEmailInvalid => 'Enter a valid email address.';
+
+  @override
+  String get accountSendCode => 'Send code';
+
+  @override
+  String get accountOtpSendFailed => 'Could not send the sign-in code.';
+
+  @override
+  String get accountVerifyTitle => 'Enter code';
+
+  @override
+  String accountVerifySubtitle(String email) {
+    return 'We sent a code to $email';
+  }
+
+  @override
+  String get accountCodeLabel => 'Verification code';
+
+  @override
+  String get accountCodeInvalid => 'Enter the code from your email.';
+
+  @override
+  String get accountVerifyAction => 'Verify and continue';
+
+  @override
+  String get accountOtpVerifyFailed => 'Invalid or expired code.';
+
+  @override
+  String get accountStatusLabel => 'Status';
+
+  @override
+  String get accountUnknown => 'Unknown';
+
+  @override
+  String get accountSignOut => 'Sign out of HOPE TV';
+
+  @override
+  String get accountIptvSeparateHint =>
+      'Signing out of HOPE TV does not delete your saved IPTV provider credentials. Use Settings to disconnect the IPTV server.';
+
+  @override
+  String get accountDevicesTitle => 'Devices';
+
+  @override
+  String accountDeviceLimitLabel(int limit) {
+    return 'Device limit: $limit';
+  }
+
+  @override
+  String get accountDeviceActive => 'Active';
+
+  @override
+  String get accountDeviceRevoked => 'Revoked';
+
+  @override
+  String get accountRevokeDeviceTitle => 'Revoke device';
+
+  @override
+  String accountRevokeDeviceMessage(String name) {
+    return 'Remove access for \"$name\"?';
+  }
+
+  @override
+  String get accountRevokeDeviceAction => 'Revoke';
+
+  @override
+  String get accountDeleteSectionTitle => 'Delete account';
+
+  @override
+  String get accountDeleteSectionBody =>
+      'Permanently delete your HOPE TV account and commercial data after a grace period. IPTV credentials stored on this device are not removed automatically.';
+
+  @override
+  String get accountDeleteTitle => 'Delete HOPE TV account?';
+
+  @override
+  String get accountDeleteWarning =>
+      'This schedules deletion of your account, devices, and personal analytics. Active subscriptions should be canceled first. You can cancel the deletion request during the grace period.';
+
+  @override
+  String get accountDeleteContinue => 'Continue';
+
+  @override
+  String get accountDeleteCancel => 'Cancel';
+
+  @override
+  String get accountDeleteConfirmTitle => 'Confirm deletion';
+
+  @override
+  String get accountDeleteConfirmBody =>
+      'Type DELETE_MY_ACCOUNT below to confirm. You will be signed out on all devices.';
+
+  @override
+  String get accountDeleteConfirmLabel => 'Confirmation phrase';
+
+  @override
+  String get accountDeleteAction => 'Delete my account';
+
+  @override
+  String get accountDeleteScheduled =>
+      'Account deletion scheduled. You have been signed out.';
+
+  @override
+  String get accountDeleteFailed => 'Could not schedule account deletion.';
+
+  @override
+  String get accountDeleteActiveSubscription =>
+      'Cancel your subscription or acknowledge subscription loss before deleting your account.';
+
+  @override
+  String get accountDeletePendingTitle => 'Deletion scheduled';
+
+  @override
+  String accountDeletePendingBody(String date) {
+    return 'Your account will be deleted after $date. You can cancel this request until then.';
+  }
+
+  @override
+  String get accountDeleteCancelRequest => 'Cancel deletion request';
+
+  @override
+  String get accountDeleteCanceled => 'Account deletion canceled.';
+
+  @override
+  String get accountDeleteCancelFailed =>
+      'Could not cancel the deletion request.';
+
+  @override
+  String get accountDeleteStatusFailed => 'Could not load deletion status.';
+
+  @override
+  String get settingsSignOutIptvHint => 'Disconnect IPTV provider only';
+
+  @override
+  String get accessRequiredTitle => 'Access required';
+
+  @override
+  String get accessRequiredHeadline => 'Your HOPE TV access is not active';
+
+  @override
+  String get accessRequiredBody =>
+      'Your free trial may have ended, or your subscription needs attention. Refresh access after reconnecting, or subscribe on our website.';
+
+  @override
+  String accessRequiredReason(String reason) {
+    return 'Status: $reason';
+  }
+
+  @override
+  String get accessRequiredRefresh => 'Refresh access';
+
+  @override
+  String get accessRequiredSubscribe => 'Subscribe on our website';
+
+  @override
+  String get subscriptionPortalNotConfigured =>
+      'Subscription website is not configured yet.';
 }

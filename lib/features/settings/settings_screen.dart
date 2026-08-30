@@ -8,8 +8,10 @@ import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
+import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/features/auth/auth_controller.dart';
+import 'package:iptv/features/updates/update_dialog.dart';
 
 import 'package:iptv/shared/extensions/context_extensions.dart';
 
@@ -121,12 +123,65 @@ class SettingsScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
+                  leading: const HugeIcon(icon: AppIcons.user, color: AppColors.accent, size: 22),
+                  title: Text(
+                    context.l10n.accountTitle,
+                    style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                  onTap: () => context.push(Routes.account),
+                ),
+                const SizedBox(height: 6),
+                ListTile(
+                  tileColor: AppColors.bg1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
                   leading: const HugeIcon(icon: AppIcons.logout, color: AppColors.error, size: 22),
                   title: Text(context.l10n.actionSignOut, style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    context.l10n.settingsSignOutIptvHint,
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  ),
                   onTap: () => _signOut(context, ref),
                 ),
               ],
             ),
+            if (CommercialApiConfig.isConfigured) ...[
+              const SizedBox(height: AppSpacing.xl),
+              _SettingsSection(
+                title: 'App updates',
+                children: [
+                  ListTile(
+                    tileColor: AppColors.bg1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    leading: const HugeIcon(
+                      icon: AppIcons.refresh,
+                      color: AppColors.accent,
+                      size: 22,
+                    ),
+                    title: const Text(
+                      'Check for updates',
+                      style: TextStyle(color: AppColors.textPrimary),
+                    ),
+                    subtitle: Text(
+                      ref.watch(updateProvider).updateAvailable
+                          ? 'Update available'
+                          : 'HOPE TV ${AppConstants.appVersion}',
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    ),
+                    onTap: () async {
+                      await ref.read(updateProvider.notifier).checkForUpdates();
+                      if (context.mounted) {
+                        await showUpdateDialogIfNeeded(context, ref);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: AppSpacing.xl),
             _SettingsSection(
               title: context.l10n.settingsAbout,
@@ -146,7 +201,10 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   title: Text(context.l10n.settingsVersion, style: const TextStyle(color: AppColors.textPrimary)),
-                  trailing: const Text('0.1.0', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  trailing: Text(
+                    AppConstants.appVersion,
+                    style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),

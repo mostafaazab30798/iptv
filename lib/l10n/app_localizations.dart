@@ -1369,6 +1369,318 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Something went wrong.'**
   String get errorUnknown;
+
+  /// No description provided for @accountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'HOPE TV Account'**
+  String get accountTitle;
+
+  /// No description provided for @accountSignInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to HOPE TV'**
+  String get accountSignInTitle;
+
+  /// No description provided for @accountSignInSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email to receive a one-time sign-in code. This is separate from your IPTV provider login.'**
+  String get accountSignInSubtitle;
+
+  /// No description provided for @accountNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Commercial auth is not configured in this build. Set SUPABASE_URL and SUPABASE_ANON_KEY dart-defines.'**
+  String get accountNotConfigured;
+
+  /// No description provided for @accountEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get accountEmailLabel;
+
+  /// No description provided for @accountEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get accountEmailInvalid;
+
+  /// No description provided for @accountSendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Send code'**
+  String get accountSendCode;
+
+  /// No description provided for @accountOtpSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the sign-in code.'**
+  String get accountOtpSendFailed;
+
+  /// No description provided for @accountVerifyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter code'**
+  String get accountVerifyTitle;
+
+  /// No description provided for @accountVerifySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a code to {email}'**
+  String accountVerifySubtitle(String email);
+
+  /// No description provided for @accountCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code'**
+  String get accountCodeLabel;
+
+  /// No description provided for @accountCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code from your email.'**
+  String get accountCodeInvalid;
+
+  /// No description provided for @accountVerifyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify and continue'**
+  String get accountVerifyAction;
+
+  /// No description provided for @accountOtpVerifyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid or expired code.'**
+  String get accountOtpVerifyFailed;
+
+  /// No description provided for @accountStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get accountStatusLabel;
+
+  /// No description provided for @accountUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get accountUnknown;
+
+  /// No description provided for @accountSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of HOPE TV'**
+  String get accountSignOut;
+
+  /// No description provided for @accountIptvSeparateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing out of HOPE TV does not delete your saved IPTV provider credentials. Use Settings to disconnect the IPTV server.'**
+  String get accountIptvSeparateHint;
+
+  /// No description provided for @accountDevicesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get accountDevicesTitle;
+
+  /// No description provided for @accountDeviceLimitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Device limit: {limit}'**
+  String accountDeviceLimitLabel(int limit);
+
+  /// No description provided for @accountDeviceActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get accountDeviceActive;
+
+  /// No description provided for @accountDeviceRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoked'**
+  String get accountDeviceRevoked;
+
+  /// No description provided for @accountRevokeDeviceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke device'**
+  String get accountRevokeDeviceTitle;
+
+  /// No description provided for @accountRevokeDeviceMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove access for \"{name}\"?'**
+  String accountRevokeDeviceMessage(String name);
+
+  /// No description provided for @accountRevokeDeviceAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke'**
+  String get accountRevokeDeviceAction;
+
+  /// No description provided for @accountDeleteSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get accountDeleteSectionTitle;
+
+  /// No description provided for @accountDeleteSectionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete your HOPE TV account and commercial data after a grace period. IPTV credentials stored on this device are not removed automatically.'**
+  String get accountDeleteSectionBody;
+
+  /// No description provided for @accountDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete HOPE TV account?'**
+  String get accountDeleteTitle;
+
+  /// No description provided for @accountDeleteWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This schedules deletion of your account, devices, and personal analytics. Active subscriptions should be canceled first. You can cancel the deletion request during the grace period.'**
+  String get accountDeleteWarning;
+
+  /// No description provided for @accountDeleteContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get accountDeleteContinue;
+
+  /// No description provided for @accountDeleteCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get accountDeleteCancel;
+
+  /// No description provided for @accountDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm deletion'**
+  String get accountDeleteConfirmTitle;
+
+  /// No description provided for @accountDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Type DELETE_MY_ACCOUNT below to confirm. You will be signed out on all devices.'**
+  String get accountDeleteConfirmBody;
+
+  /// No description provided for @accountDeleteConfirmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation phrase'**
+  String get accountDeleteConfirmLabel;
+
+  /// No description provided for @accountDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get accountDeleteAction;
+
+  /// No description provided for @accountDeleteScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion scheduled. You have been signed out.'**
+  String get accountDeleteScheduled;
+
+  /// No description provided for @accountDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not schedule account deletion.'**
+  String get accountDeleteFailed;
+
+  /// No description provided for @accountDeleteActiveSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel your subscription or acknowledge subscription loss before deleting your account.'**
+  String get accountDeleteActiveSubscription;
+
+  /// No description provided for @accountDeletePendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion scheduled'**
+  String get accountDeletePendingTitle;
+
+  /// No description provided for @accountDeletePendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account will be deleted after {date}. You can cancel this request until then.'**
+  String accountDeletePendingBody(String date);
+
+  /// No description provided for @accountDeleteCancelRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel deletion request'**
+  String get accountDeleteCancelRequest;
+
+  /// No description provided for @accountDeleteCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion canceled.'**
+  String get accountDeleteCanceled;
+
+  /// No description provided for @accountDeleteCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not cancel the deletion request.'**
+  String get accountDeleteCancelFailed;
+
+  /// No description provided for @accountDeleteStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load deletion status.'**
+  String get accountDeleteStatusFailed;
+
+  /// No description provided for @settingsSignOutIptvHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect IPTV provider only'**
+  String get settingsSignOutIptvHint;
+
+  /// No description provided for @accessRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Access required'**
+  String get accessRequiredTitle;
+
+  /// No description provided for @accessRequiredHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your HOPE TV access is not active'**
+  String get accessRequiredHeadline;
+
+  /// No description provided for @accessRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your free trial may have ended, or your subscription needs attention. Refresh access after reconnecting, or subscribe on our website.'**
+  String get accessRequiredBody;
+
+  /// No description provided for @accessRequiredReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {reason}'**
+  String accessRequiredReason(String reason);
+
+  /// No description provided for @accessRequiredRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh access'**
+  String get accessRequiredRefresh;
+
+  /// No description provided for @accessRequiredSubscribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe on our website'**
+  String get accessRequiredSubscribe;
+
+  /// No description provided for @subscriptionPortalNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription website is not configured yet.'**
+  String get subscriptionPortalNotConfigured;
 }
 
 class _AppLocalizationsDelegate

@@ -731,4 +731,178 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get errorUnknown => 'حدث خطأ ما.';
+
+  @override
+  String get accountTitle => 'حساب HOPE TV';
+
+  @override
+  String get accountSignInTitle => 'تسجيل الدخول إلى HOPE TV';
+
+  @override
+  String get accountSignInSubtitle =>
+      'أدخل بريدك الإلكتروني لتلقي رمز تسجيل الدخول لمرة واحدة. هذا منفصل عن تسجيل دخول مزود IPTV.';
+
+  @override
+  String get accountNotConfigured =>
+      'لم يتم إعداد مصادقة الحساب في هذا البناء. عيّن SUPABASE_URL و SUPABASE_ANON_KEY.';
+
+  @override
+  String get accountEmailLabel => 'البريد الإلكتروني';
+
+  @override
+  String get accountEmailInvalid => 'أدخل بريداً إلكترونياً صالحاً.';
+
+  @override
+  String get accountSendCode => 'إرسال الرمز';
+
+  @override
+  String get accountOtpSendFailed => 'تعذر إرسال رمز تسجيل الدخول.';
+
+  @override
+  String get accountVerifyTitle => 'أدخل الرمز';
+
+  @override
+  String accountVerifySubtitle(String email) {
+    return 'أرسلنا رمزاً إلى $email';
+  }
+
+  @override
+  String get accountCodeLabel => 'رمز التحقق';
+
+  @override
+  String get accountCodeInvalid => 'أدخل الرمز من بريدك الإلكتروني.';
+
+  @override
+  String get accountVerifyAction => 'تحقق ومتابعة';
+
+  @override
+  String get accountOtpVerifyFailed => 'رمز غير صالح أو منتهٍ.';
+
+  @override
+  String get accountStatusLabel => 'الحالة';
+
+  @override
+  String get accountUnknown => 'غير معروف';
+
+  @override
+  String get accountSignOut => 'تسجيل الخروج من HOPE TV';
+
+  @override
+  String get accountIptvSeparateHint =>
+      'تسجيل الخروج من HOPE TV لا يحذف بيانات مزود IPTV المحفوظة. استخدم الإعدادات لقطع اتصال خادم IPTV.';
+
+  @override
+  String get accountDevicesTitle => 'الأجهزة';
+
+  @override
+  String accountDeviceLimitLabel(int limit) {
+    return 'حد الأجهزة: $limit';
+  }
+
+  @override
+  String get accountDeviceActive => 'نشط';
+
+  @override
+  String get accountDeviceRevoked => 'ملغى';
+
+  @override
+  String get accountRevokeDeviceTitle => 'إلغاء الجهاز';
+
+  @override
+  String accountRevokeDeviceMessage(String name) {
+    return 'إزالة الوصول لـ \"$name\"؟';
+  }
+
+  @override
+  String get accountRevokeDeviceAction => 'إلغاء';
+
+  @override
+  String get accountDeleteSectionTitle => 'حذف الحساب';
+
+  @override
+  String get accountDeleteSectionBody =>
+      'حذف حساب HOPE TV والبيانات التجارية نهائياً بعد فترة سماح. بيانات مزود IPTV المحفوظة على هذا الجهاز لا تُحذف تلقائياً.';
+
+  @override
+  String get accountDeleteTitle => 'حذف حساب HOPE TV؟';
+
+  @override
+  String get accountDeleteWarning =>
+      'سيتم جدولة حذف حسابك وأجهزتك والتحليلات الشخصية. يُفضّل إلغاء الاشتراك النشط أولاً. يمكنك إلغاء طلب الحذف خلال فترة السماح.';
+
+  @override
+  String get accountDeleteContinue => 'متابعة';
+
+  @override
+  String get accountDeleteCancel => 'إلغاء';
+
+  @override
+  String get accountDeleteConfirmTitle => 'تأكيد الحذف';
+
+  @override
+  String get accountDeleteConfirmBody =>
+      'اكتب DELETE_MY_ACCOUNT أدناه للتأكيد. سيتم تسجيل خروجك من جميع الأجهزة.';
+
+  @override
+  String get accountDeleteConfirmLabel => 'عبارة التأكيد';
+
+  @override
+  String get accountDeleteAction => 'حذف حسابي';
+
+  @override
+  String get accountDeleteScheduled => 'تم جدولة حذف الحساب. تم تسجيل خروجك.';
+
+  @override
+  String get accountDeleteFailed => 'تعذر جدولة حذف الحساب.';
+
+  @override
+  String get accountDeleteActiveSubscription =>
+      'ألغِ اشتراكك أو أكّد فقدان الاشتراك قبل حذف الحساب.';
+
+  @override
+  String get accountDeletePendingTitle => 'الحذف مجدول';
+
+  @override
+  String accountDeletePendingBody(String date) {
+    return 'سيُحذف حسابك بعد $date. يمكنك إلغاء الطلب حتى ذلك الحين.';
+  }
+
+  @override
+  String get accountDeleteCancelRequest => 'إلغاء طلب الحذف';
+
+  @override
+  String get accountDeleteCanceled => 'تم إلغاء حذف الحساب.';
+
+  @override
+  String get accountDeleteCancelFailed => 'تعذر إلغاء طلب الحذف.';
+
+  @override
+  String get accountDeleteStatusFailed => 'تعذر تحميل حالة الحذف.';
+
+  @override
+  String get settingsSignOutIptvHint => 'قطع اتصال مزود IPTV فقط';
+
+  @override
+  String get accessRequiredTitle => 'الوصول مطلوب';
+
+  @override
+  String get accessRequiredHeadline => 'وصول HOPE TV غير نشط';
+
+  @override
+  String get accessRequiredBody =>
+      'قد تكون الفترة التجريبية قد انتهت، أو يحتاج اشتراكك إلى متابعة. حدّث الوصول بعد الاتصال، أو اشترك عبر موقعنا.';
+
+  @override
+  String accessRequiredReason(String reason) {
+    return 'الحالة: $reason';
+  }
+
+  @override
+  String get accessRequiredRefresh => 'تحديث الوصول';
+
+  @override
+  String get accessRequiredSubscribe => 'اشترك عبر موقعنا';
+
+  @override
+  String get subscriptionPortalNotConfigured => 'موقع الاشتراك غير مُعد بعد.';
 }

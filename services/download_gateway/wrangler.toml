@@ -1,0 +1,17 @@
+name = "hope-tv-download-gateway"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+# Isolated from the root IPTV proxy Worker configuration.
+# Private R2 binding only — never public object ACLs.
+
+[[r2_buckets]]
+binding = "RELEASES"
+bucket_name = "PLACEHOLDER_R2_RELEASES_BUCKET"
+preview_bucket_name = "PLACEHOLDER_R2_RELEASES_BUCKET_PREVIEW"
+
+[vars]
+PRODUCT_NAME = "HOPE TV"
+SUPABASE_URL = "PLACEHOLDER_SUPABASE_URL"
+DOWNLOAD_CONSUME_URL = "PLACEHOLDER_SUPABASE_URL/functions/v1/download-consume"
+# DOWNLOAD_TOKEN_HMAC_SECRET and GATEWAY_SERVICE_SECRET are Worker secrets, not vars.

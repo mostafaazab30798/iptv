@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,11 +36,33 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _navigate() async {
     await initializeAfterFirstFrame();
+    // Kick app-account bootstrap (separate from IPTV session).
+    ref.read(appAccountSessionProvider);
     await ref.read(sessionProvider.notifier).loadSession();
     if (!mounted) return;
 
-    final session = ref.read(sessionProvider).valueOrNull;
-    if (session != null && session.isValid) {
+    // Wait briefly for app-account controller to finish loading when configured.
+    for (var i = 0; i < 40; i++) {
+      final app = ref.read(appAccountSessionProvider);
+      if (!app.loading) break;
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      if (!mounted) return;
+    }
+
+    final app = ref.read(appAccountSessionProvider);
+    final iptv = ref.read(sessionProvider).valueOrNull;
+    final commercialOn = app.configured;
+
+    if (commercialOn && !app.isSignedIn) {
+      context.go(Routes.signIn);
+      return;
+    }
+
+    if (commercialOn && app.isSignedIn) {
+      unawaited(ref.read(entitlementProvider.notifier).refresh());
+    }
+
+    if (iptv != null && iptv.isValid) {
       context.go(Routes.home);
     } else {
       context.go(Routes.onboarding);

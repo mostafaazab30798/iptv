@@ -3,6 +3,8 @@ abstract final class AppConstants {
   // App identity
   static const String appName = 'HOPE IPTV';
   static const String appVersion = '0.1.0';
+  /// Integer build number compared against server release metadata.
+  static const int appBuildNumber = 1;
   static const String appLogo = 'assets/icons/app_logo.png';
 
 

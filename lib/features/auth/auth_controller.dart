@@ -22,15 +22,19 @@ class AuthController extends StateNotifier<AsyncValue<ServerConfig?>> {
       password: password,
     );
 
-    result.when(
-      ok: (config) {
-        state = AsyncValue.data(config);
-        _ref.read(sessionProvider.notifier).setConfig(config);
-      },
-      err: (err) {
-        state = AsyncValue.error(err.message, StackTrace.current);
-      },
-    );
+    if (result.isOk) {
+      final config = result.value;
+      state = AsyncValue.data(config);
+      _ref.read(sessionProvider.notifier).setConfig(config);
+      // Credential-free trial activation after IPTV success (Phase 3).
+      try {
+        await _ref.read(entitlementProvider.notifier).activateTrialAfterIptvSuccess();
+      } catch (_) {
+        // Do not roll back IPTV login; access gate will require retry/connectivity.
+      }
+    } else {
+      state = AsyncValue.error(result.error.message, StackTrace.current);
+    }
 
     return result;
   }

@@ -326,5 +326,84 @@
   "errorServer": "Server error. Please try again.",
   "errorAuth": "Invalid credentials. Please check your details.",
   "errorPlayback": "Stream unavailable",
-  "errorUnknown": "Something went wrong."
+  "errorUnknown": "Something went wrong.",
+
+  "accountTitle": "HOPE TV Account",
+  "accountSignInTitle": "Sign in to HOPE TV",
+  "accountSignInSubtitle": "Enter your email to receive a one-time sign-in code. This is separate from your IPTV provider login.",
+  "accountNotConfigured": "Commercial auth is not configured in this build. Set SUPABASE_URL and SUPABASE_ANON_KEY dart-defines.",
+  "accountEmailLabel": "Email",
+  "accountEmailInvalid": "Enter a valid email address.",
+  "accountSendCode": "Send code",
+  "accountOtpSendFailed": "Could not send the sign-in code.",
+  "accountVerifyTitle": "Enter code",
+  "accountVerifySubtitle": "We sent a code to {email}",
+  "@accountVerifySubtitle": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "accountCodeLabel": "Verification code",
+  "accountCodeInvalid": "Enter the code from your email.",
+  "accountVerifyAction": "Verify and continue",
+  "accountOtpVerifyFailed": "Invalid or expired code.",
+  "accountStatusLabel": "Status",
+  "accountUnknown": "Unknown",
+  "accountSignOut": "Sign out of HOPE TV",
+  "accountIptvSeparateHint": "Signing out of HOPE TV does not delete your saved IPTV provider credentials. Use Settings to disconnect the IPTV server.",
+  "accountDevicesTitle": "Devices",
+  "accountDeviceLimitLabel": "Device limit: {limit}",
+  "@accountDeviceLimitLabel": {
+    "placeholders": {
+      "limit": { "type": "int" }
+    }
+  },
+  "accountDeviceActive": "Active",
+  "accountDeviceRevoked": "Revoked",
+  "accountRevokeDeviceTitle": "Revoke device",
+  "accountRevokeDeviceMessage": "Remove access for \"{name}\"?",
+  "@accountRevokeDeviceMessage": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "accountRevokeDeviceAction": "Revoke",
+  "accountDeleteSectionTitle": "Delete account",
+  "accountDeleteSectionBody": "Permanently delete your HOPE TV account and commercial data after a grace period. IPTV credentials stored on this device are not removed automatically.",
+  "accountDeleteTitle": "Delete HOPE TV account?",
+  "accountDeleteWarning": "This schedules deletion of your account, devices, and personal analytics. Active subscriptions should be canceled first. You can cancel the deletion request during the grace period.",
+  "accountDeleteContinue": "Continue",
+  "accountDeleteCancel": "Cancel",
+  "accountDeleteConfirmTitle": "Confirm deletion",
+  "accountDeleteConfirmBody": "Type DELETE_MY_ACCOUNT below to confirm. You will be signed out on all devices.",
+  "accountDeleteConfirmLabel": "Confirmation phrase",
+  "accountDeleteAction": "Delete my account",
+  "accountDeleteScheduled": "Account deletion scheduled. You have been signed out.",
+  "accountDeleteFailed": "Could not schedule account deletion.",
+  "accountDeleteActiveSubscription": "Cancel your subscription or acknowledge subscription loss before deleting your account.",
+  "accountDeletePendingTitle": "Deletion scheduled",
+  "accountDeletePendingBody": "Your account will be deleted after {date}. You can cancel this request until then.",
+  "@accountDeletePendingBody": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "accountDeleteCancelRequest": "Cancel deletion request",
+  "accountDeleteCanceled": "Account deletion canceled.",
+  "accountDeleteCancelFailed": "Could not cancel the deletion request.",
+  "accountDeleteStatusFailed": "Could not load deletion status.",
+  "settingsSignOutIptvHint": "Disconnect IPTV provider only",
+
+  "accessRequiredTitle": "Access required",
+  "accessRequiredHeadline": "Your HOPE TV access is not active",
+  "accessRequiredBody": "Your free trial may have ended, or your subscription needs attention. Refresh access after reconnecting, or subscribe on our website.",
+  "accessRequiredReason": "Status: {reason}",
+  "@accessRequiredReason": {
+    "placeholders": {
+      "reason": { "type": "String" }
+    }
+  },
+  "accessRequiredRefresh": "Refresh access",
+  "accessRequiredSubscribe": "Subscribe on our website",
+  "subscriptionPortalNotConfigured": "Subscription website is not configured yet."
 }

@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv/app/providers.dart';
+import 'package:iptv/core/commercial/commercial_api_config.dart';
+import 'package:iptv/features/subscription/access_required_screen.dart';
+import 'package:iptv/features/account/account_screen.dart';
+import 'package:iptv/features/account/devices_screen.dart';
+import 'package:iptv/features/account/sign_in_screen.dart';
+import 'package:iptv/features/account/verify_code_screen.dart';
 import 'package:iptv/features/favorites/favorites_screen.dart';
 import 'package:iptv/features/guide/guide_screen.dart';
 import 'package:iptv/features/history/history_screen.dart';
@@ -22,6 +28,11 @@ import 'package:iptv/shared/navigation/app_shell.dart';
 
 abstract final class Routes {
   static const splash = '/';
+  static const signIn = '/sign-in';
+  static const verifyCode = '/verify-code';
+  static const account = '/account';
+  static const devices = '/devices';
+  static const accessRequired = '/access-required';
   static const onboarding = '/onboarding';
   static const home = '/home';
   static const live = '/live';
@@ -44,6 +55,12 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(sessionProvider, (previous, next) {
     refresh.value++;
   });
+  ref.listen(appAccountSessionProvider, (previous, next) {
+    refresh.value++;
+  });
+  ref.listen(entitlementProvider, (previous, next) {
+    refresh.value++;
+  });
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -52,19 +69,61 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final loc = state.matchedLocation;
-      final sessionAsync = ref.read(sessionProvider);
 
       // Splash owns the initial session load + first navigation.
       if (loc == Routes.splash) return null;
 
-      if (sessionAsync.isLoading) {
+      final appAccount = ref.read(appAccountSessionProvider);
+      final iptvAsync = ref.read(sessionProvider);
+      final entitlement = ref.read(entitlementProvider);
+      final commercialOn = CommercialApiConfig.isConfigured;
+
+      if (commercialOn && appAccount.loading) {
         return Routes.splash;
       }
 
-      final isAuthed = sessionAsync.valueOrNull?.isValid ?? false;
-      final isOnboarding = loc == Routes.onboarding;
+      if (iptvAsync.isLoading) {
+        return Routes.splash;
+      }
 
-      if (!isAuthed && !isOnboarding) {
+      final appSignedIn = appAccount.isSignedIn;
+      final iptvAuthed = iptvAsync.valueOrNull?.isValid ?? false;
+
+      final onAppAuthRoute =
+          loc == Routes.signIn || loc == Routes.verifyCode;
+      final onAccountRoute =
+          loc == Routes.account || loc == Routes.devices;
+      final onAccessRequired = loc == Routes.accessRequired;
+
+      if (commercialOn) {
+        if (!appSignedIn && !onAppAuthRoute) {
+          return Routes.signIn;
+        }
+        if (appSignedIn && onAppAuthRoute) {
+          return iptvAuthed ? Routes.home : Routes.onboarding;
+        }
+        if (appSignedIn && !iptvAuthed && !onAccountRoute) {
+          final isOnboarding = loc == Routes.onboarding;
+          if (!isOnboarding) return Routes.onboarding;
+        }
+        if (appSignedIn && iptvAuthed && !onAccountRoute && !onAppAuthRoute) {
+          // Soft gate: while loading entitlement, allow cached path; deny premium routes when known denied.
+          if (!entitlement.loading &&
+              entitlement.entitlement != null &&
+              !entitlement.allowsPremium &&
+              !onAccessRequired) {
+            return Routes.accessRequired;
+          }
+          if (onAccessRequired && entitlement.allowsPremium) {
+            return Routes.home;
+          }
+        }
+        return null;
+      }
+
+      // Placeholders / commercial off: preserve IPTV-only gate.
+      final isOnboarding = loc == Routes.onboarding;
+      if (!iptvAuthed && !isOnboarding && !onAppAuthRoute && !onAccountRoute) {
         return Routes.onboarding;
       }
 
@@ -74,6 +133,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.splash,
         pageBuilder: (context, state) => _fade(const SplashScreen()),
+      ),
+      GoRoute(
+        path: Routes.signIn,
+        pageBuilder: (context, state) => _fade(const SignInScreen()),
+      ),
+      GoRoute(
+        path: Routes.verifyCode,
+        pageBuilder: (context, state) => _fade(const VerifyCodeScreen()),
+      ),
+      GoRoute(
+        path: Routes.account,
+        pageBuilder: (context, state) => _fade(const AccountScreen()),
+      ),
+      GoRoute(
+        path: Routes.devices,
+        pageBuilder: (context, state) => _fade(const DevicesScreen()),
+      ),
+      GoRoute(
+        path: Routes.accessRequired,
+        pageBuilder: (context, state) => _fade(const AccessRequiredScreen()),
       ),
       GoRoute(
         path: Routes.onboarding,

@@ -1,0 +1,85 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:iptv/app/providers.dart';
+import 'package:iptv/app/router.dart';
+import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class AccessRequiredScreen extends ConsumerWidget {
+  const AccessRequiredScreen({super.key});
+
+  Future<void> _openSubscribe(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    // Portal URL comes from remote config later; placeholder host rejected.
+    final uri = Uri.tryParse('https://PLACEHOLDER_PORTAL_ORIGIN');
+    if (uri == null ||
+        uri.host.contains('PLACEHOLDER') ||
+        uri.scheme != 'https') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.subscriptionPortalNotConfigured)),
+      );
+      return;
+    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final entitlement = ref.watch(entitlementProvider).entitlement;
+
+    return Scaffold(
+      backgroundColor: AppColors.bg0,
+      appBar: AppBar(
+        title: Text(l10n.accessRequiredTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.manage_accounts),
+            onPressed: () => context.push(Routes.account),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.accessRequiredHeadline,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.accessRequiredBody,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+              ),
+              if (entitlement != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  l10n.accessRequiredReason(entitlement.reason),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+              const Spacer(),
+              FilledButton(
+                onPressed: () =>
+                    ref.read(entitlementProvider.notifier).refresh(),
+                child: Text(l10n.accessRequiredRefresh),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => _openSubscribe(context),
+                child: Text(l10n.accessRequiredSubscribe),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
