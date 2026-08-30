@@ -76,6 +76,13 @@ otp_expiry = 3600
 subject = "رمز تسجيل الدخول إلى HOPE TV"
 content_path = "./supabase/templates/magic_link.html"
 
+# signInWithOtp uses the confirmation template the first time an address is
+# seen, then the magic-link template for returning users. Keep both pointed at
+# the same token-only body so every address receives a six-digit code.
+[auth.email.template.confirmation]
+subject = "رمز تسجيل الدخول إلى HOPE TV"
+content_path = "./supabase/templates/magic_link.html"
+
 [auth.sms]
 enable_signup = false
 enable_confirmations = false

@@ -969,6 +969,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accessRequiredSubscribe => 'Subscribe on our website';
 
   @override
+  String get accessRequiredChangeServer => 'Use another IPTV server';
+
+  @override
   String get subscriptionPortalNotConfigured =>
       'Subscription website is not configured yet.';
 

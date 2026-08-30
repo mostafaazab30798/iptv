@@ -131,10 +131,11 @@ After saving the SMTP settings:
 
 1. Review **Authentication → Rate Limits**.
 2. Keep email OTP length at `6`.
-3. Copy the contents of [`supabase/templates/magic_link.html`](../../supabase/templates/magic_link.html) into the hosted Supabase Magic Link template.
-4. Confirm that the template still contains `{{ .Token }}`.
-5. Send an OTP to a non-owner mailbox and verify delivery.
-6. Inspect message headers and confirm SPF, DKIM, and DMARC pass.
+3. Copy the contents of [`supabase/templates/magic_link.html`](../../supabase/templates/magic_link.html) into both the hosted **Confirm signup** and **Magic Link** templates.
+4. Confirm that both templates contain `{{ .Token }}` and neither contains `{{ .ConfirmationURL }}`.
+5. Send an OTP to a brand-new non-owner mailbox and verify that it contains a six-digit code, not an activation link.
+6. Request another OTP for the same mailbox and verify the returning-user email also contains a six-digit code.
+7. Inspect message headers and confirm SPF, DKIM, and DMARC pass.
 
 ## 7. Configure Supabase Edge Function origins
 

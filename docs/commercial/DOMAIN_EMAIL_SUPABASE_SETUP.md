@@ -80,9 +80,14 @@ In Supabase project `otmovtxevvuxbsrmurkb`:
 
 Store these values only in Supabase Auth settings. They are not Edge Function secrets and must never be placed in Flutter, Vite, or GitHub build variables.
 
-### Email template
+### Email templates
 
-The Flutter client expects the six-digit value produced by `{{ .Token }}`. Copy the body from `supabase/templates/magic_link.html` into the hosted Supabase **Magic Link** template and keep OTP length at `6`.
+The Flutter client expects the six-digit value produced by `{{ .Token }}`. Copy the body from `supabase/templates/magic_link.html` into both hosted Supabase templates:
+
+- **Confirm signup** — used the first time a new email address signs in.
+- **Magic Link** — used for an existing account.
+
+Keep OTP length at `6`. Both templates must contain `{{ .Token }}` and must not contain `{{ .ConfirmationURL }}`; otherwise new users receive an activation link while returning users receive a code.
 
 After saving SMTP, review **Authentication → Rate Limits**. Supabase starts custom SMTP projects with conservative email limits; raise them only to a measured production value.
 

@@ -11,6 +11,11 @@ import 'package:url_launcher/url_launcher.dart';
 class AccessRequiredScreen extends ConsumerWidget {
   const AccessRequiredScreen({super.key});
 
+  Future<void> _changeServer(BuildContext context, WidgetRef ref) async {
+    await ref.read(sessionProvider.notifier).clearSession();
+    if (context.mounted) context.go(Routes.onboarding);
+  }
+
   Future<void> _openSubscribe(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     final uri = CommercialApiConfig.subscriptionPortalUri;
@@ -73,6 +78,11 @@ class AccessRequiredScreen extends ConsumerWidget {
               OutlinedButton(
                 onPressed: () => _openSubscribe(context),
                 child: Text(l10n.accessRequiredSubscribe),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => _changeServer(context, ref),
+                child: Text(l10n.accessRequiredChangeServer),
               ),
             ],
           ),

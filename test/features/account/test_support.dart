@@ -24,8 +24,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// tracked so tests can assert what was actually requested, and every
 /// method's error/latency can be configured per test.
 class FakeAppAccountRepository implements AppAccountRepository {
-  FakeAppAccountRepository({bool configured = true})
-    : _configured = configured;
+  FakeAppAccountRepository({bool configured = true}) : _configured = configured;
 
   final bool _configured;
   final _controller = StreamController<AppAccount?>.broadcast();
@@ -138,10 +137,17 @@ class TestSessionNotifier extends SessionNotifier {
       super(_UnusedAuthRepository());
 
   final ServerConfig? _initial;
+  int clearSessionCalls = 0;
 
   @override
   Future<void> loadSession() async {
     state = AsyncValue.data(_initial);
+  }
+
+  @override
+  Future<void> clearSession() async {
+    clearSessionCalls++;
+    state = const AsyncValue.data(null);
   }
 }
 
@@ -278,6 +284,30 @@ void setSurfaceSize(WidgetTester tester, Size logicalSize) {
   tester.view.physicalSize = logicalSize;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
+}
+
+/// Pumps in small, bounded increments until [predicate] is satisfied (or
+/// [timeout] elapses), then throws if it never was.
+///
+/// Prefer this over [WidgetTester.pumpAndSettle] for these screens: the
+/// ambient background drift animation repeats forever under normal motion,
+/// so `pumpAndSettle` never settles. Small repeated [step]s (rather than one
+/// large jump) are also what reliably flushes a GoRouter navigation that
+/// completes via a timer/microtask mid-elapse.
+Future<void> pumpUntil(
+  WidgetTester tester,
+  bool Function() predicate, {
+  Duration step = const Duration(milliseconds: 100),
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  var elapsed = Duration.zero;
+  while (!predicate()) {
+    if (elapsed >= timeout) {
+      throw TestFailure('pumpUntil: condition not met within $timeout');
+    }
+    await tester.pump(step);
+    elapsed += step;
+  }
 }
 
 Future<void> initFakePreferences({String? pendingOtpEmail}) async {

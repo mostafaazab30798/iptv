@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/app/router.dart';
+import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/features/account/sign_in_screen.dart';
 import 'package:iptv/features/account/verify_code_screen.dart';
 import 'package:iptv/features/account/widgets/auth_primary_button.dart';
@@ -44,8 +45,9 @@ void main() {
     );
   }
 
-  testWidgets('shows the pending destination email and an edit action',
-      (tester) async {
+  testWidgets('shows the pending destination email and an edit action', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(390, 844));
     await initFakePreferences(pendingOtpEmail: email);
     final harness = AccountTestHarness();
@@ -53,8 +55,17 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    expect(find.text(en.accountVerifySubtitle(email)), findsOneWidget);
-    expect(find.text(en.accountEditEmail), findsOneWidget);
+    // The destination email is shown in its own chip alongside an "edit"
+    // affordance (exposed to assistive tech via its semantic label on the
+    // glyph, rather than interpolated into a sentence).
+    expect(find.text(email), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is AppIcon && widget.semanticLabel == en.accountEditEmail,
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -63,24 +74,34 @@ void main() {
       setSurfaceSize(tester, const Size(390, 844));
       final harness = AccountTestHarness();
       await tester.pumpWidget(pumpableApp(harness));
-      await tester.pump();
-      await tester.pump();
+      await pumpUntil(
+        tester,
+        () =>
+            find.byType(SignInScreen).evaluate().isNotEmpty &&
+            find.byType(VerifyCodeScreen).evaluate().isEmpty,
+      );
 
       expect(find.byType(SignInScreen), findsOneWidget);
       expect(find.byType(VerifyCodeScreen), findsNothing);
     },
   );
 
-  testWidgets('"Edit email" navigates back to the sign-in screen',
-      (tester) async {
+  testWidgets('"Edit email" navigates back to the sign-in screen', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(390, 844));
     await initFakePreferences(pendingOtpEmail: email);
     final harness = AccountTestHarness();
     await tester.pumpWidget(pumpableApp(harness));
     await tester.pump();
 
-    await tester.tap(find.text(en.accountEditEmail));
-    await tester.pump();
+    // The email chip's whole surface (icon + email + edit glyph) is one
+    // InkWell — there is no separate visible "Edit email" text to tap.
+    await tester.tap(find.byType(InkWell));
+    await pumpUntil(
+      tester,
+      () => find.byType(SignInScreen).evaluate().isNotEmpty,
+    );
 
     expect(find.byType(SignInScreen), findsOneWidget);
   });
@@ -118,16 +139,18 @@ void main() {
       );
 
       await tester.tap(find.byType(AuthPrimaryButton));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 150));
-      await tester.pump(const Duration(milliseconds: 700));
+      await pumpUntil(
+        tester,
+        () => find.text('onboarding-stub').evaluate().isNotEmpty,
+      );
 
       expect(find.text('onboarding-stub'), findsOneWidget);
     },
   );
 
-  testWidgets('submitting the code with Enter verifies successfully',
-      (tester) async {
+  testWidgets('submitting the code with Enter verifies successfully', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(390, 844));
     await initFakePreferences(pendingOtpEmail: email);
     final harness = AccountTestHarness();
@@ -136,44 +159,42 @@ void main() {
 
     await tester.enterText(find.byType(TextField), '654321');
     await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 150));
-    await tester.pump(const Duration(milliseconds: 700));
+    await pumpUntil(
+      tester,
+      () => find.text('onboarding-stub').evaluate().isNotEmpty,
+    );
 
     expect(find.text('onboarding-stub'), findsOneWidget);
   });
 
-  testWidgets(
-    'resend shows a countdown, disables itself, then re-enables',
-    (tester) async {
-      setSurfaceSize(tester, const Size(390, 844));
-      await initFakePreferences(pendingOtpEmail: email);
-      final harness = AccountTestHarness();
-      await tester.pumpWidget(pumpableApp(harness));
-      await tester.pump();
+  testWidgets('resend shows a countdown, disables itself, then re-enables', (
+    tester,
+  ) async {
+    setSurfaceSize(tester, const Size(390, 844));
+    await initFakePreferences(pendingOtpEmail: email);
+    final harness = AccountTestHarness();
+    await tester.pumpWidget(pumpableApp(harness));
+    await tester.pump();
 
-      expect(find.text(en.accountResendCode), findsOneWidget);
+    expect(find.text(en.accountResendCode), findsOneWidget);
 
-      await tester.tap(find.byType(ResendCodeAction));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 150));
+    await tester.tap(find.byType(ResendCodeAction));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
 
-      expect(find.text(en.accountResendCooldown(60)), findsOneWidget);
-      expect(find.text(en.accountOtpResent), findsOneWidget);
+    expect(find.text(en.accountResendCooldown(60)), findsOneWidget);
+    expect(find.text(en.accountOtpResent), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 61));
+    await tester.pump(const Duration(seconds: 61));
 
-      expect(find.text(en.accountResendCode), findsOneWidget);
-    },
-  );
+    expect(find.text(en.accountResendCode), findsOneWidget);
+  });
 
   testWidgets('renders Arabic RTL layout without overflow', (tester) async {
     setSurfaceSize(tester, const Size(390, 844));
     await initFakePreferences(pendingOtpEmail: email);
     final harness = AccountTestHarness();
-    await tester.pumpWidget(
-      pumpableApp(harness, locale: const Locale('ar')),
-    );
+    await tester.pumpWidget(pumpableApp(harness, locale: const Locale('ar')));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
@@ -191,14 +212,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('renders without throwing when reduced motion is enabled',
-      (tester) async {
+  testWidgets('renders without throwing when reduced motion is enabled', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(390, 844));
     await initFakePreferences(pendingOtpEmail: email);
     final harness = AccountTestHarness();
-    await tester.pumpWidget(
-      pumpableApp(harness, disableAnimations: true),
-    );
+    await tester.pumpWidget(pumpableApp(harness, disableAnimations: true));
     await tester.pump();
 
     expect(tester.takeException(), isNull);

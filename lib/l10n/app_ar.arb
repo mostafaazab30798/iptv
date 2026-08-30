@@ -410,6 +410,7 @@
   },
   "accessRequiredRefresh": "تحديث الوصول",
   "accessRequiredSubscribe": "اشترك عبر موقعنا",
+  "accessRequiredChangeServer": "استخدام خادم IPTV آخر",
   "subscriptionPortalNotConfigured": "موقع الاشتراك غير مُعد بعد.",
 
   "updateAvailableTitle": "تحديث متاح",

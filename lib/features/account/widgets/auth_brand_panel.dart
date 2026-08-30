@@ -19,6 +19,7 @@ class AuthBrandPanel extends StatelessWidget {
 
     final wordmark = Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           width: compact ? 40 : 52,
@@ -50,14 +51,18 @@ class AuthBrandPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.md),
-        Text(
-          'HOPE TV',
-          style: (compact ? textTheme.titleLarge : textTheme.headlineSmall)
-              ?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.6,
-              ),
+        Flexible(
+          child: Text(
+            'HOPE TV',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: (compact ? textTheme.titleLarge : textTheme.headlineSmall)
+                ?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                ),
+          ),
         ),
       ],
     );

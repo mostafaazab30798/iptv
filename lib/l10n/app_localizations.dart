@@ -1796,6 +1796,12 @@ abstract class AppLocalizations {
   /// **'Subscribe on our website'**
   String get accessRequiredSubscribe;
 
+  /// No description provided for @accessRequiredChangeServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Use another IPTV server'**
+  String get accessRequiredChangeServer;
+
   /// No description provided for @subscriptionPortalNotConfigured.
   ///
   /// In en, this message translates to:

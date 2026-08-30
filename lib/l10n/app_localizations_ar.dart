@@ -975,6 +975,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accessRequiredSubscribe => 'اشترك عبر موقعنا';
 
   @override
+  String get accessRequiredChangeServer => 'استخدام خادم IPTV آخر';
+
+  @override
   String get subscriptionPortalNotConfigured => 'موقع الاشتراك غير مُعد بعد.';
 
   @override

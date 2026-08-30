@@ -430,6 +430,7 @@
   },
   "accessRequiredRefresh": "Refresh access",
   "accessRequiredSubscribe": "Subscribe on our website",
+  "accessRequiredChangeServer": "Use another IPTV server",
   "subscriptionPortalNotConfigured": "Subscription website is not configured yet.",
 
   "updateAvailableTitle": "Update available",

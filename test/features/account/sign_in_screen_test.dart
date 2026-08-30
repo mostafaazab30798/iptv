@@ -93,8 +93,9 @@ void main() {
     expect(find.byType(VerifyCodeScreen), findsNothing);
   });
 
-  testWidgets('valid email submits and navigates to the verification screen',
-      (tester) async {
+  testWidgets('valid email submits and navigates to the verification screen', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(390, 844));
     final harness = AccountTestHarness();
     await tester.pumpWidget(pumpableApp(harness));
@@ -102,15 +103,18 @@ void main() {
 
     await tester.enterText(find.byType(TextFormField), 'viewer@example.com');
     await tester.tap(find.byType(AuthPrimaryButton));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await pumpUntil(
+      tester,
+      () => find.byType(VerifyCodeScreen).evaluate().isNotEmpty,
+    );
 
     expect(find.byType(VerifyCodeScreen), findsOneWidget);
     expect(find.text(en.accountVerifyTitle), findsOneWidget);
   });
 
-  testWidgets('pressing Enter in the email field submits the form',
-      (tester) async {
+  testWidgets('pressing Enter in the email field submits the form', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(390, 844));
     final harness = AccountTestHarness();
     await tester.pumpWidget(pumpableApp(harness));
@@ -118,14 +122,17 @@ void main() {
 
     await tester.enterText(find.byType(TextFormField), 'viewer@example.com');
     await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await pumpUntil(
+      tester,
+      () => find.byType(VerifyCodeScreen).evaluate().isNotEmpty,
+    );
 
     expect(find.byType(VerifyCodeScreen), findsOneWidget);
   });
 
-  testWidgets('restores a previously entered email pending verification',
-      (tester) async {
+  testWidgets('restores a previously entered email pending verification', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(390, 844));
     await initFakePreferences(pendingOtpEmail: 'returning@example.com');
     final harness = AccountTestHarness();
@@ -138,9 +145,7 @@ void main() {
   testWidgets('renders Arabic RTL layout without overflow', (tester) async {
     setSurfaceSize(tester, const Size(390, 844));
     final harness = AccountTestHarness();
-    await tester.pumpWidget(
-      pumpableApp(harness, locale: const Locale('ar')),
-    );
+    await tester.pumpWidget(pumpableApp(harness, locale: const Locale('ar')));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
@@ -157,21 +162,21 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('renders without throwing when reduced motion is enabled',
-      (tester) async {
+  testWidgets('renders without throwing when reduced motion is enabled', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(390, 844));
     final harness = AccountTestHarness();
-    await tester.pumpWidget(
-      pumpableApp(harness, disableAnimations: true),
-    );
+    await tester.pumpWidget(pumpableApp(harness, disableAnimations: true));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
     expect(find.text(en.accountSendCode), findsOneWidget);
   });
 
-  testWidgets('Tab moves focus from the email field to the primary button',
-      (tester) async {
+  testWidgets('Tab moves focus from the email field to the primary button', (
+    tester,
+  ) async {
     setSurfaceSize(tester, const Size(1920, 1080));
     final harness = AccountTestHarness();
     await tester.pumpWidget(pumpableApp(harness));
