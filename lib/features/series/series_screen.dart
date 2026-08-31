@@ -513,6 +513,7 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
         episodeId: streamId,
         seriesName: widget.series.name,
         posterUrl: ep.cover ?? widget.series.cover,
+        metadata: {'type': 'episode', 'seriesId': widget.series.seriesId},
       );
     }
 

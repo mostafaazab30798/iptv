@@ -68,6 +68,10 @@ void main() {
     });
 
     test('Non-beIN and unknown channels return null', () {
+      expect(BeinLogoNormalizer.normalize('beIN Kids'), isNull);
+      expect(BeinLogoNormalizer.normalize('beIN Junior HD'), isNull);
+      expect(BeinLogoNormalizer.normalize('beIN Movies 1'), isNull);
+      expect(BeinLogoNormalizer.normalize('بي إن أطفال'), isNull);
       expect(BeinLogoNormalizer.normalize('Sky Sports Premier League'), isNull);
       expect(BeinLogoNormalizer.normalize('BBC One HD'), isNull);
       expect(BeinLogoNormalizer.normalize('Canal+ Sport'), isNull);

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -86,7 +87,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
 
     // Tear down live preview when leaving the channel list for categories.
     final player = ref.read(playerControllerProvider.notifier);
-    Future(() => player.stop());
+    unawaited(player.stop());
   }
 
   void _playChannel(Channel channel, {bool openFullscreen = false}) {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/bootstrap.dart';
@@ -56,6 +57,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   }
 
   Future<void> _onAppResumed() async {
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
     if (!CommercialApiConfig.isConfigured) return;
     final updateState = ref.read(updateProvider);
     if (updateState.isMandatoryBlocking) {

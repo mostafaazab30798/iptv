@@ -11,6 +11,7 @@ import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
 import 'package:iptv/player/domain/enums/playback_profile.dart';
+import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/domain/interfaces/player_engine.dart';
 import 'package:iptv/player/infrastructure/media_kit_player_engine.dart';
@@ -22,12 +23,14 @@ class PlayerController extends StateNotifier<PlayerState> {
     PlayerEngine? engine,
     HistoryRepository? historyRepository,
     PlaybackBufferMode? initialBufferMode,
+    Future<bool> Function(PlayerSource source)? canLoadSource,
   })  : _engine = engine ??
             MediaKitPlayerEngine(
               initialBufferMode:
                   initialBufferMode ?? PlaybackBufferMode.deviceDefault,
             ),
         _historyRepository = historyRepository,
+        _canLoadSource = canLoadSource,
         super(
           PlayerState.initial.copyWith(
             bufferMode: initialBufferMode ??
@@ -45,6 +48,7 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   final PlayerEngine _engine;
   final HistoryRepository? _historyRepository;
+  final Future<bool> Function(PlayerSource source)? _canLoadSource;
   late final SmartPlaybackEngine _smartEngine;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
@@ -98,6 +102,8 @@ class PlayerController extends StateNotifier<PlayerState> {
         state = state.copyWith(
           status: status,
           clearError: status == PlayerStatus.playing || status == PlayerStatus.loading,
+          isRetrying: status == PlayerStatus.playing ? false : state.isRetrying,
+          retryAttempt: status == PlayerStatus.playing ? 0 : state.retryAttempt,
         );
 
         if (status == PlayerStatus.playing) {
@@ -137,14 +143,9 @@ class PlayerController extends StateNotifier<PlayerState> {
     _subscriptions.add(
       _engine.errorStream.listen((err) {
         if (!mounted) return;
-        state = state.copyWith(
-          status: PlayerStatus.error,
-          error: err,
-          errorMessage: err.defaultMessage,
-        );
 
-        // Trigger bounded auto-retry
-        _smartEngine.handleError(
+        // Trigger bounded auto-retry (up to 5 attempts)
+        final scheduled = _smartEngine.handleError(
           err,
           onExecuteRetry: () async {
             if (mounted) await retry();
@@ -152,11 +153,25 @@ class PlayerController extends StateNotifier<PlayerState> {
           onRetryScheduled: (delay, attempt) {
             if (mounted) {
               state = state.copyWith(
-                errorMessage: '${err.defaultMessage} Retrying in ${delay.inSeconds}s (Attempt $attempt)...',
+                status: PlayerStatus.error,
+                error: err,
+                isRetrying: true,
+                retryAttempt: attempt,
+                maxRetries: 5,
+                errorMessage: '${err.defaultMessage} (Attempt $attempt/5)...',
               );
             }
           },
         );
+
+        if (!scheduled && mounted) {
+          state = state.copyWith(
+            status: PlayerStatus.error,
+            error: err,
+            isRetrying: false,
+            errorMessage: err.defaultMessage,
+          );
+        }
       }),
     );
 
@@ -307,6 +322,18 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   /// Loads and plays a [PlayerSource], automatically checking saved progress if applicable.
   Future<void> load(PlayerSource source) async {
+    final canLoad = _canLoadSource;
+    if (canLoad != null && !await canLoad(source)) {
+      await _smartEngine.stop();
+      state = state.copyWith(
+        status: PlayerStatus.error,
+        clearSource: true,
+        error: PlayerErrorType.invalidSource,
+        errorMessage: 'Content blocked by Kids Mode.',
+      );
+      return;
+    }
+
     // Drop Live TV mini-preview handoff when loading something outside that
     // playlist (favourites, movies, series, search, etc.).
     if (_hasLazyLivePlaylist) {
@@ -572,6 +599,14 @@ class PlayerController extends StateNotifier<PlayerState> {
 final playerControllerProvider =
     StateNotifierProvider<PlayerController, PlayerState>((ref) {
   final historyRepo = ref.watch(historyRepositoryProvider);
-  return PlayerController(historyRepository: historyRepo);
+  return PlayerController(
+    historyRepository: historyRepo,
+    canLoadSource: (source) async {
+      final mode = ref.read(kidsModeProvider);
+      if (!mode.isInitialized) return false;
+      if (!mode.isEnabled) return true;
+      final allowed = await ref.read(kidsAllowedContentProvider.future);
+      return allowed.allowsSource(source);
+    },
+  );
 });
-

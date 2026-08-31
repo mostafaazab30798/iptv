@@ -32,6 +32,9 @@ class PlayerState extends Equatable {
     this.availableSubtitleTracks = const [],
     this.capabilities = PlayerCapabilities.defaultCapabilities,
     this.metrics = PlayerMetrics.empty,
+    this.isRetrying = false,
+    this.retryAttempt = 0,
+    this.maxRetries = 5,
   });
 
   final PlayerStatus status;
@@ -55,6 +58,9 @@ class PlayerState extends Equatable {
   final List<PlayerSubtitleTrack> availableSubtitleTracks;
   final PlayerCapabilities capabilities;
   final PlayerMetrics metrics;
+  final bool isRetrying;
+  final int retryAttempt;
+  final int maxRetries;
 
   static const initial = PlayerState();
 
@@ -62,7 +68,8 @@ class PlayerState extends Equatable {
   bool get isPlaying => status == PlayerStatus.playing;
   bool get isBuffering => status == PlayerStatus.buffering;
   bool get isLoading => status == PlayerStatus.loading || status == PlayerStatus.initializing;
-  bool get hasError => status == PlayerStatus.error && error != null;
+  bool get hasError => status == PlayerStatus.error && error != null && !isRetrying;
+  bool get isAutoReconnecting => isRetrying || (isLoading && retryAttempt > 0);
 
   double get bufferedFraction {
     if (duration == Duration.zero) return 0.0;
@@ -98,6 +105,9 @@ class PlayerState extends Equatable {
     List<PlayerSubtitleTrack>? availableSubtitleTracks,
     PlayerCapabilities? capabilities,
     PlayerMetrics? metrics,
+    bool? isRetrying,
+    int? retryAttempt,
+    int? maxRetries,
   }) {
     return PlayerState(
       status: status ?? this.status,
@@ -122,6 +132,9 @@ class PlayerState extends Equatable {
           availableSubtitleTracks ?? this.availableSubtitleTracks,
       capabilities: capabilities ?? this.capabilities,
       metrics: metrics ?? this.metrics,
+      isRetrying: isRetrying ?? this.isRetrying,
+      retryAttempt: retryAttempt ?? this.retryAttempt,
+      maxRetries: maxRetries ?? this.maxRetries,
     );
   }
 
@@ -148,5 +161,8 @@ class PlayerState extends Equatable {
         availableSubtitleTracks,
         capabilities,
         metrics,
+        isRetrying,
+        retryAttempt,
+        maxRetries,
       ];
 }

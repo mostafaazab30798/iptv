@@ -1897,6 +1897,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not check for updates'**
   String get updateStatusError;
+
+  /// No description provided for @updateStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to check'**
+  String get updateStatusReady;
+
+  /// No description provided for @updateCheckAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get updateCheckAction;
+
+  /// No description provided for @settingsParentalControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Parental controls'**
+  String get settingsParentalControls;
+
+  /// No description provided for @kidsModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kids Mode'**
+  String get kidsModeTitle;
+
+  /// No description provided for @kidsModeDisabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the full provider catalog'**
+  String get kidsModeDisabledSubtitle;
+
+  /// No description provided for @kidsModeEnabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only kid-friendly categories and channels are shown'**
+  String get kidsModeEnabledSubtitle;
+
+  /// No description provided for @kidsModeCreatePinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create parent PIN'**
+  String get kidsModeCreatePinTitle;
+
+  /// No description provided for @kidsModeEnterPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter parent PIN'**
+  String get kidsModeEnterPinTitle;
+
+  /// No description provided for @kidsModePinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN'**
+  String get kidsModePinLabel;
+
+  /// No description provided for @kidsModeConfirmPinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm PIN'**
+  String get kidsModeConfirmPinLabel;
+
+  /// No description provided for @kidsModePinHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter 4 digits'**
+  String get kidsModePinHint;
+
+  /// No description provided for @kidsModePinMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The PINs do not match.'**
+  String get kidsModePinMismatch;
+
+  /// No description provided for @kidsModeInvalidPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect PIN.'**
+  String get kidsModeInvalidPin;
+
+  /// No description provided for @kidsModeInvalidFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a 4-digit PIN.'**
+  String get kidsModeInvalidFormat;
+
+  /// No description provided for @kidsModeLockedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Try again in 30 seconds.'**
+  String get kidsModeLockedOut;
+
+  /// No description provided for @kidsModeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Parental controls are temporarily unavailable.'**
+  String get kidsModeUnavailable;
+
+  /// No description provided for @kidsModeEnableAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get kidsModeEnableAction;
+
+  /// No description provided for @kidsModeDisableAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable'**
+  String get kidsModeDisableAction;
+
+  /// No description provided for @kidsModeChangePinAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Change parent PIN'**
+  String get kidsModeChangePinAction;
+
+  /// No description provided for @kidsModeCurrentPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter current PIN'**
+  String get kidsModeCurrentPinTitle;
+
+  /// No description provided for @kidsModeNewPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new 4-digit PIN'**
+  String get kidsModeNewPinTitle;
+
+  /// No description provided for @kidsModeConfirmNewPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new 4-digit PIN'**
+  String get kidsModeConfirmNewPinTitle;
+
+  /// No description provided for @kidsModeStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String kidsModeStep(int current, int total);
+
+  /// No description provided for @kidsModeProtectedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'PROTECTED'**
+  String get kidsModeProtectedBadge;
+
+  /// No description provided for @kidsModeStandardBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'STANDARD'**
+  String get kidsModeStandardBadge;
+
+  /// No description provided for @kidsModeChangePinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update master parental PIN'**
+  String get kidsModeChangePinSubtitle;
+
+  /// No description provided for @kidsModeEnterPinPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your 4-digit master PIN to proceed'**
+  String get kidsModeEnterPinPrompt;
+
+  /// No description provided for @kidsModeCreatePinPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a 4-digit master PIN to secure Kids Mode'**
+  String get kidsModeCreatePinPrompt;
+
+  /// No description provided for @kidsModeConfirmPinPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-enter the 4-digit PIN to confirm'**
+  String get kidsModeConfirmPinPrompt;
+
+  /// No description provided for @kidsModeCurrentPinPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your current 4-digit PIN'**
+  String get kidsModeCurrentPinPrompt;
 }
 
 class _AppLocalizationsDelegate

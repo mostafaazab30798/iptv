@@ -34,12 +34,18 @@ class SearchState {
 }
 
 class SearchController extends StateNotifier<SearchState> {
-  SearchController(this._liveRepo, this._vodRepo, this._seriesRepo)
-    : super(const SearchState());
+  SearchController(
+    this._liveRepo,
+    this._vodRepo,
+    this._seriesRepo, {
+    bool kidsModeEnabled = false,
+  }) : _kidsModeEnabled = kidsModeEnabled,
+       super(const SearchState());
 
   final LiveRepository? _liveRepo;
   final VodRepository? _vodRepo;
   final SeriesRepository? _seriesRepo;
+  final bool _kidsModeEnabled;
 
   Timer? _debounceTimer;
   int _searchToken = 0;
@@ -123,8 +129,10 @@ class SearchController extends StateNotifier<SearchState> {
 
   /// Prefer local disk cache, then repository (network only as last resort).
   Future<List<Channel>> _fetchChannels() async {
-    final disk = await LocalCatalogCache.instance.loadChannels();
-    if (disk != null && disk.isNotEmpty) return disk;
+    if (!_kidsModeEnabled) {
+      final disk = await LocalCatalogCache.instance.loadChannels();
+      if (disk != null && disk.isNotEmpty) return disk;
+    }
 
     final res =
         await (_liveRepo?.getChannels() ??
@@ -133,8 +141,10 @@ class SearchController extends StateNotifier<SearchState> {
   }
 
   Future<List<Movie>> _fetchMovies() async {
-    final disk = await LocalCatalogCache.instance.loadMovies();
-    if (disk != null && disk.isNotEmpty) return disk;
+    if (!_kidsModeEnabled) {
+      final disk = await LocalCatalogCache.instance.loadMovies();
+      if (disk != null && disk.isNotEmpty) return disk;
+    }
 
     final res =
         await (_vodRepo?.getMovies() ??
@@ -143,8 +153,10 @@ class SearchController extends StateNotifier<SearchState> {
   }
 
   Future<List<Series>> _fetchSeriesList() async {
-    final disk = await LocalCatalogCache.instance.loadSeries();
-    if (disk != null && disk.isNotEmpty) return disk;
+    if (!_kidsModeEnabled) {
+      final disk = await LocalCatalogCache.instance.loadSeries();
+      if (disk != null && disk.isNotEmpty) return disk;
+    }
 
     final res =
         await (_seriesRepo?.getSeries() ??
@@ -216,5 +228,13 @@ final searchControllerProvider =
       final liveRepo = ref.watch(liveRepositoryProvider);
       final vodRepo = ref.watch(vodRepositoryProvider);
       final seriesRepo = ref.watch(seriesRepositoryProvider);
-      return SearchController(liveRepo, vodRepo, seriesRepo);
+      final kidsModeEnabled = ref.watch(
+        kidsModeProvider.select((state) => state.isEnabled),
+      );
+      return SearchController(
+        liveRepo,
+        vodRepo,
+        seriesRepo,
+        kidsModeEnabled: kidsModeEnabled,
+      );
     });

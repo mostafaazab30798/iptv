@@ -1024,4 +1024,100 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateStatusError => 'Could not check for updates';
+
+  @override
+  String get updateStatusReady => 'Tap to check';
+
+  @override
+  String get updateCheckAction => 'Check for updates';
+
+  @override
+  String get settingsParentalControls => 'Parental controls';
+
+  @override
+  String get kidsModeTitle => 'Kids Mode';
+
+  @override
+  String get kidsModeDisabledSubtitle => 'Show the full provider catalog';
+
+  @override
+  String get kidsModeEnabledSubtitle =>
+      'Only kid-friendly categories and channels are shown';
+
+  @override
+  String get kidsModeCreatePinTitle => 'Create parent PIN';
+
+  @override
+  String get kidsModeEnterPinTitle => 'Enter parent PIN';
+
+  @override
+  String get kidsModePinLabel => 'PIN';
+
+  @override
+  String get kidsModeConfirmPinLabel => 'Confirm PIN';
+
+  @override
+  String get kidsModePinHint => 'Enter 4 digits';
+
+  @override
+  String get kidsModePinMismatch => 'The PINs do not match.';
+
+  @override
+  String get kidsModeInvalidPin => 'Incorrect PIN.';
+
+  @override
+  String get kidsModeInvalidFormat => 'Enter a 4-digit PIN.';
+
+  @override
+  String get kidsModeLockedOut => 'Too many attempts. Try again in 30 seconds.';
+
+  @override
+  String get kidsModeUnavailable =>
+      'Parental controls are temporarily unavailable.';
+
+  @override
+  String get kidsModeEnableAction => 'Enable';
+
+  @override
+  String get kidsModeDisableAction => 'Disable';
+
+  @override
+  String get kidsModeChangePinAction => 'Change parent PIN';
+
+  @override
+  String get kidsModeCurrentPinTitle => 'Enter current PIN';
+
+  @override
+  String get kidsModeNewPinTitle => 'Enter new 4-digit PIN';
+
+  @override
+  String get kidsModeConfirmNewPinTitle => 'Confirm new 4-digit PIN';
+
+  @override
+  String kidsModeStep(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get kidsModeProtectedBadge => 'PROTECTED';
+
+  @override
+  String get kidsModeStandardBadge => 'STANDARD';
+
+  @override
+  String get kidsModeChangePinSubtitle => 'Update master parental PIN';
+
+  @override
+  String get kidsModeEnterPinPrompt =>
+      'Enter your 4-digit master PIN to proceed';
+
+  @override
+  String get kidsModeCreatePinPrompt =>
+      'Set a 4-digit master PIN to secure Kids Mode';
+
+  @override
+  String get kidsModeConfirmPinPrompt => 'Re-enter the 4-digit PIN to confirm';
+
+  @override
+  String get kidsModeCurrentPinPrompt => 'Enter your current 4-digit PIN';
 }

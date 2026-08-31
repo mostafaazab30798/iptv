@@ -52,6 +52,16 @@ Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
 
+  // Hide system status bar / immersive full screen
+  unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ),
+  );
+
   // Cap decoded image RAM — unbounded cache is a major low-spec pressure source.
   final lowRam = DeviceMemory.isLowRamDevice;
   final imageCache = PaintingBinding.instance.imageCache;

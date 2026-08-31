@@ -62,6 +62,7 @@ class SmartPlaybackEngine {
 
   Timer? _escalationTimer;
   StreamSubscription<PlayerMetrics>? _metricsSubscription;
+  StreamSubscription<Duration>? _firstFrameSubscription;
 
   // ── Adaptive network buffer escalation ──────────────────────────────────────────
   //
@@ -108,9 +109,12 @@ class SmartPlaybackEngine {
   }) async {
     _switchStartTime = DateTime.now(); // T0: User selects / changes channel
     _retryManager.cancel();
+    _stopEscalationMonitor();
+    final firstFrameSub = _firstFrameSubscription;
+    _firstFrameSubscription = null;
+    await firstFrameSub?.cancel();
 
     // Reset escalation state for the new channel.
-    _stopEscalationMonitor();
     await _applyEscalationTier(SoftwareDecodeFallbackTier.none);
     _lastTotalDrops = 0;
     _tier2ConsecutiveSeconds = 0;
@@ -124,8 +128,8 @@ class SmartPlaybackEngine {
     await _engine.open(source);
 
     // Setup first-frame latency tracking.
-    final sub = _engine.positionStream.listen(null);
-    sub.onData((pos) {
+    _firstFrameSubscription = _engine.positionStream.listen(null);
+    _firstFrameSubscription?.onData((pos) {
       if (pos > Duration.zero && _switchStartTime != null) {
         final totalSwitchDuration = DateTime.now().difference(_switchStartTime!);
         _latestMetrics = _latestMetrics.copyWith(
@@ -133,7 +137,8 @@ class SmartPlaybackEngine {
         );
         _switchStartTime = null;
         _retryManager.reset();
-        sub.cancel();
+        _firstFrameSubscription?.cancel();
+        _firstFrameSubscription = null;
       }
     });
 
@@ -317,10 +322,14 @@ class SmartPlaybackEngine {
     );
   }
 
+  void cancelRetry() => _retryManager.cancel();
+
   Future<void> play() => _engine.play();
   Future<void> pause() => _engine.pause();
   Future<void> stop() {
     _switchStartTime = null;
+    _firstFrameSubscription?.cancel();
+    _firstFrameSubscription = null;
     _retryManager.cancel();
     _stopEscalationMonitor();
     return _engine.stop();
@@ -340,8 +349,11 @@ class SmartPlaybackEngine {
   Future<void> retry() => _engine.retry();
 
   Future<void> dispose() async {
-    _retryManager.cancel();
     _stopEscalationMonitor();
+    _retryManager.cancel();
+    final firstFrameSub = _firstFrameSubscription;
+    _firstFrameSubscription = null;
+    await firstFrameSub?.cancel();
     await _engine.dispose();
   }
 }

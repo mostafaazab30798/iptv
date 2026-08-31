@@ -1028,4 +1028,99 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get updateStatusError => 'تعذّر التحقق من التحديثات';
+
+  @override
+  String get updateStatusReady => 'اضغط للتحقق';
+
+  @override
+  String get updateCheckAction => 'التحقق من التحديثات';
+
+  @override
+  String get settingsParentalControls => 'الرقابة الأبوية';
+
+  @override
+  String get kidsModeTitle => 'وضع الأطفال';
+
+  @override
+  String get kidsModeDisabledSubtitle => 'عرض مكتبة المزود كاملة';
+
+  @override
+  String get kidsModeEnabledSubtitle => 'عرض فئات وقنوات الأطفال فقط';
+
+  @override
+  String get kidsModeCreatePinTitle => 'إنشاء رمز الوالدين';
+
+  @override
+  String get kidsModeEnterPinTitle => 'أدخل رمز الوالدين';
+
+  @override
+  String get kidsModePinLabel => 'الرمز';
+
+  @override
+  String get kidsModeConfirmPinLabel => 'تأكيد الرمز';
+
+  @override
+  String get kidsModePinHint => 'أدخل 4 أرقام';
+
+  @override
+  String get kidsModePinMismatch => 'الرمزان غير متطابقين.';
+
+  @override
+  String get kidsModeInvalidPin => 'الرمز غير صحيح.';
+
+  @override
+  String get kidsModeInvalidFormat => 'أدخل رمزاً مكوناً من 4 أرقام.';
+
+  @override
+  String get kidsModeLockedOut => 'محاولات كثيرة. حاول مجدداً بعد 30 ثانية.';
+
+  @override
+  String get kidsModeUnavailable => 'الرقابة الأبوية غير متاحة مؤقتاً.';
+
+  @override
+  String get kidsModeEnableAction => 'تفعيل';
+
+  @override
+  String get kidsModeDisableAction => 'إيقاف';
+
+  @override
+  String get kidsModeChangePinAction => 'تغيير رمز الوالدين';
+
+  @override
+  String get kidsModeCurrentPinTitle => 'أدخل الرمز الحالي';
+
+  @override
+  String get kidsModeNewPinTitle => 'أدخل الرمز الجديد';
+
+  @override
+  String get kidsModeConfirmNewPinTitle => 'تأكيد الرمز الجديد';
+
+  @override
+  String kidsModeStep(int current, int total) {
+    return 'الخطوة $current من $total';
+  }
+
+  @override
+  String get kidsModeProtectedBadge => 'محمي';
+
+  @override
+  String get kidsModeStandardBadge => 'افتراضي';
+
+  @override
+  String get kidsModeChangePinSubtitle => 'تحديث رمز الرقابة الأبوية الرئيسي';
+
+  @override
+  String get kidsModeEnterPinPrompt =>
+      'أدخل رمز الوالدين المكون من 4 أرقام للمتابعة';
+
+  @override
+  String get kidsModeCreatePinPrompt =>
+      'قم بتعيين رمز سري من 4 أرقام لحماية وضع الأطفال';
+
+  @override
+  String get kidsModeConfirmPinPrompt =>
+      'أعد إدخال الرمز المكون من 4 أرقام للتأكيد';
+
+  @override
+  String get kidsModeCurrentPinPrompt => 'أدخل الرمز الحالي المكون من 4 أرقام';
 }

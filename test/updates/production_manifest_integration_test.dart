@@ -25,14 +25,14 @@ void main() {
       }
       final decoded = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       await _verifyLiveManifest(
-        decoded.map((k, v) => MapEntry('$k', '$v')),
+        decoded.map((k, v) => MapEntry(k, v.toString())),
       );
       return;
     }
 
     final decoded = jsonDecode(keysJson) as Map<String, dynamic>;
     await _verifyLiveManifest(
-      decoded.map((k, v) => MapEntry('$k', '$v')),
+      decoded.map((k, v) => MapEntry(k, v.toString())),
     );
   });
 }
@@ -70,11 +70,11 @@ Future<void> _verifyLiveManifest(Map<String, String> publicKeys) async {
 
     final payload = jsonDecode(body) as Map<String, dynamic>;
     final manifestJson = payload['manifest'];
-    expect(manifestJson, isA<Map>());
+    expect(manifestJson, isA<Map<dynamic, dynamic>>());
 
     final verifier = ReleaseVerifier(ed25519PublicKeysById: publicKeys);
     final manifest = ReleaseManifest.fromJson(
-      Map<String, dynamic>.from(manifestJson as Map),
+      Map<String, dynamic>.from(manifestJson as Map<dynamic, dynamic>),
     );
     await expectLater(verifier.verify(manifest), completes);
   } finally {

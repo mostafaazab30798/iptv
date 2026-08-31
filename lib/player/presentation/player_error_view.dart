@@ -24,7 +24,7 @@ class PlayerErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message = customMessage ?? _getDefaultMessage(context, errorType);
-    final canRetry = errorType.isRetryable;
+    const canRetry = true;
 
     return ColoredBox(
       color: Colors.black.withValues(alpha: 0.85),

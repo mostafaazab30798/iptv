@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
+import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
@@ -487,18 +488,27 @@ class PlayerControls extends StatelessWidget {
                             const SizedBox(width: 4),
                           ],
 
-                          // Fullscreen — icon follows controller flag only (not orientation).
+                          // Fullscreen — dynamically reflects orientation on mobile and window state on desktop.
                           if (caps.fullscreen) ...[
-                            _CompactGlassButton(
-                              icon: playerState.isFullscreen
-                                  ? AppIcons.exitFullscreen
-                                  : AppIcons.fullscreen,
-                              tooltip: playerState.isFullscreen
-                                  ? 'Exit Fullscreen'
-                                  : 'Fullscreen',
-                              size: 32,
-                              iconSize: 18,
-                              onPressed: onToggleFullscreen,
+                            Builder(
+                              builder: (context) {
+                                final isMobile = PlatformService.instance.isAndroid;
+                                final isLandscape = MediaQuery.maybeOrientationOf(context) == Orientation.landscape;
+                                final isFullscreenActive = isMobile ? isLandscape : playerState.isFullscreen;
+                                final tooltip = isMobile
+                                    ? (isLandscape ? 'Portrait' : 'Fullscreen (Landscape)')
+                                    : (playerState.isFullscreen ? 'Exit Fullscreen' : 'Fullscreen');
+
+                                return _CompactGlassButton(
+                                  icon: isFullscreenActive
+                                      ? AppIcons.exitFullscreen
+                                      : AppIcons.fullscreen,
+                                  tooltip: tooltip,
+                                  size: 32,
+                                  iconSize: 18,
+                                  onPressed: onToggleFullscreen,
+                                );
+                              },
                             ),
                           ],
                         ],

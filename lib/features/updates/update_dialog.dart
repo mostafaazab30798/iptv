@@ -50,7 +50,7 @@ Future<void> _showMandatoryUpdateSurface(
     PageRouteBuilder<void>(
       opaque: true,
       barrierDismissible: false,
-      pageBuilder: (_, __, ___) => _MandatoryUpdateScreen(manifest: manifest),
+      pageBuilder: (_, _, _) => _MandatoryUpdateScreen(manifest: manifest),
     ),
   );
   _updateSurfaceVisible = false;
@@ -187,7 +187,7 @@ class _MandatoryUpdateScreenState
                     PlatformService.instance.isAndroid) ...[
                   const SizedBox(height: 8),
                   TextButton(
-                    onPressed: () => SystemNavigator.pop(),
+                    onPressed: SystemNavigator.pop,
                     child: Text(l10n.updateExitApp),
                   ),
                 ],

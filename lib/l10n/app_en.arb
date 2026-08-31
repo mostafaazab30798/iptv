@@ -458,5 +458,41 @@
   "updateStatusUnsupported": "Updates not supported on this platform",
   "updateStatusNotConfigured": "Update service not configured",
   "updateStatusChecking": "Checking for updates…",
-  "updateStatusError": "Could not check for updates"
+  "updateStatusError": "Could not check for updates",
+  "updateStatusReady": "Tap to check",
+  "updateCheckAction": "Check for updates",
+  "settingsParentalControls": "Parental controls",
+  "kidsModeTitle": "Kids Mode",
+  "kidsModeDisabledSubtitle": "Show the full provider catalog",
+  "kidsModeEnabledSubtitle": "Only kid-friendly categories and channels are shown",
+  "kidsModeCreatePinTitle": "Create parent PIN",
+  "kidsModeEnterPinTitle": "Enter parent PIN",
+  "kidsModePinLabel": "PIN",
+  "kidsModeConfirmPinLabel": "Confirm PIN",
+  "kidsModePinHint": "Enter 4 digits",
+  "kidsModePinMismatch": "The PINs do not match.",
+  "kidsModeInvalidPin": "Incorrect PIN.",
+  "kidsModeInvalidFormat": "Enter a 4-digit PIN.",
+  "kidsModeLockedOut": "Too many attempts. Try again in 30 seconds.",
+  "kidsModeUnavailable": "Parental controls are temporarily unavailable.",
+  "kidsModeEnableAction": "Enable",
+  "kidsModeDisableAction": "Disable",
+  "kidsModeChangePinAction": "Change parent PIN",
+  "kidsModeCurrentPinTitle": "Enter current PIN",
+  "kidsModeNewPinTitle": "Enter new 4-digit PIN",
+  "kidsModeConfirmNewPinTitle": "Confirm new 4-digit PIN",
+  "kidsModeStep": "Step {current} of {total}",
+  "@kidsModeStep": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "kidsModeProtectedBadge": "PROTECTED",
+  "kidsModeStandardBadge": "STANDARD",
+  "kidsModeChangePinSubtitle": "Update master parental PIN",
+  "kidsModeEnterPinPrompt": "Enter your 4-digit master PIN to proceed",
+  "kidsModeCreatePinPrompt": "Set a 4-digit master PIN to secure Kids Mode",
+  "kidsModeConfirmPinPrompt": "Re-enter the 4-digit PIN to confirm",
+  "kidsModeCurrentPinPrompt": "Enter your current 4-digit PIN"
 }

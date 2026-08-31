@@ -18,9 +18,10 @@ import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 final favoritesListProvider = FutureProvider<List<Favorite>>((ref) async {
   final repo = ref.watch(favoritesRepositoryProvider);
+  final allowed = await ref.watch(kidsAllowedContentProvider.future);
   final res = await repo.getFavorites();
   return res.when(
-    ok: (list) => list,
+    ok: (list) => list.where(allowed.allowsFavorite).toList(),
     err: (_) => [],
   );
 });

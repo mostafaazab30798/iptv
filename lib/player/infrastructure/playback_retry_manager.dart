@@ -5,9 +5,9 @@ import 'package:iptv/player/utils/player_logger.dart';
 /// Manages bounded retry attempts with exponential backoff for playback recovery.
 class PlaybackRetryManager {
   PlaybackRetryManager({
-    this.maxRetries = 4,
-    this.initialDelay = const Duration(milliseconds: 2000),
-    this.maxDelay = const Duration(milliseconds: 15000),
+    this.maxRetries = 5,
+    this.initialDelay = const Duration(milliseconds: 1000),
+    this.maxDelay = const Duration(milliseconds: 10000),
   });
 
   final int maxRetries;
@@ -19,6 +19,7 @@ class PlaybackRetryManager {
 
   int get retryCount => _retryCount;
   bool get canRetry => _retryCount < maxRetries;
+  bool get isRetrying => _pendingRetryTimer != null;
 
   /// Resets the retry counter on successful playback (first frame).
   void reset() {

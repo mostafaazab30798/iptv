@@ -164,13 +164,9 @@ Channel _ch({
 }
 
 void main() {
-  setUp(() {
-    LiveRepositoryImpl.debugResetCaches();
-  });
+  setUp(LiveRepositoryImpl.debugResetCaches);
 
-  tearDown(() {
-    LiveRepositoryImpl.debugResetCaches();
-  });
+  tearDown(LiveRepositoryImpl.debugResetCaches);
 
   test('Home sports/news rows use category-scoped lookups (no full-list name scan)', () async {
     final sports = List.generate(
@@ -278,5 +274,40 @@ void main() {
       'catalog_smoke scan_us=${swScan.elapsedMicroseconds} '
       'index_us=${swIndex.elapsedMicroseconds} catalog=${channels.length}',
     );
+  });
+
+  test('beIN kids categories are not classified as sports', () async {
+    final kids = [
+      _ch(id: 700, name: 'beIN Junior', categoryId: 7),
+      _ch(id: 701, name: 'beIN Kids', categoryId: 7),
+    ];
+    final liveRepo = _FakeLiveRepo(
+      categories: const [
+        Category(
+          id: 7,
+          serverId: 1,
+          type: CategoryType.live,
+          name: 'BEIN KIDS',
+        ),
+      ],
+      channelsByCategory: {7: kids},
+      allChannels: kids,
+    );
+
+    final controller = HomeController(
+      liveRepo: liveRepo,
+      vodRepo: _EmptyVod(),
+      seriesRepo: _EmptySeries(),
+      favoritesRepo: _EmptyFavorites(),
+      historyRepo: _EmptyHistory(),
+    );
+
+    for (var i = 0; i < 30 && controller.state.isLoading; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+
+    expect(controller.state.liveChannels, hasLength(2));
+    expect(controller.state.sportsChannels, isEmpty);
+    expect(liveRepo.requestedCategoryIds, isNot(contains(7)));
   });
 }

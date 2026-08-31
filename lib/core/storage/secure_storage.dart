@@ -11,11 +11,11 @@ import 'package:iptv/core/storage/preferences_storage.dart';
 /// mirrored to preferences for UX prefill — never the password.
 class SecureStorage {
   SecureStorage._()
-      : _storage = const FlutterSecureStorage(
-          aOptions: AndroidOptions(),
-          wOptions: WindowsOptions(),
-          webOptions: WebOptions(dbName: 'iptv_vault'),
-        );
+    : _storage = const FlutterSecureStorage(
+        aOptions: AndroidOptions(),
+        wOptions: WindowsOptions(),
+        webOptions: WebOptions(dbName: 'iptv_vault'),
+      );
 
   static SecureStorage? _instance;
   static SecureStorage get instance {
@@ -28,6 +28,9 @@ class SecureStorage {
   static const String _keyServerUrl = 'server_url';
   static const String _keyUsername = 'username';
   static const String _keyPassword = 'password';
+  static const String _keyKidsModeEnabled = 'kids_mode_enabled';
+  static const String _keyKidsPinSalt = 'kids_mode_pin_salt';
+  static const String _keyKidsPinVerifier = 'kids_mode_pin_verifier';
 
   String? _decodeString(String? value) {
     if (value == null || value.isEmpty) return null;
@@ -65,11 +68,15 @@ class SecureStorage {
       );
       AppLogger.info('Credentials saved to secure storage', feature: 'storage');
     } catch (e) {
-      AppLogger.error('Failed to save auth identity prefs: $e', feature: 'storage');
+      AppLogger.error(
+        'Failed to save auth identity prefs: $e',
+        feature: 'storage',
+      );
     }
   }
 
-  Future<({String serverUrl, String username, String password})?> loadCredentials() async {
+  Future<({String serverUrl, String username, String password})?>
+  loadCredentials() async {
     // 1. Prefer FlutterSecureStorage
     String? serverUrl;
     String? username;
@@ -121,7 +128,11 @@ class SecureStorage {
             username: prefUser,
             password: decodedPass,
           );
-          return (serverUrl: prefUrl, username: prefUser, password: decodedPass);
+          return (
+            serverUrl: prefUrl,
+            username: prefUser,
+            password: decodedPass,
+          );
         }
       }
     } catch (_) {}
@@ -143,7 +154,10 @@ class SecureStorage {
     try {
       await PreferencesStorage.instance.clearAuthCredentials();
     } catch (e) {
-      AppLogger.error('Failed to clear auth identity prefs: $e', feature: 'storage');
+      AppLogger.error(
+        'Failed to clear auth identity prefs: $e',
+        feature: 'storage',
+      );
     }
   }
 
@@ -151,4 +165,31 @@ class SecureStorage {
     final creds = await loadCredentials();
     return creds != null;
   }
+
+  Future<({bool enabled, String? pinSalt, String? pinVerifier})>
+  loadKidsModeConfig() async {
+    final values = await Future.wait([
+      _storage.read(key: _keyKidsModeEnabled),
+      _storage.read(key: _keyKidsPinSalt),
+      _storage.read(key: _keyKidsPinVerifier),
+    ]);
+    return (
+      enabled: values[0] == 'true',
+      pinSalt: values[1],
+      pinVerifier: values[2],
+    );
+  }
+
+  Future<void> saveKidsModePin({
+    required String salt,
+    required String verifier,
+  }) async {
+    await Future.wait([
+      _storage.write(key: _keyKidsPinSalt, value: salt),
+      _storage.write(key: _keyKidsPinVerifier, value: verifier),
+    ]);
+  }
+
+  Future<void> setKidsModeEnabled(bool enabled) =>
+      _storage.write(key: _keyKidsModeEnabled, value: enabled.toString());
 }

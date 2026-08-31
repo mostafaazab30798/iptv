@@ -71,7 +71,7 @@ void main() {
 
     test('installed build 2 does not find build 2', () async {
       final service = UpdateService(
-        api: _FakeApi((_, __) async {
+        api: _FakeApi((_, _) async {
           return {'updateAvailable': false, 'releaseId': 'rel-1'};
         }),
         installedAppInfo: FakeInstalledAppInfo(

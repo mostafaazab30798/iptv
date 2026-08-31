@@ -60,12 +60,24 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   Future<void> _enterFullscreenMode() async {
     _controller ??= ref.read(playerControllerProvider.notifier);
     _controller?.setFullscreen(true);
+    if (PlatformService.instance.isAndroid) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
     await PlatformService.instance.setFullScreen(true);
   }
 
   Future<void> _exitFullscreenMode() async {
     _controller ??= ref.read(playerControllerProvider.notifier);
     _controller?.setFullscreen(false);
+    if (PlatformService.instance.isAndroid) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
     await PlatformService.instance.setFullScreen(false);
   }
 
@@ -82,22 +94,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
 
   Future<void> _toggleFullscreen() async {
     final isMobile = PlatformService.instance.isAndroid;
-    final isCurrentlyFull = ref.read(playerControllerProvider).isFullscreen;
     if (isMobile) {
-      // Branch only on fullscreen flag — do not mix in current orientation,
-      // which previously forced landscape when the exit icon was shown.
-      if (isCurrentlyFull) {
-        _restoreDefaultOrientations();
+      final isLandscape = MediaQuery.maybeOrientationOf(context) == Orientation.landscape;
+      if (isLandscape) {
         await _exitFullscreenMode();
       } else {
-        await SystemChrome.setPreferredOrientations([
-          DeviceOrientation.landscapeLeft,
-          DeviceOrientation.landscapeRight,
-        ]);
         await _enterFullscreenMode();
       }
     } else {
       final isPlatformFull = await PlatformService.instance.isFullScreen();
+      final isCurrentlyFull = ref.read(playerControllerProvider).isFullscreen;
       final shouldExit = isPlatformFull || isCurrentlyFull;
       if (shouldExit) {
         await _exitFullscreenMode();
@@ -168,10 +174,19 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     // Narrow selectors — each widget only rebuilds on the fields it actually needs.
     // This prevents the entire Stack from rebuilding on every position tick from mpv.
     final isBufferingOrLoading = ref.watch(
-      playerControllerProvider.select((s) => s.isBuffering || s.isLoading),
+      playerControllerProvider.select((s) => s.isBuffering || s.isLoading || s.isRetrying),
     );
     final hasError = ref.watch(
       playerControllerProvider.select((s) => s.hasError),
+    );
+    final isRetrying = ref.watch(
+      playerControllerProvider.select((s) => s.isRetrying),
+    );
+    final retryAttempt = ref.watch(
+      playerControllerProvider.select((s) => s.retryAttempt),
+    );
+    final maxRetries = ref.watch(
+      playerControllerProvider.select((s) => s.maxRetries),
     );
 
     // Full state is read (not watched) here — passed to PlayerOverlay which has
@@ -234,9 +249,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
               },
             ),
 
-            // 2. Debounced Buffering Indicator — only rebuilds on buffering/loading changes.
+            // 2. Debounced Buffering Indicator / Non-blocking Auto-reconnect HUD
             BufferingIndicator(
               isBuffering: isBufferingOrLoading,
+              statusMessage: isRetrying
+                  ? 'Reconnecting... ($retryAttempt/$maxRetries)'
+                  : null,
             ),
 
             // 3. Interactive Controls Overlay & Diagnostics HUD

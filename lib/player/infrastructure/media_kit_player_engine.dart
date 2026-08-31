@@ -345,18 +345,18 @@ class MediaKitPlayerEngine implements PlayerEngine {
     );
   }
 
-  /// Telemetry poll cadence. Kept slower than 1s since this data only feeds the
-  /// debug-only DiagnosticsOverlay and the adaptive escalation loops — while every
-  /// tick costs up to 9 platform-channel round trips that can contend with the
-  /// video render/decode pipeline on constrained devices (Android TV / STBs).
-  static const _telemetryInterval = Duration(seconds: 2);
+  /// Telemetry powers the adaptive buffer and decoder safeguards in production.
+  /// Release builds poll only the five signals those safeguards require and use
+  /// a slower cadence; debug builds additionally collect diagnostics HUD data.
+  static const _debugTelemetryInterval = Duration(seconds: 2);
+  static const _releaseTelemetryInterval = Duration(seconds: 3);
 
   void _startTelemetryPolling() {
-    // Telemetry polling makes 9 sequential platform-channel calls every second.
-    // The only consumer (DiagnosticsOverlay) is debug-only, so skip entirely in release builds.
-    if (!kDebugMode) return;
     _telemetryTimer?.cancel();
-    _telemetryTimer = Timer.periodic(_telemetryInterval, (_) => _pollMpvTelemetry());
+    const interval = kDebugMode
+        ? _debugTelemetryInterval
+        : _releaseTelemetryInterval;
+    _telemetryTimer = Timer.periodic(interval, (_) => _pollMpvTelemetry());
   }
 
   Future<void> _pollMpvTelemetry() async {
@@ -364,32 +364,41 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
     try {
       final platform = _player?.platform;
-      if (platform == null) return;
-      final p = platform as dynamic;
+      if (platform is! mk.NativePlayer) return;
 
-      // Fire all property reads concurrently instead of one at a time — this was
-      // previously 9 sequential platform-channel round trips per tick.
-      final results = await Future.wait<dynamic>([
-        p.getProperty('estimated-vf-fps') as Future<dynamic>,
-        p.getProperty('video-bitrate') as Future<dynamic>,
-        p.getProperty('demuxer-cache-duration') as Future<dynamic>,
-        p.getProperty('cache-buffering-state') as Future<dynamic>,
-        p.getProperty('frame-drop-count') as Future<dynamic>,
-        p.getProperty('decoder-frame-drop-count') as Future<dynamic>,
-        p.getProperty('hwdec-current') as Future<dynamic>,
-        p.getProperty('video-codec') as Future<dynamic>,
-        p.getProperty('video-params/pixelformat') as Future<dynamic>,
+      // Keep release polling lean: these signals drive network-buffer and
+      // software-decoder adaptation. Reads are concurrent to avoid serial
+      // platform-channel latency on Android TV and lower-powered devices.
+      final adaptiveResults = await Future.wait<dynamic>([
+        platform.getProperty('demuxer-cache-duration'),
+        platform.getProperty('cache-buffering-state'),
+        platform.getProperty('frame-drop-count'),
+        platform.getProperty('decoder-frame-drop-count'),
+        platform.getProperty('hwdec-current'),
       ]);
 
-      final fpsStr = results[0];
-      final bitrateStr = results[1];
-      final cacheDurStr = results[2];
-      final cacheStateStr = results[3];
-      final frameDropStr = results[4];
-      final decoderDropStr = results[5];
-      final hwdecCurrentStr = results[6];
-      final videoCodecStr = results[7];
-      final pixelFormatStr = results[8];
+      final cacheDurStr = adaptiveResults[0];
+      final cacheStateStr = adaptiveResults[1];
+      final frameDropStr = adaptiveResults[2];
+      final decoderDropStr = adaptiveResults[3];
+      final hwdecCurrentStr = adaptiveResults[4];
+
+      dynamic fpsStr;
+      dynamic bitrateStr;
+      dynamic videoCodecStr;
+      dynamic pixelFormatStr;
+      if (kDebugMode) {
+        final diagnosticsResults = await Future.wait<dynamic>([
+          platform.getProperty('estimated-vf-fps'),
+          platform.getProperty('video-bitrate'),
+          platform.getProperty('video-codec'),
+          platform.getProperty('video-params/pixelformat'),
+        ]);
+        fpsStr = diagnosticsResults[0];
+        bitrateStr = diagnosticsResults[1];
+        videoCodecStr = diagnosticsResults[2];
+        pixelFormatStr = diagnosticsResults[3];
+      }
 
       final fps = fpsStr != null ? double.tryParse(fpsStr.toString()) : null;
       final bitrate = bitrateStr != null ? int.tryParse(bitrateStr.toString()) : null;
@@ -450,6 +459,14 @@ class MediaKitPlayerEngine implements PlayerEngine {
     PlayerLogger.open(source.title, streamType: source.streamType.name);
 
     try {
+      // For live streams or reconnects, cleanly stop previous stalled engine pipeline
+      // so mpv tears down the stalled socket and immediately catches up with the fresh live edge.
+      if (source.profile.isLive) {
+        try {
+          await _player?.stop();
+        } catch (_) {}
+      }
+
       final media = mk.Media(
         source.url,
         httpHeaders: source.headers.isNotEmpty ? source.headers : null,

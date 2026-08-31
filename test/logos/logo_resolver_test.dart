@@ -54,6 +54,22 @@ void main() {
       expect(result.initials, 'SSF');
     });
 
+    test('does not assign sports assets to beIN kids channels', () {
+      const channel = Channel(
+        id: 30,
+        serverId: 1,
+        streamId: 230,
+        name: 'beIN Junior HD',
+        streamIcon: 'https://cdn.example.com/bein-junior.png',
+      );
+
+      final result = LogoResolver.resolve(channel);
+
+      expect(result.source, LogoSource.provider);
+      expect(result.assetPath, isNull);
+      expect(result.remoteUrl, 'https://cdn.example.com/bein-junior.png');
+    });
+
     test('Falls back to generic/initials when no local asset and no remote URL', () {
       const channel = Channel(
         id: 4,

@@ -48,6 +48,17 @@ To exercise the real backend from a debug build, disable the preview explicitly:
 flutter run -d <device-id> --dart-define=DEBUG_AUTH_PREVIEW=false
 ```
 
+For a local build connected to the production update service, use the ignored
+`.env.local` owner configuration:
+
+```powershell
+.\scripts\run_configured.ps1 -DeviceId <device-id>
+```
+
+In VS Code, select **HOPE TV (configured)** from Run and Debug. Dart defines are
+compiled into the application, so hot reload cannot configure an already-built
+binary; stop and rebuild after changing `.env.local`.
+
 ### 1. Windows (Desktop)
 ```bash
 flutter run -d windows

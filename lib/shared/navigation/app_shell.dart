@@ -82,20 +82,24 @@ class AppShell extends ConsumerWidget {
     final selectedIndex = _getSelectedIndex(currentPath);
     final navItems = getNavItems(context);
 
+    final isHomePortrait = isPortrait && currentPath == Routes.home;
+
     return LandscapeGate(
       child: Scaffold(
         backgroundColor: AppColors.bg0,
         extendBody: false,
         body: Column(
           children: [
-            _ShellTopNav(
-              items: navItems,
-              selectedIndex: selectedIndex,
-              currentPath: currentPath,
-              onItemTap: (index, route) => _onNavigate(context, route),
-              onRefresh: () => _handleSmartRefresh(ref, currentPath),
-            ),
-            const SizedBox(height: AppSpacing.sm),
+            if (!isHomePortrait) ...[
+              _ShellTopNav(
+                items: navItems,
+                selectedIndex: selectedIndex,
+                currentPath: currentPath,
+                onItemTap: (index, route) => _onNavigate(context, route),
+                onRefresh: () => _handleSmartRefresh(ref, currentPath),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             Expanded(child: child),
           ],
         ),
@@ -160,13 +164,28 @@ class _ShellTopNav extends StatelessWidget {
   final void Function(int index, String route) onItemTap;
   final VoidCallback onRefresh;
 
+  String _getTitle(BuildContext context, String currentPath) {
+    if (currentPath.startsWith(Routes.movies)) return context.l10n.navMovies;
+    if (currentPath.startsWith(Routes.series)) return context.l10n.navSeries;
+    if (currentPath.startsWith(Routes.live)) return context.l10n.navLive;
+    if (currentPath.startsWith(Routes.favorites)) return context.l10n.labelFavorites;
+    if (currentPath.startsWith(Routes.guide)) return context.l10n.navGuide;
+    if (currentPath.startsWith(Routes.settings)) return context.l10n.navSettings;
+    if (currentPath.startsWith(Routes.history)) return context.l10n.labelContinueWatching;
+    return 'Watch';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPortrait =
         MediaQuery.orientationOf(context) == Orientation.portrait;
 
     if (isPortrait) {
-      // Portrait Top Header with High-Performance Glass Gradient
+      final title = _getTitle(context, currentPath);
+      final topPadding = MediaQueryData.fromView(View.of(context)).padding.top;
+      final topInset = topPadding > 0 ? (topPadding + 10.0) : 48.0;
+
+      // Portrait Top Header matching Home screen hero banner exactly
       return Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -176,70 +195,75 @@ class _ShellTopNav extends StatelessWidget {
             colors: [Color(0xF5080B12), Color(0xDC080B12), Colors.transparent],
           ),
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Container(
-            height: 64,
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.xs,
-              AppSpacing.lg,
-              AppSpacing.md,
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          topInset,
+          AppSpacing.xl,
+          AppSpacing.sm,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                height: 1.1,
+              ),
             ),
-            child: Row(
-              children: [
-                _BrandLogo(onTap: () => context.go(Routes.home)),
-                const Spacer(),
-                // Modern Glass Action Capsule
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(12),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withAlpha(22),
-                      width: 0.8,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(50),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _GlassActionButton(
-                        icon: AppIcons.search,
-                        activeIcon: AppIcons.search,
-                        isActive: currentPath == Routes.search,
-                        tooltip: context.l10n.actionSearch,
-                        onTap: () => context.push(Routes.search),
-                      ),
-                      const SizedBox(width: 3),
-                      _SpinningRefreshButton(
-                        tooltip: context.l10n.actionRefresh,
-                        onTap: onRefresh,
-                      ),
-                      const SizedBox(width: 3),
-                      _GlassActionButton(
-                        icon: AppIcons.settings,
-                        activeIcon: AppIcons.settings,
-                        isActive: currentPath == Routes.settings,
-                        tooltip: context.l10n.navSettings,
-                        onTap: () => context.go(Routes.settings),
-                      ),
-                    ],
-                  ),
+            const Spacer(),
+            // Modern Glass Action Capsule
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(90),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.white.withAlpha(35),
+                  width: 0.8,
                 ),
-              ],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(70),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _GlassActionButton(
+                    icon: AppIcons.search,
+                    activeIcon: AppIcons.search,
+                    isActive: currentPath == Routes.search,
+                    tooltip: context.l10n.actionSearch,
+                    onTap: () => context.push(Routes.search),
+                  ),
+                  const SizedBox(width: 3),
+                  _SpinningRefreshButton(
+                    tooltip: context.l10n.actionRefresh,
+                    onTap: onRefresh,
+                  ),
+                  const SizedBox(width: 3),
+                  _GlassActionButton(
+                    icon: AppIcons.settings,
+                    activeIcon: AppIcons.settings,
+                    isActive: currentPath == Routes.settings,
+                    tooltip: context.l10n.navSettings,
+                    onTap: () => context.go(Routes.settings),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       );
     }
@@ -648,17 +672,11 @@ class _SpinningRefreshButtonState extends State<_SpinningRefreshButton>
           onTap: _handleTap,
           child: AnimatedContainer(
             duration: MotionPolicy.of(context).focus,
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: _hovered ? Colors.white.withAlpha(22) : Colors.transparent,
+              color: _hovered ? Colors.white.withAlpha(25) : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _hovered
-                    ? Colors.white.withAlpha(35)
-                    : Colors.transparent,
-                width: 0.8,
-              ),
             ),
             child: RotationTransition(
               turns: Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -667,10 +685,12 @@ class _SpinningRefreshButtonState extends State<_SpinningRefreshButton>
                   curve: AppMotion.curveEnter,
                 ),
               ),
-              child: HugeIcon(
-                icon: AppIcons.refresh,
-                size: 20,
-                color: _hovered ? AppColors.accent : AppColors.textSecondary,
+              child: Center(
+                child: HugeIcon(
+                  icon: AppIcons.refresh,
+                  size: 19,
+                  color: _hovered ? AppColors.accent : Colors.white70,
+                ),
               ),
             ),
           ),
@@ -715,45 +735,24 @@ class _GlassActionButtonState extends State<_GlassActionButton> {
           onTap: widget.onTap,
           child: AnimatedContainer(
             duration: MotionPolicy.of(context).focus,
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               color: active
                   ? AppColors.accent.withAlpha(35)
-                  : _hovered
-                  ? Colors.white.withAlpha(22)
-                  : Colors.transparent,
+                  : (_hovered ? Colors.white.withAlpha(25) : Colors.transparent),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: active
-                    ? AppColors.accent.withAlpha(120)
-                    : (_hovered
-                          ? Colors.white.withAlpha(35)
-                          : Colors.transparent),
-                width: 0.8,
-              ),
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: AppColors.accent.withAlpha(50),
-                        blurRadius: 10,
-                        offset: const Offset(0, 1),
-                      ),
-                    ]
+              border: active
+                  ? Border.all(color: AppColors.accent.withAlpha(120), width: 0.8)
                   : null,
             ),
-            child: AnimatedScale(
-              scale: _hovered ? 1.08 : 1.0,
-              duration: MotionPolicy.of(context).focus,
-              curve: AppMotion.curveEnter,
+            child: Center(
               child: HugeIcon(
                 icon: active ? widget.activeIcon : widget.icon,
-                size: 20,
+                size: 19,
                 color: active
                     ? AppColors.accent
-                    : (_hovered
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary),
+                    : (_hovered ? Colors.white : Colors.white70),
               ),
             ),
           ),

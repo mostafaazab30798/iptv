@@ -34,7 +34,7 @@ void main() {
     Future<void> finishPlayerTest(WidgetTester tester) async {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump(const Duration(seconds: 5));
       if (controller.mounted) {
         controller.dispose();
       }
@@ -100,18 +100,38 @@ void main() {
       );
       await controller.load(source);
 
-      fakeEngine.simulateError(PlayerErrorType.serverUnavailable);
+      fakeEngine.simulateError(PlayerErrorType.unauthorized);
       await tester.pump();
       await tester.pump(const Duration(seconds: 5));
 
       expect(find.byType(PlayerErrorView), findsOneWidget);
-      expect(find.text('Server error. Please try again.'), findsOneWidget);
+      expect(find.text('Access denied. Please check your subscription credentials.'), findsOneWidget);
 
       final retryBtn = find.text('Retry');
       expect(retryBtn, findsOneWidget);
       await tester.tap(retryBtn);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
+
+      await finishPlayerTest(tester);
+    });
+
+    testWidgets('shows non-blocking reconnecting HUD during auto-reconnect attempts', (tester) async {
+      await tester.pumpWidget(createTestApp());
+      await tester.pump();
+
+      final source = PlayerSource.live(
+        url: 'http://live.stream/ch.m3u8',
+        title: 'Live Stream',
+      );
+      await controller.load(source);
+
+      fakeEngine.simulateError(PlayerErrorType.networkUnavailable);
+      await tester.pump();
+
+      expect(find.byType(PlayerErrorView), findsNothing);
+      expect(find.byType(BufferingIndicator), findsOneWidget);
+      expect(find.textContaining('Reconnecting... (1/5)'), findsOneWidget);
 
       await finishPlayerTest(tester);
     });

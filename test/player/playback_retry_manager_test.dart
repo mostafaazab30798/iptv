@@ -69,18 +69,21 @@ void main() {
       expect(manager.retryCount, equals(0));
     });
 
-    test('resets retry count upon successful playback', () {
+    test('defaults to 5 max retry attempts', () {
       final manager = PlaybackRetryManager();
-      manager.scheduleRetry(
-        errorType: PlayerErrorType.timeout,
-        onExecuteRetry: () async {},
-        onRetryScheduled: (delay, attempt) {},
-      );
-      expect(manager.retryCount, equals(1));
+      expect(manager.maxRetries, equals(5));
 
-      manager.reset();
-      expect(manager.retryCount, equals(0));
-      expect(manager.canRetry, isTrue);
+      for (var i = 0; i < 5; i++) {
+        expect(manager.canRetry, isTrue);
+        final scheduled = manager.scheduleRetry(
+          errorType: PlayerErrorType.networkUnavailable,
+          onExecuteRetry: () async {},
+          onRetryScheduled: (_, _) {},
+        );
+        expect(scheduled, isTrue);
+      }
+      expect(manager.retryCount, equals(5));
+      expect(manager.canRetry, isFalse);
     });
   });
 }

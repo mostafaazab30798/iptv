@@ -1,6 +1,8 @@
 name: Release Android & Windows
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       channel:

@@ -19,9 +19,10 @@ import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 final historyListProvider = FutureProvider.autoDispose<List<WatchHistoryEntry>>((ref) async {
   final repo = ref.watch(historyRepositoryProvider);
+  final allowed = await ref.watch(kidsAllowedContentProvider.future);
   final res = await repo.getHistory(limit: 100);
   return res.when(
-    ok: (list) => list,
+    ok: (list) => list.where(allowed.allowsHistory).toList(),
     err: (_) => [],
   );
 });
@@ -193,16 +194,32 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                   ),
                                   if (progress > 0)
                                     Positioned(
-                                      bottom: 0,
-                                      left: 0,
-                                      right: 0,
-                                      child: ClipRRect(
-                                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
-                                        child: LinearProgressIndicator(
-                                          value: progress,
-                                          backgroundColor: Colors.black54,
-                                          valueColor: const AlwaysStoppedAnimation(AppColors.accent),
-                                          minHeight: 4,
+                                      bottom: 4,
+                                      left: 4,
+                                      right: 4,
+                                      child: Container(
+                                        height: 3.5,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(100),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withAlpha(120),
+                                              blurRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Directionality(
+                                          textDirection: TextDirection.ltr,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(100),
+                                            child: LinearProgressIndicator(
+                                              value: progress.clamp(0.0, 1.0),
+                                              backgroundColor: Colors.white.withAlpha(60),
+                                              valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                                              minHeight: 3.5,
+                                              borderRadius: BorderRadius.circular(100),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),

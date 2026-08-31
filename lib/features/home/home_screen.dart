@@ -138,26 +138,32 @@ class _HomeContent extends ConsumerWidget {
         onRefresh: () => ref
             .read(homeControllerProvider.notifier)
             .loadData(forceRefresh: true),
-        child: CustomScrollView(
-          cacheExtent: 350,
-          slivers: [
-            // 1. Full-Width Cinematic Hero Banner
-            if (homeState.heroItem != null)
-              SliverToBoxAdapter(
-                child: RepaintBoundary(
-                  key: const ValueKey('home-hero'),
-                  child: HomeHeroBanner(
-                    item: homeState.heroItem!,
-                    onPlay: () => _playHero(context, ref, homeState.heroItem!),
-                    onSecondaryAction: () =>
-                        _handleHeroSecondary(context, homeState.heroItem!),
-                    secondaryActionLabel:
-                        homeState.heroItem!.type == HeroItemType.live
-                        ? context.l10n.homeTvGuide
-                        : context.l10n.homeAllMovies,
+        child: MediaQuery.removePadding(
+          context: context,
+          removeTop: true,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            cacheExtent: 350,
+            slivers: [
+              // 1. Full-Width Cinematic Hero Banner
+              if (homeState.heroItem != null || homeState.heroItems.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: RepaintBoundary(
+                    key: const ValueKey('home-hero'),
+                    child: HomeHeroBanner(
+                      item: homeState.heroItem,
+                      items: homeState.heroItems,
+                      onPlay: (hero) => _playHero(context, ref, hero),
+                      onRefresh: () => ref
+                          .read(homeControllerProvider.notifier)
+                          .loadData(forceRefresh: true),
+                      onSecondaryAction: (hero) =>
+                          _handleHeroSecondary(context, hero),
+                    ),
                   ),
                 ),
-              ),
 
             if (homeState.continueWatching.isNotEmpty)
               SliverToBoxAdapter(
@@ -169,10 +175,9 @@ class _HomeContent extends ConsumerWidget {
                     key: const ValueKey('home-continue-watching'),
                     child: HomeSectionRow<WatchHistoryEntry>(
                       title: context.l10n.labelContinueWatching,
-                      icon: AppIcons.history,
                       onSeeAll: () => context.push(Routes.history),
                       items: homeState.continueWatching,
-                      height: 145,
+                      height: 215,
                       itemBuilder: (context, entry, _) => HistoryCard(
                         entry: entry,
                         onTap: () => _playHistory(context, ref, entry),
@@ -194,10 +199,9 @@ class _HomeContent extends ConsumerWidget {
                     key: const ValueKey('home-featured-movies'),
                     child: HomeSectionRow<Movie>(
                       title: context.l10n.homeFeaturedMovies,
-                      icon: AppIcons.movies,
                       onSeeAll: () => context.push(Routes.movies),
                       items: homeState.featuredMovies,
-                      height: 195,
+                      height: 215,
                       itemBuilder: (context, movie, _) => MovieCard(
                         movie: movie,
                         onTap: () => _playMovie(context, ref, movie),
@@ -219,10 +223,9 @@ class _HomeContent extends ConsumerWidget {
                     key: const ValueKey('home-popular-series'),
                     child: HomeSectionRow<Series>(
                       title: context.l10n.homePopularSeries,
-                      icon: AppIcons.series,
                       onSeeAll: () => context.push(Routes.series),
                       items: homeState.popularSeries,
-                      height: 195,
+                      height: 215,
                       itemBuilder: (context, series, _) => SeriesCard(
                         series: series,
                         onTap: () => showSeriesDetailsModal(context, series),
@@ -244,10 +247,9 @@ class _HomeContent extends ConsumerWidget {
                     key: const ValueKey('home-sports-channels'),
                     child: HomeSectionRow<Channel>(
                       title: context.l10n.homeSportsChannels,
-                      icon: AppIcons.sports,
                       onSeeAll: () => context.push(Routes.live),
                       items: homeState.sportsChannels,
-                      height: 130,
+                      height: 135,
                       itemBuilder: (context, channel, _) => ChannelCard(
                         channel: channel,
                         onTap: () => _playChannel(context, ref, channel),
@@ -269,10 +271,9 @@ class _HomeContent extends ConsumerWidget {
                     key: const ValueKey('home-news-channels'),
                     child: HomeSectionRow<Channel>(
                       title: context.l10n.homeNewsChannels,
-                      icon: AppIcons.news,
                       onSeeAll: () => context.push(Routes.live),
                       items: homeState.newsChannels,
-                      height: 130,
+                      height: 135,
                       itemBuilder: (context, channel, _) => ChannelCard(
                         channel: channel,
                         onTap: () => _playChannel(context, ref, channel),
@@ -294,10 +295,9 @@ class _HomeContent extends ConsumerWidget {
                     key: const ValueKey('home-favorites'),
                     child: HomeSectionRow<Favorite>(
                       title: context.l10n.labelFavorites,
-                      icon: AppIcons.favorites,
                       onSeeAll: () => context.push(Routes.favorites),
                       items: homeState.favorites,
-                      height: 130,
+                      height: 135,
                       itemBuilder: (context, fav, _) => ChannelCard(
                         channel: Channel(
                           id: fav.itemId,
@@ -318,8 +318,9 @@ class _HomeContent extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _playHero(BuildContext context, WidgetRef ref, HomeHeroItem hero) {
     if (hero.movie != null) {

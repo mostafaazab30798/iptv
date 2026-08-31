@@ -70,14 +70,66 @@ abstract final class BeinLogoNormalizer {
   }
 
   static bool _isBein(String line, List<String> tokens) {
-    // Check for bein / be in / sports
-    if (tokens.contains('bein') || tokens.contains('beinsports')) {
-      return true;
-    }
-    if (line.startsWith('bein ') || line.contains(' bein ') || line.endsWith(' bein')) {
-      return true;
-    }
-    return false;
+    final hasBrand = tokens.contains('bein') ||
+        tokens.contains('beinsports') ||
+        line.startsWith('bein ') ||
+        line.contains(' bein ') ||
+        line.endsWith(' bein');
+    if (!hasBrand) return false;
+
+    // beIN also operates kids and entertainment channels. Never assign those
+    // the bundled beIN SPORTS logo merely because the brand name is present.
+    const childTokens = {
+      'kid',
+      'kids',
+      'junior',
+      'child',
+      'children',
+      'cartoon',
+      'اطفال',
+      'أطفال',
+      'الاطفال',
+      'براعم',
+    };
+    if (tokens.any(childTokens.contains)) return false;
+
+    final hasSportsMarker = tokens.contains('sport') ||
+        tokens.contains('sports') ||
+        tokens.contains('beinsports');
+    if (hasSportsMarker) return true;
+
+    const nonSportsTokens = {
+      'movie',
+      'movies',
+      'series',
+      'drama',
+      'gourmet',
+      'entertainment',
+      'documentary',
+      'سينما',
+      'افلام',
+      'مسلسلات',
+    };
+    if (tokens.any(nonSportsTokens.contains)) return false;
+
+    // Preserve established short aliases such as "beIN 1" and specific
+    // sports sub-brands, but reject an otherwise generic beIN channel.
+    return tokens.any((token) => RegExp(r'^\d+$').hasMatch(token)) ||
+        tokens.any(
+          const {
+            'news',
+            'akhbar',
+            'ikhbariya',
+            'nba',
+            '4k',
+            'uhd4k',
+            'premium',
+            'prem',
+            'max',
+            'xtra',
+            'extra',
+          }.contains,
+        );
   }
 
   static String? _resolveCanonicalKey(List<String> tokens) {

@@ -39,8 +39,9 @@ class HomeSectionRow<T> extends StatelessWidget {
       children: [
         // Section Header
         Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (icon != null) ...[
                 icon is IconData
@@ -48,15 +49,7 @@ class HomeSectionRow<T> extends StatelessWidget {
                     : HugeIcon(icon: icon as List<List<dynamic>>, color: AppColors.accent, size: 18),
                 const SizedBox(width: 8),
               ],
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
-              ),
+              _buildTitle(context, title),
               if (badgeText != null) ...[
                 const SizedBox(width: 8),
                 Container(
@@ -115,14 +108,70 @@ class HomeSectionRow<T> extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             cacheExtent: 350,
+            padding: const EdgeInsets.symmetric(horizontal: 2),
             itemCount: items.length,
-            separatorBuilder: (_, index) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, i) => itemBuilder(context, items[i], i),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) =>
+                itemBuilder(context, items[index], index),
           ),
         ),
 
         const SizedBox(height: AppSpacing.xl),
       ],
+    );
+  }
+
+  Widget _buildTitle(BuildContext context, String title) {
+    final trimmed = title.trim();
+    final spaceIdx = trimmed.indexOf(' ');
+    const blueTone = Color(0xFF00C2FF);
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
+
+    if (spaceIdx == -1) {
+      return Text(
+        trimmed.toUpperCase(),
+        style: TextStyle(
+          color: isEn ? blueTone : Colors.white,
+          fontSize: 16.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+        ),
+      );
+    }
+
+    final firstWord = trimmed.substring(0, spaceIdx).toUpperCase();
+    final rest = trimmed.substring(spaceIdx + 1).toUpperCase();
+
+    // In English: first word (e.g. CONTINUE, FEATURED, POPULAR) is white,
+    // and second word (WATCHING, MOVIES, SERIES, CHANNELS) is blue!
+    final firstColor = isEn ? Colors.white : blueTone;
+    final firstWeight = isEn ? FontWeight.w800 : FontWeight.w400;
+    final secondColor = isEn ? blueTone : Colors.white;
+    final secondWeight = isEn ? FontWeight.w800 : FontWeight.w900;
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$firstWord ',
+            style: TextStyle(
+              color: firstColor,
+              fontSize: 16.5,
+              fontWeight: firstWeight,
+              letterSpacing: 0.8,
+            ),
+          ),
+          TextSpan(
+            text: rest,
+            style: TextStyle(
+              color: secondColor,
+              fontSize: 16.5,
+              fontWeight: secondWeight,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

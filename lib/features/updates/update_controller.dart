@@ -79,28 +79,51 @@ class UpdateController extends StateNotifier<UpdateState> {
     this._releases, {
     UpdatePreferences? preferences,
     ReleaseVerifier? verifier,
+    bool Function()? isConfigured,
+    bool Function()? supportsUpdates,
   }) : _preferences = preferences ?? UpdatePreferences(),
        _verifier = verifier ?? ReleaseVerifier(),
+       _isConfigured = isConfigured ?? (() => CommercialApiConfig.isConfigured),
+       _supportsUpdates = supportsUpdates ?? supportsNativeUpdates,
        super(const UpdateState());
 
   final ReleaseRepository _releases;
   final UpdatePreferences _preferences;
   final ReleaseVerifier _verifier;
+  final bool Function() _isConfigured;
+  final bool Function() _supportsUpdates;
+  Future<void>? _checkInFlight;
 
   static const checkCacheTtl = Duration(hours: 6);
 
   Future<void> checkForUpdates({
     bool silent = false,
     bool force = false,
+  }) {
+    final activeCheck = _checkInFlight;
+    if (activeCheck != null) return activeCheck;
+
+    final check = _performCheck(silent: silent, force: force);
+    _checkInFlight = check;
+    return check.whenComplete(() {
+      if (identical(_checkInFlight, check)) {
+        _checkInFlight = null;
+      }
+    });
+  }
+
+  Future<void> _performCheck({
+    required bool silent,
+    required bool force,
   }) async {
-    if (!CommercialApiConfig.isConfigured) {
+    if (!_isConfigured()) {
       if (!silent) {
         state = state.copyWith(status: UpdateFlowStatus.notConfigured);
       }
       return;
     }
 
-    if (!supportsNativeUpdates()) {
+    if (!_supportsUpdates()) {
       if (!silent) {
         state = state.copyWith(status: UpdateFlowStatus.unsupported);
       }

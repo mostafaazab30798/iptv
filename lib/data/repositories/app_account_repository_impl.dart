@@ -184,7 +184,7 @@ class AppAccountRepositoryImpl implements AppAccountRepository {
         'action': 'request',
         'confirmation': confirmation,
         'acknowledgeSubscriptionLoss': acknowledgeSubscriptionLoss,
-        if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
+        'idempotencyKey': ?idempotencyKey,
       },
     );
 
