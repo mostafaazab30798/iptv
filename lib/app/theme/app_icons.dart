@@ -126,7 +126,6 @@ abstract final class AppIcons {
   static const List<List<dynamic>> hub = HugeIcons.strokeRoundedRouter01;
   static const List<List<dynamic>> link = HugeIcons.strokeRoundedLink01;
   static const List<List<dynamic>> playlist = HugeIcons.strokeRoundedPlayList;
-  static const List<List<dynamic>> epg = HugeIcons.strokeRoundedCalendar03;
   static const List<List<dynamic>> star = HugeIcons.strokeRoundedStar;
   static const List<List<dynamic>> delete = HugeIcons.strokeRoundedDelete02;
   static const List<List<dynamic>> edit = HugeIcons.strokeRoundedEdit02;
@@ -145,7 +144,6 @@ abstract final class AppIcons {
   static const List<List<dynamic>> paste = HugeIcons.strokeRoundedClipboard;
   static const List<List<dynamic>> chevronDown =
       HugeIcons.strokeRoundedArrowDown01;
-  static const List<List<dynamic>> guide = HugeIcons.strokeRoundedCalendar03;
   static const List<List<dynamic>> deleteSweep =
       HugeIcons.strokeRoundedDelete01;
   static const List<List<dynamic>> time = HugeIcons.strokeRoundedClock01;
@@ -154,6 +152,7 @@ abstract final class AppIcons {
   static const List<List<dynamic>> mail = HugeIcons.strokeRoundedMail01;
   static const List<List<dynamic>> securityCheck =
       HugeIcons.strokeRoundedSecurityCheck;
+  static const List<List<dynamic>> kids = HugeIcons.strokeRoundedKid;
 }
 
 /// Convenience widget wrapper for rendering HugeIcons

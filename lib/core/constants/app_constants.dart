@@ -17,7 +17,6 @@ abstract final class AppConstants {
 
   // Cache TTL
   static const Duration channelCacheTtl = Duration(hours: 6);
-  static const Duration epgCacheTtl = Duration(hours: 1);
   static const Duration vodCacheTtl = Duration(hours: 24);
   static const Duration categoryCacheTtl = Duration(hours: 6);
   static const Duration imageCacheTtl = Duration(days: 7);

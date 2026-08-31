@@ -1120,4 +1120,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kidsModeCurrentPinPrompt => 'Enter your current 4-digit PIN';
+
+  @override
+  String get exitAppTitle => 'Leave HOPE TV?';
+
+  @override
+  String get exitAppMessage => 'Are you sure you want to close the app?';
+
+  @override
+  String get exitAppConfirm => 'Leave';
 }

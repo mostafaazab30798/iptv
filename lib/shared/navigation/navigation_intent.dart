@@ -14,7 +14,6 @@ abstract final class NavigationIntent {
   static const playPause = PlayPauseIntent();
   static const nextChannel = NextChannelIntent();
   static const previousChannel = PreviousChannelIntent();
-  static const openGuide = OpenGuideIntent();
   static const openSearch = OpenSearchIntent();
   static const toggleFullscreen = ToggleFullscreenIntent();
 }

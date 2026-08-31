@@ -50,6 +50,11 @@ class MediaKitPlayerEngine implements PlayerEngine {
   bool _firstFrameReceived = false;
   PlaybackBufferMode _bufferMode;
 
+  /// Bumped on every [open]/[stop]/[dispose] so overlapping async engine
+  /// calls from rapid channel enter/leave cannot apply stale results.
+  int _operationEpoch = 0;
+  Future<void>? _inFlightOperation;
+
   @override
   PlayerStatus get currentStatus => _status;
 
@@ -125,9 +130,7 @@ class MediaKitPlayerEngine implements PlayerEngine {
   Future<void> _applyLowLevelMpvProperties() async {
     // ── Caching: maintain a smooth pre-buffer to prevent starved playback ─────
     await _setProperty('cache', 'yes');
-    await _setProperty('cache-pause', 'yes');
-    await _setProperty('cache-pause-initial', 'yes');
-    await _setProperty('cache-pause-wait', '1.0'); // 1s safety buffer for seamless 60fps playback
+    // Default to VOD-safe pause; live opens override via [_applyCachePausePolicy].
 
     // ── Video sync: audio clock master ────────────────────────────────────────
     // video-sync=audio syncs video frames to the audio clock without heavy GPU/CPU
@@ -149,8 +152,12 @@ class MediaKitPlayerEngine implements PlayerEngine {
     if (enableHardwareAcceleration) {
       await _setProperty('hwdec', 'auto');
       await _setProperty('hwdec-codecs', 'all');
-      await _setProperty('vd-lavc-fast', 'yes'); // Skip non-essential decode steps
     }
+    // Full-quality lavc path: never enable vd-lavc-fast (it skips deblocking and
+    // produces visible macroblocking on IPTV H.264). Error concealment softens
+    // mid-GOP packet loss until the next keyframe.
+    await _setProperty('vd-lavc-fast', 'no');
+    await _setProperty('vd-lavc-o', 'ec=deblock+favor_inter');
     await _setProperty('vd-lavc-threads', '0'); // Auto-detect CPU core count
     await _setProperty('demuxer-thread', 'yes'); // Demux on separate thread
 
@@ -162,6 +169,7 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
     // ── Buffer sizing per active mode ─────────────────────────────────────────
     await _applyBufferModeProperties(_bufferMode);
+    await _applyCachePausePolicy(isLive: false);
 
     // ── Network: persistent connections, best quality ABR ────────────────────
     await _setProperty('network-timeout', '10'); // Fail fast on dead streams
@@ -175,6 +183,19 @@ class MediaKitPlayerEngine implements PlayerEngine {
     await _setProperty('cache-secs', mode.cacheSecs.toString());
     await _setProperty('demuxer-max-bytes', mode.demuxerMaxBytes);
     await _setProperty('demuxer-max-back-bytes', mode.demuxerMaxBackBytes);
+  }
+
+  /// Live sports prefer a shorter initial cache pause so startup does not add a
+  /// full second of intentional delay; VOD keeps the safer 1s pause.
+  Future<void> _applyCachePausePolicy({required bool isLive}) async {
+    await _setProperty('cache-pause', 'yes');
+    if (isLive) {
+      await _setProperty('cache-pause-initial', 'no');
+      await _setProperty('cache-pause-wait', '0.3');
+    } else {
+      await _setProperty('cache-pause-initial', 'yes');
+      await _setProperty('cache-pause-wait', '1.0');
+    }
   }
 
   Future<void> _setProperty(String name, String value) async {
@@ -231,9 +252,12 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
     _subscriptions.add(
       player.stream.playing.listen((playing) {
-        if (_status == PlayerStatus.disposed || _status == PlayerStatus.error) return;
+        if (_status == PlayerStatus.disposed) return;
         if (playing) {
-          if (_status != PlayerStatus.buffering && _status != PlayerStatus.loading) {
+          // Promote loading/error → playing so reconnect HUD clears even when
+          // live IPTV never advances position past zero (no "first frame" tick).
+          // Stay on buffering until demuxer reports buffering=false.
+          if (_status != PlayerStatus.buffering) {
             _updateStatus(PlayerStatus.playing);
           }
         } else if (_status == PlayerStatus.playing) {
@@ -244,13 +268,15 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
     _subscriptions.add(
       player.stream.buffering.listen((buffering) {
-        if (_status == PlayerStatus.disposed || _status == PlayerStatus.error) return;
+        if (_status == PlayerStatus.disposed) return;
         if (buffering) {
           PlayerLogger.bufferingStart();
           _metrics = _metrics.copyWith(bufferingCount: _metrics.bufferingCount + 1);
           _metricsController.add(_metrics);
           _updateStatus(PlayerStatus.buffering);
-        } else if (_status == PlayerStatus.buffering) {
+        } else if (_status == PlayerStatus.buffering ||
+            _status == PlayerStatus.loading ||
+            _status == PlayerStatus.error) {
           PlayerLogger.bufferingEnd(Duration.zero);
           _updateStatus(player.state.playing ? PlayerStatus.playing : PlayerStatus.paused);
         }
@@ -445,42 +471,75 @@ class MediaKitPlayerEngine implements PlayerEngine {
     }
   }
 
+  Future<void> _runExclusive(Future<void> Function(int epoch) body) async {
+    final epoch = ++_operationEpoch;
+    final previous = _inFlightOperation;
+    final gate = Completer<void>();
+    _inFlightOperation = gate.future;
+    if (previous != null) {
+      try {
+        await previous;
+      } catch (_) {}
+    }
+    try {
+      if (epoch != _operationEpoch) return;
+      await body(epoch);
+    } finally {
+      if (!gate.isCompleted) gate.complete();
+      if (identical(_inFlightOperation, gate.future)) {
+        _inFlightOperation = null;
+      }
+    }
+  }
+
   @override
   Future<void> open(PlayerSource source) async {
-    if (_player == null) {
-      await initialize();
-    }
-
-    _currentSource = source;
-    _firstFrameReceived = false;
-    _openStartTime = DateTime.now();
-    _updateStatus(PlayerStatus.loading);
-
-    PlayerLogger.open(source.title, streamType: source.streamType.name);
-
-    try {
-      // For live streams or reconnects, cleanly stop previous stalled engine pipeline
-      // so mpv tears down the stalled socket and immediately catches up with the fresh live edge.
-      if (source.profile.isLive) {
-        try {
-          await _player?.stop();
-        } catch (_) {}
+    await _runExclusive((epoch) async {
+      if (_player == null) {
+        await initialize();
       }
+      if (epoch != _operationEpoch) return;
 
-      final media = mk.Media(
-        source.url,
-        httpHeaders: source.headers.isNotEmpty ? source.headers : null,
-        start: source.profile.isLive ? null : source.startAt,
-      );
+      _currentSource = source;
+      _firstFrameReceived = false;
+      _openStartTime = DateTime.now();
+      _updateStatus(PlayerStatus.loading);
 
-      await _player?.open(media, play: true);
+      PlayerLogger.open(source.title, streamType: source.streamType.name);
 
-      final openDuration = DateTime.now().difference(_openStartTime!);
-      _metrics = _metrics.copyWith(playerOpenDuration: openDuration, bufferMode: _bufferMode);
-      _metricsController.add(_metrics);
-    } catch (e) {
-      _handleBackendError(e.toString());
-    }
+      try {
+        // Re-apply buffer + cache-pause policy every open so live sports stay
+        // near the edge even after prior VOD / mode changes on the same engine.
+        await _applyBufferModeProperties(_bufferMode);
+        await _applyCachePausePolicy(isLive: source.profile.isLive);
+        if (epoch != _operationEpoch) return;
+
+        // For live streams or reconnects, cleanly stop previous stalled engine pipeline
+        // so mpv tears down the stalled socket and immediately catches up with the fresh live edge.
+        if (source.profile.isLive) {
+          try {
+            await _player?.stop();
+          } catch (_) {}
+        }
+        if (epoch != _operationEpoch) return;
+
+        final media = mk.Media(
+          source.url,
+          httpHeaders: source.headers.isNotEmpty ? source.headers : null,
+          start: source.profile.isLive ? null : source.startAt,
+        );
+
+        await _player?.open(media, play: true);
+        if (epoch != _operationEpoch) return;
+
+        final openDuration = DateTime.now().difference(_openStartTime!);
+        _metrics = _metrics.copyWith(playerOpenDuration: openDuration, bufferMode: _bufferMode);
+        _metricsController.add(_metrics);
+      } catch (e) {
+        if (epoch != _operationEpoch) return;
+        _handleBackendError(e.toString());
+      }
+    });
   }
 
   @override
@@ -495,17 +554,20 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
   @override
   Future<void> stop() async {
-    _currentSource = null;
-    _firstFrameReceived = false;
-    _openStartTime = null;
-    _position = Duration.zero;
-    _duration = Duration.zero;
-    try {
-      await _player?.stop();
-    } catch (e) {
-      PlayerLogger.error('Error stopping player', message: e.toString());
-    }
-    _updateStatus(PlayerStatus.stopped);
+    await _runExclusive((epoch) async {
+      _currentSource = null;
+      _firstFrameReceived = false;
+      _openStartTime = null;
+      _position = Duration.zero;
+      _duration = Duration.zero;
+      try {
+        await _player?.stop();
+      } catch (e) {
+        PlayerLogger.error('Error stopping player', message: e.toString());
+      }
+      if (epoch != _operationEpoch) return;
+      _updateStatus(PlayerStatus.stopped);
+    });
   }
 
   @override
@@ -598,11 +660,20 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
   @override
   Future<void> dispose() async {
+    _operationEpoch++;
     _updateStatus(PlayerStatus.disposed);
     PlayerLogger.dispose();
 
     _telemetryTimer?.cancel();
     _telemetryTimer = null;
+
+    final inFlight = _inFlightOperation;
+    _inFlightOperation = null;
+    if (inFlight != null) {
+      try {
+        await inFlight;
+      } catch (_) {}
+    }
 
     for (final sub in _subscriptions) {
       await sub.cancel();

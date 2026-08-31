@@ -7,22 +7,22 @@ import 'package:iptv/player/infrastructure/fake_player_engine.dart';
 
 void main() {
   group('PlaybackBufferMode', () {
-    test('compact configuration values match low-RAM preset', () {
+    test('compact configuration values match low-RAM sports preset', () {
       const mode = PlaybackBufferMode.compact;
-      expect(mode.demuxerReadaheadSecs, equals(3));
-      expect(mode.cacheSecs, equals(4));
+      expect(mode.demuxerReadaheadSecs, equals(2));
+      expect(mode.cacheSecs, equals(3));
       expect(mode.bufferSizeBytes, equals(6 * 1024 * 1024));
       expect(mode.demuxerMaxBytes, equals('12MiB'));
       expect(mode.demuxerMaxBackBytes, equals('4MiB'));
     });
 
-    test('lowLatency configuration values match streaming guide specs', () {
+    test('lowLatency configuration values match tightened sports profile', () {
       const mode = PlaybackBufferMode.lowLatency;
-      expect(mode.demuxerReadaheadSecs, equals(6));
-      expect(mode.cacheSecs, equals(8));
+      expect(mode.demuxerReadaheadSecs, equals(3));
+      expect(mode.cacheSecs, equals(3));
       expect(mode.bufferSizeBytes, equals(16 * 1024 * 1024));
-      expect(mode.demuxerMaxBytes, equals('32MiB'));
-      expect(mode.demuxerMaxBackBytes, equals('8MiB'));
+      expect(mode.demuxerMaxBytes, equals('24MiB'));
+      expect(mode.demuxerMaxBackBytes, equals('6MiB'));
     });
 
     test('balanced configuration values match streaming guide specs', () {

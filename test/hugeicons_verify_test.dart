@@ -12,7 +12,6 @@ void main() {
     expect(AppIcons.search, isNotEmpty);
     expect(AppIcons.play, isNotEmpty);
     expect(AppIcons.pause, isNotEmpty);
-    expect(AppIcons.guide, isNotEmpty);
     expect(AppIcons.deleteSweep, isNotEmpty);
     expect(AppIcons.time, isNotEmpty);
     expect(AppIcons.paste, isNotEmpty);

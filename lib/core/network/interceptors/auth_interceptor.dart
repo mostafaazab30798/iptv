@@ -12,8 +12,7 @@ class AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     // Merge credentials into query params for panel API requests only.
-    if (options.path.contains('player_api') ||
-        options.path.contains('xmltv')) {
+    if (options.path.contains('player_api')) {
       options.queryParameters['username'] = _config.username;
       options.queryParameters['password'] = _config.password;
     }

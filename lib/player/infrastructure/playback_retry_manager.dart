@@ -54,6 +54,7 @@ class PlaybackRetryManager {
     onRetryScheduled(delay, _retryCount);
 
     _pendingRetryTimer = Timer(delay, () async {
+      _pendingRetryTimer = null;
       try {
         await onExecuteRetry();
       } catch (_) {}
@@ -62,7 +63,10 @@ class PlaybackRetryManager {
     return true;
   }
 
-  /// Cancels any scheduled retry.
+  /// Cancels any scheduled retry without resetting the attempt counter.
+  ///
+  /// Call [reset] after a successful first frame (or when intentionally
+  /// abandoning the current recovery sequence and starting fresh).
   void cancel() {
     _pendingRetryTimer?.cancel();
     _pendingRetryTimer = null;

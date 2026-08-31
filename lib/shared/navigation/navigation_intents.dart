@@ -12,6 +12,5 @@ class IptvBackIntent extends Intent { const IptvBackIntent(); }
 class PlayPauseIntent extends Intent { const PlayPauseIntent(); }
 class NextChannelIntent extends Intent { const NextChannelIntent(); }
 class PreviousChannelIntent extends Intent { const PreviousChannelIntent(); }
-class OpenGuideIntent extends Intent { const OpenGuideIntent(); }
 class OpenSearchIntent extends Intent { const OpenSearchIntent(); }
 class ToggleFullscreenIntent extends Intent { const ToggleFullscreenIntent(); }

@@ -16,6 +16,7 @@ import 'package:iptv/features/live/live_controller.dart';
 import 'package:iptv/features/live/widgets/live_mini_preview.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/category_card.dart';
 import 'package:iptv/shared/widgets/channel_list_tile.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
@@ -98,14 +99,16 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
 
     final liveState = ref.read(liveControllerProvider);
     final channels = liveState.filteredChannels;
-    final initialIndex = channels.indexWhere((c) => c.streamId == channel.streamId);
+    final initialIndex = channels.indexWhere(
+      (c) => c.streamId == channel.streamId,
+    );
 
     String urlFor(Channel c) => XtreamRemoteDataSource.buildLiveStreamUrl(
-          serverUrl: session.serverUrl,
-          username: session.username,
-          password: session.password,
-          streamId: c.streamId,
-        );
+      serverUrl: session.serverUrl,
+      username: session.username,
+      password: session.password,
+      streamId: c.streamId,
+    );
 
     final playerNotifier = ref.read(playerControllerProvider.notifier);
     playerNotifier.setLazyLivePlaylist(
@@ -137,12 +140,13 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     );
     final inChannelsView = _selectedCategory != null || _isAllChannelsSelected;
 
-    return PopScope(
-      canPop: !inChannelsView,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && inChannelsView) {
-          _onBack();
-        }
+    return InnerBackScope(
+      onBack: () {
+        final inChannelsView =
+            _selectedCategory != null || _isAllChannelsSelected;
+        if (!inChannelsView) return false;
+        _onBack();
+        return true;
       },
       child: Scaffold(
         backgroundColor: AppColors.bg0,
@@ -150,7 +154,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
           duration: const Duration(milliseconds: 250),
           child: inChannelsView
               ? _buildChannelsView()
-              : _buildCategoriesHub(isLoading: isLoading, categories: categories),
+              : _buildCategoriesHub(
+                  isLoading: isLoading,
+                  categories: categories,
+                ),
         ),
       ),
     );
@@ -187,7 +194,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
               icon: AppIcons.empty,
             )
           : ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
               cacheExtent: 350,
               itemCount: categories.length + 1,
               separatorBuilder: (_, index) => const SizedBox(height: 8),
@@ -249,10 +259,15 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
           builder: (context, constraints) {
             final isCompact = constraints.maxWidth < 600;
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
               decoration: const BoxDecoration(
                 color: AppColors.bg1,
-                border: Border(bottom: BorderSide(color: AppColors.border, width: 0.8)),
+                border: Border(
+                  bottom: BorderSide(color: AppColors.border, width: 0.8),
+                ),
               ),
               child: Row(
                 children: [
@@ -260,25 +275,44 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                     IconButton(
                       onPressed: _onBack,
                       tooltip: context.l10n.labelCategories,
-                      icon: HugeIcon(icon: backIcon, size: 14, color: AppColors.accent),
+                      icon: HugeIcon(
+                        icon: backIcon,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
                       style: IconButton.styleFrom(
                         backgroundColor: AppColors.accent.withAlpha(25),
                         padding: const EdgeInsets.all(8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     )
                   else
                     TextButton.icon(
                       onPressed: _onBack,
-                      icon: HugeIcon(icon: backIcon, size: 14, color: AppColors.accent),
+                      icon: HugeIcon(
+                        icon: backIcon,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
                       label: Text(
                         context.l10n.labelCategories,
-                        style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                       style: TextButton.styleFrom(
                         backgroundColor: AppColors.accent.withAlpha(25),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   const SizedBox(width: 8),
@@ -300,14 +334,21 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.bg3,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             '${filteredChannels.length}',
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -321,7 +362,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                       size: 20,
                       color: AppColors.textSecondary,
                     ),
-                    tooltip: _isGridView ? 'Switch to List View' : 'Switch to Grid View',
+                    tooltip: _isGridView
+                        ? 'Switch to List View'
+                        : 'Switch to Grid View',
                     onPressed: () => setState(() => _isGridView = !_isGridView),
                   ),
                 ],
@@ -333,7 +376,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final isPortrait = MediaQuery.orientationOf(context) == Orientation.portrait || constraints.maxWidth < 750;
+              final isPortrait =
+                  MediaQuery.orientationOf(context) == Orientation.portrait ||
+                  constraints.maxWidth < 750;
 
               if (isPortrait) {
                 return Column(
@@ -341,7 +386,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                     if (activeChannelId != null || _selectedChannel != null)
                       Container(
                         color: AppColors.bg0,
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
+                        ),
                         child: LiveMiniPreview(
                           selectedChannel: _selectedChannel,
                           onExpandFullscreen: () => context.push(Routes.player),
@@ -360,7 +408,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                           },
                           onClear: () {
                             _channelSearchController.clear();
-                            ref.read(liveControllerProvider.notifier).search('');
+                            ref
+                                .read(liveControllerProvider.notifier)
+                                .search('');
                           },
                         ),
                       ),
@@ -384,18 +434,27 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                     child: Column(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.md,
+                            AppSpacing.sm,
+                            AppSpacing.md,
+                            0,
+                          ),
                           child: SizedBox(
                             height: 38,
                             child: _LiveSearchField(
                               controller: _channelSearchController,
                               hintText: context.l10n.liveSearchHint,
                               onChanged: (q) {
-                                ref.read(liveControllerProvider.notifier).search(q);
+                                ref
+                                    .read(liveControllerProvider.notifier)
+                                    .search(q);
                               },
                               onClear: () {
                                 _channelSearchController.clear();
-                                ref.read(liveControllerProvider.notifier).search('');
+                                ref
+                                    .read(liveControllerProvider.notifier)
+                                    .search('');
                               },
                             ),
                           ),
@@ -483,7 +542,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
       itemBuilder: (context, i) {
         final channel = filteredChannels[i];
         final isPlaying = activeChannelId == channel.streamId;
-        final catName = categoryNames[channel.categoryId] ?? context.l10n.navLive;
+        final catName =
+            categoryNames[channel.categoryId] ?? context.l10n.navLive;
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: ChannelListTile(
@@ -523,14 +583,25 @@ class _LiveSearchField extends StatelessWidget {
           style: const TextStyle(fontSize: 13),
           decoration: InputDecoration(
             hintText: hintText,
-            prefixIcon: const HugeIcon(icon: AppIcons.search, size: 18, color: AppColors.textSecondary),
+            prefixIcon: const HugeIcon(
+              icon: AppIcons.search,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
             suffixIcon: value.text.isNotEmpty
                 ? IconButton(
-                    icon: const HugeIcon(icon: AppIcons.close, size: 16, color: AppColors.textSecondary),
+                    icon: const HugeIcon(
+                      icon: AppIcons.close,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
                     onPressed: onClear,
                   )
                 : null,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 0,
+            ),
           ),
         );
       },

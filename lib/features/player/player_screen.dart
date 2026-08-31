@@ -1,5 +1,3 @@
-import 'dart:async' show scheduleMicrotask;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +24,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   PlayerController? _controller;
   /// Cached so exit logic still works after system-back dispose (ref unusable).
   bool _isLiveSource = false;
+  /// Guards against PopScope + overlay both invoking leave on the same pop.
+  bool _isLeaving = false;
 
   @override
   void initState() {
@@ -121,9 +121,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     final controller = _controller;
     super.dispose();
     // Defer provider writes until after the unmount cascade finishes. Calling
-    // setState on listeners mid-unmount marks defunct elements dirty. Tests
-    // must pump once after removing PlayerScreen to drain this microtask.
-    scheduleMicrotask(() {
+    // setState on listeners mid-unmount marks defunct elements dirty. Use a
+    // post-frame callback (not a microtask) so the fullscreen Video surface is
+    // fully detached before LiveMiniPreview remounts the shared controller.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (controller == null || !controller.mounted) return;
       controller.setPlayerRouteActive(false);
       controller.setFullscreen(false);
@@ -133,6 +134,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   /// Leaves the fullscreen player without tearing down live playback so the
   /// Live TV mini preview can keep showing the same stream.
   void _leavePlayer({required bool alreadyPopped}) {
+    if (_isLeaving) return;
+    _isLeaving = true;
+
     if (!alreadyPopped) {
       _restoreDefaultOrientations();
       // Exit OS immersive mode immediately. Surface ownership is released in
@@ -151,12 +155,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     // timers when the route is disposed under widget tests.
     final retainForMiniPreview =
         _isLiveSource && (_controller?.hasLivePreviewHandoff ?? false);
-    if (!retainForMiniPreview) {
+    if (retainForMiniPreview) {
+      // Drop a stuck reconnect HUD / pending retry timer without killing audio.
+      _controller?.cancelAutoReconnect();
+    } else {
       _controller?.stop();
     }
 
     if (alreadyPopped) return;
 
+    if (!mounted) return;
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
@@ -222,11 +230,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     _isLiveSource = fullPlayerState.isLive;
 
     return PopScope(
-      canPop: true,
+      // Own the pop so leave cleanup (stop / mini-preview handoff) always runs
+      // once before the route is removed — avoids double-leave with overlay close.
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          _leavePlayer(alreadyPopped: true);
-        } else {
+        if (!didPop) {
           _handleBack();
         }
       },

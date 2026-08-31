@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/player/application/player_controller.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
+import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/infrastructure/fake_player_engine.dart';
 
@@ -141,8 +142,61 @@ void main() {
       expect(controller.state.duration, equals(Duration.zero));
       expect(controller.state.availableAudioTracks, isEmpty);
       expect(controller.state.availableSubtitleTracks, isEmpty);
+      expect(controller.state.isRetrying, isFalse);
+      expect(controller.state.retryAttempt, equals(0));
       expect(fakeEngine.currentSource, isNull);
       expect(fakeEngine.currentStatus, equals(PlayerStatus.stopped));
+    });
+
+    test('rapid load keeps only the latest channel (stale open discarded)', () async {
+      fakeEngine.openDelay = const Duration(milliseconds: 40);
+
+      final first = PlayerSource.live(
+        url: 'http://ch1.m3u8',
+        title: 'Channel 1',
+        channelId: 1,
+      );
+      final second = PlayerSource.live(
+        url: 'http://ch2.m3u8',
+        title: 'Channel 2',
+        channelId: 2,
+      );
+
+      final firstLoad = controller.load(first);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final secondLoad = controller.load(second);
+      await Future.wait([firstLoad, secondLoad]);
+
+      expect(controller.state.source?.title, equals('Channel 2'));
+      expect(controller.state.source?.channelId, equals(2));
+      expect(fakeEngine.currentSource?.channelId, equals(2));
+    });
+
+    test('stop() and cancelAutoReconnect clear stuck isRetrying HUD state', () async {
+      final source = PlayerSource.live(
+        url: 'http://live.stream/ch.m3u8',
+        title: 'Live Stream',
+        channelId: 9,
+      );
+      await controller.load(source);
+
+      fakeEngine.simulateError(PlayerErrorType.networkUnavailable);
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.state.isRetrying, isTrue);
+
+      controller.cancelAutoReconnect();
+      expect(controller.state.isRetrying, isFalse);
+      expect(controller.state.retryAttempt, equals(0));
+      expect(controller.state.source?.channelId, equals(9));
+
+      fakeEngine.simulateError(PlayerErrorType.networkUnavailable);
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.state.isRetrying, isTrue);
+
+      await controller.stop();
+      expect(controller.state.isRetrying, isFalse);
+      expect(controller.state.retryAttempt, equals(0));
+      expect(controller.state.source, isNull);
     });
   });
 }

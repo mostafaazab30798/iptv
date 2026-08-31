@@ -30,7 +30,7 @@ class LiveRepositoryImpl implements LiveRepository {
   static final Map<int, Channel> _channelMap = {};
 
   /// Precomputed category → channels slices from the full catalog cache.
-  /// Lets Home/Guide pull category rows without O(n) scans of all channels.
+  /// Lets Home pull category rows without O(n) scans of all channels.
   static final Map<int, List<Channel>> _channelsByCategoryIndex = {};
 
   static bool _isFresh(DateTime? fetchedAt) {

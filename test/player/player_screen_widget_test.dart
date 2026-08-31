@@ -29,8 +29,8 @@ void main() {
       }
     });
 
-    /// Removes PlayerScreen, drains dispose microtasks, and cancels player
-    /// timers (progress saver) before Flutter's pending-timer invariant check.
+    /// Removes PlayerScreen, drains dispose post-frame callbacks, and cancels
+    /// player timers (progress saver) before Flutter's pending-timer invariant check.
     Future<void> finishPlayerTest(WidgetTester tester) async {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

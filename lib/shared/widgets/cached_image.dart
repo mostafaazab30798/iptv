@@ -54,10 +54,20 @@ class CachedImage extends StatelessWidget {
 
     // Derive memory cache dimensions from explicit params or fall back to widget size.
     // Ensure an unconstrained image is never decoded at full 4K resolution into memory.
+    // When only one axis is provided, leave the other null so aspect ratio is preserved.
     final effectiveCacheWidth = memCacheWidth ??
-        ((width != null && !width!.isInfinite) ? width!.ceil() : 256);
+        ((width != null && !width!.isInfinite) ? width!.ceil() : null);
     final effectiveCacheHeight = memCacheHeight ??
-        ((height != null && !height!.isInfinite) ? height!.ceil() : 256);
+        ((height != null && !height!.isInfinite) ? height!.ceil() : null);
+    final int? resolvedCacheWidth;
+    final int? resolvedCacheHeight;
+    if (effectiveCacheWidth == null && effectiveCacheHeight == null) {
+      resolvedCacheWidth = 256;
+      resolvedCacheHeight = 256;
+    } else {
+      resolvedCacheWidth = effectiveCacheWidth;
+      resolvedCacheHeight = effectiveCacheHeight;
+    }
 
     final finalImageUrl = UrlHelpers.wrapWebProxy(
       imageUrl!,
@@ -72,8 +82,8 @@ class CachedImage extends StatelessWidget {
         height: height,
         fit: fit,
         alignment: alignment,
-        memCacheWidth: effectiveCacheWidth,
-        memCacheHeight: effectiveCacheHeight,
+        memCacheWidth: resolvedCacheWidth,
+        memCacheHeight: resolvedCacheHeight,
         httpHeaders: const {
           if (!kIsWeb)
             'User-Agent':

@@ -1123,4 +1123,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get kidsModeCurrentPinPrompt => 'أدخل الرمز الحالي المكون من 4 أرقام';
+
+  @override
+  String get exitAppTitle => 'مغادرة HOPE TV؟';
+
+  @override
+  String get exitAppMessage => 'هل تريد إغلاق التطبيق؟';
+
+  @override
+  String get exitAppConfirm => 'مغادرة';
 }

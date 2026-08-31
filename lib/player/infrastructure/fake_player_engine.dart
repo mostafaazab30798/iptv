@@ -23,7 +23,6 @@ class FakePlayerEngine implements PlayerEngine {
   Duration _position = Duration.zero;
   final Duration _duration = const Duration(minutes: 90);
   PlayerSource? _currentSource;
-  final PlayerMetrics _metrics = PlayerMetrics.empty;
   double _volume = 1.0;
   bool _muted = false;
   PlayerAudioTrack? _selectedAudioTrack;
@@ -35,6 +34,15 @@ class FakePlayerEngine implements PlayerEngine {
 
   /// Tracks the last tier applied via [applySoftwareDecodeEscalation] for test assertions.
   SoftwareDecodeFallbackTier lastAppliedSwDecodeTier = SoftwareDecodeFallbackTier.none;
+
+  /// Last buffer mode applied via [setBufferMode].
+  PlaybackBufferMode? lastBufferMode;
+
+  /// Number of successful [open] calls (including hard-resync reopens).
+  int openCount = 0;
+
+  int _openGeneration = 0;
+  PlayerMetrics _metrics = PlayerMetrics.empty;
 
   @override
   PlayerStatus get currentStatus => _status;
@@ -89,12 +97,14 @@ class FakePlayerEngine implements PlayerEngine {
 
   @override
   Future<void> open(PlayerSource source) async {
+    final generation = ++_openGeneration;
     _currentSource = source;
     _emitStatus(PlayerStatus.loading);
 
     if (openDelay > Duration.zero) {
       await Future<void>.delayed(openDelay);
     }
+    if (generation != _openGeneration) return;
 
     if (shouldFailOnOpen) {
       _emitStatus(PlayerStatus.error);
@@ -104,6 +114,7 @@ class FakePlayerEngine implements PlayerEngine {
       return;
     }
 
+    openCount++;
     _emitStatus(PlayerStatus.playing);
     _emitPosition(const Duration(seconds: 1));
     _audioTracksController.add([
@@ -129,6 +140,7 @@ class FakePlayerEngine implements PlayerEngine {
 
   @override
   Future<void> stop() async {
+    _openGeneration++;
     _currentSource = null;
     _position = Duration.zero;
     _emitStatus(PlayerStatus.stopped);
@@ -179,12 +191,24 @@ class FakePlayerEngine implements PlayerEngine {
 
   @override
   Future<void> setBufferMode(PlaybackBufferMode mode) async {
-    // Simulated buffer mode change
+    lastBufferMode = mode;
+    _metrics = _metrics.copyWith(bufferMode: mode);
+    if (!_metricsController.isClosed) {
+      _metricsController.add(_metrics);
+    }
   }
 
   @override
   Future<void> applySoftwareDecodeEscalation(SoftwareDecodeFallbackTier tier) async {
     lastAppliedSwDecodeTier = tier;
+  }
+
+  /// Pushes metrics to subscribers (and updates [currentMetrics]) for tests.
+  void emitMetrics(PlayerMetrics metrics) {
+    _metrics = metrics;
+    if (!_metricsController.isClosed) {
+      _metricsController.add(metrics);
+    }
   }
 
   @override

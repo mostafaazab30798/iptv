@@ -87,7 +87,7 @@ class LiveController extends StateNotifier<LiveState> {
 
   Future<void> loadData({bool forceRefresh = false}) async {
     final repo = _liveRepo;
-    if (repo == null) return;
+    if (repo == null || !mounted) return;
 
     if (!forceRefresh &&
         _catalog.isNotEmpty &&
@@ -100,6 +100,7 @@ class LiveController extends StateNotifier<LiveState> {
 
     try {
       final catResult = await repo.getCategories(forceRefresh: forceRefresh);
+      if (!mounted) return;
       final categories = catResult.when(
         ok: (cats) => cats,
         err: (_) => <Category>[],
@@ -109,6 +110,7 @@ class LiveController extends StateNotifier<LiveState> {
         categoryId: null,
         forceRefresh: forceRefresh,
       );
+      if (!mounted) return;
 
       final channels = chanResult.when(
         ok: (chans) => chans,
@@ -143,6 +145,7 @@ class LiveController extends StateNotifier<LiveState> {
         visible = const [];
       }
 
+      if (!mounted) return;
       state = state.copyWith(
         categories: categories,
         filteredChannels: visible,
@@ -153,6 +156,7 @@ class LiveController extends StateNotifier<LiveState> {
         isLoading: false,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -190,14 +194,17 @@ class LiveController extends StateNotifier<LiveState> {
 
   void search(String query) {
     _searchDebounce?.cancel();
+    if (!mounted) return;
     final trimmed = query.trim();
     state = state.copyWith(searchQuery: trimmed);
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
       unawaited(_runSearch(trimmed));
     });
   }
 
   Future<void> _runSearch(String query) async {
+    if (!mounted) return;
     final epoch = ++_searchEpoch;
     final base = state.selectedCategoryId == null
         ? _catalog
@@ -206,7 +213,7 @@ class LiveController extends StateNotifier<LiveState> {
               .toList();
 
     if (query.isEmpty) {
-      if (epoch != _searchEpoch) return;
+      if (!mounted || epoch != _searchEpoch) return;
       state = state.copyWith(filteredChannels: base);
       return;
     }
@@ -218,14 +225,14 @@ class LiveController extends StateNotifier<LiveState> {
         names,
         query.toLowerCase(),
       ));
-      if (epoch != _searchEpoch) return;
+      if (!mounted || epoch != _searchEpoch) return;
       filtered = [for (final i in indexes) base[i]];
     } else {
       final q = query.toLowerCase();
       filtered = base.where((c) => c.name.toLowerCase().contains(q)).toList();
     }
 
-    if (epoch != _searchEpoch) return;
+    if (!mounted || epoch != _searchEpoch) return;
     state = state.copyWith(filteredChannels: filtered);
   }
 }

@@ -468,5 +468,8 @@
   "kidsModeEnterPinPrompt": "أدخل رمز الوالدين المكون من 4 أرقام للمتابعة",
   "kidsModeCreatePinPrompt": "قم بتعيين رمز سري من 4 أرقام لحماية وضع الأطفال",
   "kidsModeConfirmPinPrompt": "أعد إدخال الرمز المكون من 4 أرقام للتأكيد",
-  "kidsModeCurrentPinPrompt": "أدخل الرمز الحالي المكون من 4 أرقام"
+  "kidsModeCurrentPinPrompt": "أدخل الرمز الحالي المكون من 4 أرقام",
+  "exitAppTitle": "مغادرة HOPE TV؟",
+  "exitAppMessage": "هل تريد إغلاق التطبيق؟",
+  "exitAppConfirm": "مغادرة"
 }

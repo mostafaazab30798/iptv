@@ -11,12 +11,12 @@ import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/domain/entities/server_config.dart';
 import 'package:iptv/features/auth/auth_controller.dart';
+import 'package:iptv/features/kids_mode/kids_mode_actions.dart';
 import 'package:iptv/features/kids_mode/kids_mode_controller.dart';
 import 'package:iptv/features/kids_mode/widgets/kids_mode_card.dart';
 import 'package:iptv/features/kids_mode/widgets/kids_pin_dialog.dart';
 import 'package:iptv/features/updates/update_controller.dart';
 import 'package:iptv/features/updates/update_dialog.dart';
-import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 
 String _updateStatusLabel(BuildContext context, UpdateState state) {
@@ -83,43 +83,8 @@ class SettingsScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     bool enable,
-  ) async {
-    final current = ref.read(kidsModeProvider);
-    final pin = await showKidsPinDialog(
-      context: context,
-      createPin: enable && !current.hasPin,
-    );
-    if (pin == null || !context.mounted) return;
-
-    final controller = ref.read(kidsModeProvider.notifier);
-    final result = enable
-        ? (current.hasPin
-              ? await controller.enableWithExistingPin(pin)
-              : await controller.enableWithNewPin(pin))
-        : await controller.disable(pin);
-    if (!context.mounted) return;
-
-    if (result == KidsPinResult.success) {
-      if (enable) {
-        await ref.read(playerControllerProvider.notifier).stop();
-      }
-      return;
-    }
-
-    final message = _pinResultMessage(context, result);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  String _pinResultMessage(BuildContext context, KidsPinResult result) {
-    return switch (result) {
-      KidsPinResult.invalidPin => context.l10n.kidsModeInvalidPin,
-      KidsPinResult.invalidFormat => context.l10n.kidsModeInvalidFormat,
-      KidsPinResult.lockedOut => context.l10n.kidsModeLockedOut,
-      KidsPinResult.unavailable => context.l10n.kidsModeUnavailable,
-      KidsPinResult.success => '',
-    };
+  ) {
+    return confirmKidsModeChange(context: context, ref: ref, enable: enable);
   }
 
   Future<void> _changeKidsPin(BuildContext context, WidgetRef ref) async {
@@ -134,12 +99,12 @@ class SettingsScreen extends ConsumerWidget {
     if (!context.mounted) return;
     if (result != KidsPinResult.success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_pinResultMessage(context, result))),
+        SnackBar(content: Text(kidsPinResultMessage(context, result))),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.actionSave)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.actionSave)));
     }
   }
 
@@ -150,92 +115,80 @@ class SettingsScreen extends ConsumerWidget {
     final kidsMode = ref.watch(kidsModeProvider);
     final updateState = ref.watch(updateProvider);
 
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go(Routes.home);
-          }
-        }
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF090B0F),
-        body: ListView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.lg,
-          ),
-          children: [
-            // --- 1. Hero Server & Profile Header ---
-            if (session != null) ...[
-              _HeroServerBanner(session: session),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-
-            // --- 2. Language Segmented Bento Card ---
-            _BentoCard(
-              title: context.l10n.settingsLanguage,
-              icon: AppIcons.language,
-              child: _LanguageSegmentedControl(
-                currentLocale: currentLocale,
-                onLocaleSelected: (code) => _setLocale(ref, code),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            // --- 3. Parental Controls (Kids Mode) ---
-            _BentoCard(
-              title: context.l10n.settingsParentalControls,
-              icon: AppIcons.securityCheck,
-              child: KidsModeCard(
-                state: kidsMode,
-                onToggle: (value) => _toggleKidsMode(context, ref, value),
-                onChangePin: () => _changeKidsPin(context, ref),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            // --- 4. System & Software Bento Card ---
-            _BentoCard(
-              title: context.l10n.settingsAbout,
-              icon: AppIcons.info,
-              child: _SystemInfoCard(
-                statusLabel: _updateStatusLabel(context, updateState),
-                isChecking: updateState.status == UpdateFlowStatus.checking,
-                onCheckUpdates: () async {
-                  await ref
-                      .read(updateProvider.notifier)
-                      .checkForUpdates(force: true);
-                  if (context.mounted) {
-                    final latestState = ref.read(updateProvider);
-                    if (latestState.status == UpdateFlowStatus.error &&
-                        latestState.errorMessage != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(latestState.errorMessage!)),
-                      );
-                    } else {
-                      await showUpdateDialogIfNeeded(context, ref);
-                    }
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            // --- 5. Session & Sign Out Bento Card ---
-            _BentoCard(
-              title: context.l10n.settingsAccount,
-              icon: AppIcons.logout,
-              child: _SignOutActionTile(
-                onSignOutTap: () => _signOut(context, ref),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-          ],
+    return Scaffold(
+      backgroundColor: const Color(0xFF090B0F),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.lg,
         ),
+        children: [
+          // --- 1. Hero Server & Profile Header ---
+          if (session != null) ...[
+            _HeroServerBanner(session: session),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+
+          // --- 2. Language Segmented Bento Card ---
+          _BentoCard(
+            title: context.l10n.settingsLanguage,
+            icon: AppIcons.language,
+            child: _LanguageSegmentedControl(
+              currentLocale: currentLocale,
+              onLocaleSelected: (code) => _setLocale(ref, code),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // --- 3. Parental Controls (Kids Mode) ---
+          _BentoCard(
+            title: context.l10n.settingsParentalControls,
+            icon: AppIcons.securityCheck,
+            child: KidsModeCard(
+              state: kidsMode,
+              onToggle: (value) => _toggleKidsMode(context, ref, value),
+              onChangePin: () => _changeKidsPin(context, ref),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // --- 4. System & Software Bento Card ---
+          _BentoCard(
+            title: context.l10n.settingsAbout,
+            icon: AppIcons.info,
+            child: _SystemInfoCard(
+              statusLabel: _updateStatusLabel(context, updateState),
+              isChecking: updateState.status == UpdateFlowStatus.checking,
+              onCheckUpdates: () async {
+                await ref
+                    .read(updateProvider.notifier)
+                    .checkForUpdates(force: true);
+                if (context.mounted) {
+                  final latestState = ref.read(updateProvider);
+                  if (latestState.status == UpdateFlowStatus.error &&
+                      latestState.errorMessage != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(latestState.errorMessage!)),
+                    );
+                  } else {
+                    await showUpdateDialogIfNeeded(context, ref);
+                  }
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // --- 5. Session & Sign Out Bento Card ---
+          _BentoCard(
+            title: context.l10n.settingsAccount,
+            icon: AppIcons.logout,
+            child: _SignOutActionTile(
+              onSignOutTap: () => _signOut(context, ref),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+        ],
       ),
     );
   }
@@ -256,10 +209,7 @@ class _HeroServerBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF11141D),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white.withAlpha(16),
-          width: 0.8,
-        ),
+        border: Border.all(color: Colors.white.withAlpha(16), width: 0.8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(40),
@@ -449,10 +399,7 @@ class _LanguageSegmentedControl extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF11141D),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withAlpha(14),
-          width: 0.8,
-        ),
+        border: Border.all(color: Colors.white.withAlpha(14), width: 0.8),
       ),
       padding: const EdgeInsets.all(5),
       child: Row(
@@ -591,10 +538,7 @@ class _SystemInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF11141D),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withAlpha(14),
-          width: 0.8,
-        ),
+        border: Border.all(color: Colors.white.withAlpha(14), width: 0.8),
       ),
       child: Column(
         children: [
@@ -668,10 +612,12 @@ class _SystemInfoCard extends StatelessWidget {
             Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: isChecking || onCheckUpdates == null ? null : () {
-                  HapticFeedback.lightImpact();
-                  onCheckUpdates!();
-                },
+                onTap: isChecking || onCheckUpdates == null
+                    ? null
+                    : () {
+                        HapticFeedback.lightImpact();
+                        onCheckUpdates!();
+                      },
                 borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(16),
                 ),
@@ -747,10 +693,7 @@ class _SignOutActionTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF11141D),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withAlpha(14),
-          width: 0.8,
-        ),
+        border: Border.all(color: Colors.white.withAlpha(14), width: 0.8),
       ),
       child: Material(
         color: Colors.transparent,
@@ -845,10 +788,7 @@ class _SignOutConfirmDialog extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF11141D),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withAlpha(18),
-              width: 0.8,
-            ),
+            border: Border.all(color: Colors.white.withAlpha(18), width: 0.8),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withAlpha(140),

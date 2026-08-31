@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
-import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
+import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
+import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
 
 class MovieCard extends StatelessWidget {
   const MovieCard({
@@ -46,35 +46,23 @@ class MovieCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     fallbackIcon: AppIcons.movies,
                   ),
-                  // Rating badge
-                  if (movie.rating != null && movie.rating!.isNotEmpty)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withAlpha(200),
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: AppColors.warning.withAlpha(120), width: 0.8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const HugeIcon(icon: AppIcons.star, color: AppColors.warning, size: 10),
-                            const SizedBox(width: 2),
-                            Text(
-                              movie.rating!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: PosterTopActions(
+                      compact: true,
+                      rating: movie.rating,
+                      favoriteButton: FavoriteToggleButton(
+                        type: FavoriteType.movie,
+                        itemId: movie.streamId,
+                        name: movie.name,
+                        imageUrl: movie.streamIcon,
+                        size: 20,
+                        padding: 2,
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

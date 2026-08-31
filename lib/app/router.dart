@@ -9,7 +9,6 @@ import 'package:iptv/features/account/devices_screen.dart';
 import 'package:iptv/features/account/sign_in_screen.dart';
 import 'package:iptv/features/account/verify_code_screen.dart';
 import 'package:iptv/features/favorites/favorites_screen.dart';
-import 'package:iptv/features/guide/guide_screen.dart';
 import 'package:iptv/features/history/history_screen.dart';
 import 'package:iptv/features/home/home_screen.dart';
 import 'package:iptv/features/live/live_screen.dart';
@@ -20,7 +19,9 @@ import 'package:iptv/features/search/search_screen.dart';
 import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/features/settings/settings_screen.dart';
 import 'package:iptv/features/splash/splash_screen.dart';
+import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/navigation/app_shell.dart';
+import 'package:iptv/shared/navigation/navigator_keys.dart';
 
 // ---------------------------------------------------------------------------
 // Route names — use these constants instead of raw strings.
@@ -36,7 +37,6 @@ abstract final class Routes {
   static const onboarding = '/onboarding';
   static const home = '/home';
   static const live = '/live';
-  static const guide = '/guide';
   static const movies = '/movies';
   static const series = '/series';
   static const favorites = '/favorites';
@@ -123,6 +123,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: Routes.splash,
     debugLogDiagnostics: false,
     refreshListenable: refresh,
@@ -151,27 +152,33 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: Routes.signIn,
-        pageBuilder: (context, state) => _fade(const SignInScreen()),
+        pageBuilder: (context, state) =>
+            _fade(const SignInScreen(), interceptBack: true),
       ),
       GoRoute(
         path: Routes.verifyCode,
-        pageBuilder: (context, state) => _fade(const VerifyCodeScreen()),
+        pageBuilder: (context, state) =>
+            _fade(const VerifyCodeScreen(), interceptBack: true),
       ),
       GoRoute(
         path: Routes.account,
-        pageBuilder: (context, state) => _fade(const AccountScreen()),
+        pageBuilder: (context, state) =>
+            _fade(const AccountScreen(), interceptBack: true),
       ),
       GoRoute(
         path: Routes.devices,
-        pageBuilder: (context, state) => _fade(const DevicesScreen()),
+        pageBuilder: (context, state) =>
+            _fade(const DevicesScreen(), interceptBack: true),
       ),
       GoRoute(
         path: Routes.accessRequired,
-        pageBuilder: (context, state) => _fade(const AccessRequiredScreen()),
+        pageBuilder: (context, state) =>
+            _fade(const AccessRequiredScreen(), interceptBack: true),
       ),
       GoRoute(
         path: Routes.onboarding,
-        pageBuilder: (context, state) => _fade(const OnboardingScreen()),
+        pageBuilder: (context, state) =>
+            _fade(const OnboardingScreen(), interceptBack: true),
       ),
       GoRoute(
         path: Routes.player,
@@ -179,9 +186,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: Routes.search,
-        pageBuilder: (context, state) => _fade(const SearchScreen()),
+        pageBuilder: (context, state) =>
+            _fade(const SearchScreen(), interceptBack: true),
       ),
       ShellRoute(
+        navigatorKey: shellNavigatorKey,
         builder: (context, state, child) =>
             AppShell(state: state, child: child),
         routes: [
@@ -192,10 +201,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: Routes.live,
             pageBuilder: (context, state) => _fade(const LiveScreen()),
-          ),
-          GoRoute(
-            path: Routes.guide,
-            pageBuilder: (context, state) => _fade(const GuideScreen()),
           ),
           GoRoute(
             path: Routes.movies,
@@ -227,9 +232,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 // Page transitions
 // ---------------------------------------------------------------------------
 
-CustomTransitionPage<void> _fade(Widget child) {
+CustomTransitionPage<void> _fade(Widget child, {bool interceptBack = false}) {
   return CustomTransitionPage<void>(
-    child: child,
+    child: interceptBack ? RootBackScope(child: child) : child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(opacity: animation, child: child);
     },

@@ -9,22 +9,15 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/favorite.dart';
+import 'package:iptv/domain/entities/series.dart';
+import 'package:iptv/features/favorites/favorite_ids.dart';
+import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
-
-final favoritesListProvider = FutureProvider<List<Favorite>>((ref) async {
-  final repo = ref.watch(favoritesRepositoryProvider);
-  final allowed = await ref.watch(kidsAllowedContentProvider.future);
-  final res = await repo.getFavorites();
-  return res.when(
-    ok: (list) => list.where(allowed.allowsFavorite).toList(),
-    err: (_) => [],
-  );
-});
 
 class FavoritesScreen extends ConsumerStatefulWidget {
   const FavoritesScreen({super.key});
@@ -45,14 +38,6 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     super.dispose();
   }
 
-  void _onBack() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go(Routes.home);
-    }
-  }
-
   void _playFavorite(Favorite fav) {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
@@ -64,29 +49,28 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
         password: session.password,
         streamId: fav.itemId,
       );
-      ref.read(playerControllerProvider.notifier).load(
-        VodSource(
-          url: streamUrl,
-          title: fav.name,
-          movieId: fav.itemId,
-          posterUrl: fav.imageUrl,
-        ),
-      );
+      ref
+          .read(playerControllerProvider.notifier)
+          .load(
+            VodSource(
+              url: streamUrl,
+              title: fav.name,
+              movieId: fav.itemId,
+              posterUrl: fav.imageUrl,
+            ),
+          );
     } else if (fav.type == FavoriteType.series) {
-      final streamUrl = XtreamRemoteDataSource.buildSeriesStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: fav.itemId,
-      );
-      ref.read(playerControllerProvider.notifier).load(
-        EpisodeSource(
-          url: streamUrl,
-          title: fav.name,
-          episodeId: fav.itemId,
-          posterUrl: fav.imageUrl,
+      showSeriesDetailsModal(
+        context,
+        Series(
+          id: fav.itemId,
+          serverId: 0,
+          seriesId: fav.itemId,
+          name: fav.name,
+          cover: fav.imageUrl,
         ),
       );
+      return;
     } else {
       final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
         serverUrl: session.serverUrl,
@@ -94,14 +78,16 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
         password: session.password,
         streamId: fav.itemId,
       );
-      ref.read(playerControllerProvider.notifier).load(
-        LiveSource(
-          url: streamUrl,
-          channelName: fav.name,
-          channelId: fav.itemId,
-          logoUrl: fav.imageUrl,
-        ),
-      );
+      ref
+          .read(playerControllerProvider.notifier)
+          .load(
+            LiveSource(
+              url: streamUrl,
+              channelName: fav.name,
+              channelId: fav.itemId,
+              logoUrl: fav.imageUrl,
+            ),
+          );
     }
 
     context.push(Routes.player);
@@ -111,215 +97,265 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   Widget build(BuildContext context) {
     final favoritesAsync = ref.watch(favoritesListProvider);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _onBack();
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.bg0,
-        body: favoritesAsync.when(
-          loading: () => const FavoritesSkeleton(),
-          error: (e, _) => Center(
-            child: Text('Error: $e', style: const TextStyle(color: AppColors.error)),
+    return Scaffold(
+      backgroundColor: AppColors.bg0,
+      body: favoritesAsync.when(
+        loading: () => const FavoritesSkeleton(),
+        error: (e, _) => Center(
+          child: Text(
+            'Error: $e',
+            style: const TextStyle(color: AppColors.error),
           ),
-          data: (allItems) {
-            if (allItems.isEmpty) {
-              return EmptyState(
-                title: context.l10n.favoritesEmptyTitle,
-                subtitle: context.l10n.favoritesEmptySubtitle,
-                icon: AppIcons.star,
-              );
+        ),
+        data: (allItems) {
+          if (allItems.isEmpty) {
+            return EmptyState(
+              title: context.l10n.favoritesEmptyTitle,
+              subtitle: context.l10n.favoritesEmptySubtitle,
+              icon: AppIcons.star,
+            );
+          }
+
+          final channelCount = allItems
+              .where((i) => i.type == FavoriteType.channel)
+              .length;
+          final movieCount = allItems
+              .where((i) => i.type == FavoriteType.movie)
+              .length;
+          final seriesCount = allItems
+              .where((i) => i.type == FavoriteType.series)
+              .length;
+
+          final filteredItems = allItems.where((item) {
+            if (_selectedTypeFilter != null &&
+                item.type != _selectedTypeFilter) {
+              return false;
             }
+            if (_searchQuery.isNotEmpty &&
+                !item.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
+              return false;
+            }
+            return true;
+          }).toList();
 
-            final channelCount = allItems.where((i) => i.type == FavoriteType.channel).length;
-            final movieCount = allItems.where((i) => i.type == FavoriteType.movie).length;
-            final seriesCount = allItems.where((i) => i.type == FavoriteType.series).length;
-
-            final filteredItems = allItems.where((item) {
-              if (_selectedTypeFilter != null && item.type != _selectedTypeFilter) {
-                return false;
-              }
-              if (_searchQuery.isNotEmpty &&
-                  !item.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
-                return false;
-              }
-              return true;
-            }).toList();
-
-            return Column(
-              children: [
-                // Top Filter & Search Header
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                  decoration: const BoxDecoration(
-                    color: AppColors.bg1,
-                    border: Border(bottom: BorderSide(color: AppColors.border, width: 0.8)),
+          return Column(
+            children: [
+              // Top Filter & Search Header
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.bg1,
+                  border: Border(
+                    bottom: BorderSide(color: AppColors.border, width: 0.8),
                   ),
-                  child: Row(
-                    children: [
-                      // Header Title & Total Badge
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const HugeIcon(icon: AppIcons.star, size: 18, color: AppColors.accent),
-                          const SizedBox(width: 8),
-                          Text(
-                            context.l10n.favoritesTitle,
+                ),
+                child: Row(
+                  children: [
+                    // Header Title & Total Badge
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const HugeIcon(
+                          icon: AppIcons.star,
+                          size: 18,
+                          color: AppColors.accent,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          context.l10n.favoritesTitle,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.bg3,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${allItems.length}',
                             style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w800,
+                              color: AppColors.textSecondary,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.bg3,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${allItems.length}',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w600,
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      key: const ValueKey('favorites_view_mode_toggle'),
+                      icon: HugeIcon(
+                        icon: _isGridView
+                            ? AppIcons.listView
+                            : AppIcons.gridView,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
+                      tooltip: _isGridView
+                          ? 'Switch to List View'
+                          : 'Switch to Grid View',
+                      onPressed: () =>
+                          setState(() => _isGridView = !_isGridView),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Search & Filter Row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  0,
+                ),
+                child: Column(
+                  children: [
+                    // Search Bar
+                    SizedBox(
+                      height: 38,
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (q) {
+                          setState(() => _searchQuery = q.trim());
+                        },
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: context.l10n.searchHint,
+                          prefixIcon: const HugeIcon(
+                            icon: AppIcons.search,
+                            size: 18,
+                            color: AppColors.textSecondary,
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const HugeIcon(
+                                    icon: AppIcons.close,
+                                    size: 16,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 0,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    // Filter Chips
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            label: context.l10n.labelAll,
+                            count: allItems.length,
+                            isSelected: _selectedTypeFilter == null,
+                            onTap: () =>
+                                setState(() => _selectedTypeFilter = null),
+                          ),
+                          if (channelCount > 0) ...[
+                            const SizedBox(width: 8),
+                            _buildFilterChip(
+                              label: context.l10n.labelChannels,
+                              count: channelCount,
+                              isSelected:
+                                  _selectedTypeFilter == FavoriteType.channel,
+                              onTap: () => setState(
+                                () =>
+                                    _selectedTypeFilter = FavoriteType.channel,
                               ),
                             ),
-                          ),
+                          ],
+                          if (movieCount > 0) ...[
+                            const SizedBox(width: 8),
+                            _buildFilterChip(
+                              label: context.l10n.labelMovies,
+                              count: movieCount,
+                              isSelected:
+                                  _selectedTypeFilter == FavoriteType.movie,
+                              onTap: () => setState(
+                                () => _selectedTypeFilter = FavoriteType.movie,
+                              ),
+                            ),
+                          ],
+                          if (seriesCount > 0) ...[
+                            const SizedBox(width: 8),
+                            _buildFilterChip(
+                              label: context.l10n.labelSeries,
+                              count: seriesCount,
+                              isSelected:
+                                  _selectedTypeFilter == FavoriteType.series,
+                              onTap: () => setState(
+                                () => _selectedTypeFilter = FavoriteType.series,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                      const Spacer(),
-                      IconButton(
-                        key: const ValueKey('favorites_view_mode_toggle'),
-                        icon: HugeIcon(
-                          icon: _isGridView ? AppIcons.listView : AppIcons.gridView,
-                          size: 20,
-                          color: AppColors.textSecondary,
-                        ),
-                        tooltip: _isGridView ? 'Switch to List View' : 'Switch to Grid View',
-                        onPressed: () => setState(() => _isGridView = !_isGridView),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
 
-                // Search & Filter Row
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-                  child: Column(
-                    children: [
-                      // Search Bar
-                      SizedBox(
-                        height: 38,
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (q) {
-                            setState(() => _searchQuery = q.trim());
-                          },
-                          style: const TextStyle(fontSize: 13),
-                          decoration: InputDecoration(
-                            hintText: context.l10n.searchHint,
-                            prefixIcon: const HugeIcon(icon: AppIcons.search, size: 18, color: AppColors.textSecondary),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const HugeIcon(icon: AppIcons.close, size: 16, color: AppColors.textSecondary),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      // Filter Chips
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildFilterChip(
-                              label: context.l10n.labelAll,
-                              count: allItems.length,
-                              isSelected: _selectedTypeFilter == null,
-                              onTap: () => setState(() => _selectedTypeFilter = null),
+              const SizedBox(height: AppSpacing.sm),
+
+              // Favorites Content
+              Expanded(
+                child: filteredItems.isEmpty
+                    ? EmptyState(
+                        title: context.l10n.labelNoResults,
+                        subtitle: context.l10n.searchNoResultsSubtitle,
+                        icon: AppIcons.searchOff,
+                      )
+                    : _isGridView
+                    ? GridView.builder(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 180,
+                              childAspectRatio: 0.82,
+                              crossAxisSpacing: AppSpacing.sm,
+                              mainAxisSpacing: AppSpacing.sm,
                             ),
-                            if (channelCount > 0) ...[
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                label: context.l10n.labelChannels,
-                                count: channelCount,
-                                isSelected: _selectedTypeFilter == FavoriteType.channel,
-                                onTap: () => setState(() => _selectedTypeFilter = FavoriteType.channel),
-                              ),
-                            ],
-                            if (movieCount > 0) ...[
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                label: context.l10n.labelMovies,
-                                count: movieCount,
-                                isSelected: _selectedTypeFilter == FavoriteType.movie,
-                                onTap: () => setState(() => _selectedTypeFilter = FavoriteType.movie),
-                              ),
-                            ],
-                            if (seriesCount > 0) ...[
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                label: context.l10n.labelSeries,
-                                count: seriesCount,
-                                isSelected: _selectedTypeFilter == FavoriteType.series,
-                                onTap: () => setState(() => _selectedTypeFilter = FavoriteType.series),
-                              ),
-                            ],
-                          ],
-                        ),
+                        itemCount: filteredItems.length,
+                        itemBuilder: (context, i) {
+                          final item = filteredItems[i];
+                          return _buildGridCard(item);
+                        },
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        itemCount: filteredItems.length,
+                        separatorBuilder: (_, index) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, i) {
+                          final item = filteredItems[i];
+                          return _buildListCard(item);
+                        },
                       ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.sm),
-
-                // Favorites Content
-                Expanded(
-                  child: filteredItems.isEmpty
-                      ? EmptyState(
-                          title: context.l10n.labelNoResults,
-                          subtitle: context.l10n.searchNoResultsSubtitle,
-                          icon: AppIcons.searchOff,
-                        )
-                      : _isGridView
-                          ? GridView.builder(
-                              padding: const EdgeInsets.all(AppSpacing.md),
-                              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 180,
-                                childAspectRatio: 0.82,
-                                crossAxisSpacing: AppSpacing.sm,
-                                mainAxisSpacing: AppSpacing.sm,
-                              ),
-                              itemCount: filteredItems.length,
-                              itemBuilder: (context, i) {
-                                final item = filteredItems[i];
-                                return _buildGridCard(item);
-                              },
-                            )
-                          : ListView.separated(
-                              padding: const EdgeInsets.all(AppSpacing.md),
-                              itemCount: filteredItems.length,
-                              separatorBuilder: (_, index) => const SizedBox(height: AppSpacing.sm),
-                              itemBuilder: (context, i) {
-                                final item = filteredItems[i];
-                                return _buildListCard(item);
-                              },
-                            ),
-                ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -358,7 +394,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.accent.withAlpha(60) : AppColors.bg2,
+                color: isSelected
+                    ? AppColors.accent.withAlpha(60)
+                    : AppColors.bg2,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -393,7 +431,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
               imageUrl: item.imageUrl,
               fallbackIcon: item.type == FavoriteType.channel
                   ? AppIcons.live
-                  : (item.type == FavoriteType.movie ? AppIcons.movies : AppIcons.series),
+                  : (item.type == FavoriteType.movie
+                        ? AppIcons.movies
+                        : AppIcons.series),
               borderRadius: BorderRadius.circular(8),
               memCacheWidth: 64,
               memCacheHeight: 64,
@@ -416,7 +456,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.accent.withAlpha(25),
                     borderRadius: BorderRadius.circular(4),
@@ -435,15 +478,26 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
             ),
           ),
           IconButton(
-            icon: const HugeIcon(icon: AppIcons.delete, color: AppColors.textDisabled, size: 20),
+            icon: const HugeIcon(
+              icon: AppIcons.delete,
+              color: AppColors.textDisabled,
+              size: 20,
+            ),
             tooltip: context.l10n.actionDelete,
             onPressed: () async {
-              await ref.read(favoritesRepositoryProvider).removeFavorite(item.id);
+              await ref
+                  .read(favoritesRepositoryProvider)
+                  .removeFavorite(item.id);
               ref.invalidate(favoritesListProvider);
+              await refreshAllFavoriteIds(ref);
             },
           ),
           const SizedBox(width: 4),
-          const HugeIcon(icon: AppIcons.play, color: AppColors.accent, size: 24),
+          const HugeIcon(
+            icon: AppIcons.play,
+            color: AppColors.accent,
+            size: 24,
+          ),
         ],
       ),
     );
@@ -469,7 +523,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       imageUrl: item.imageUrl,
                       fallbackIcon: item.type == FavoriteType.channel
                           ? AppIcons.live
-                          : (item.type == FavoriteType.movie ? AppIcons.movies : AppIcons.series),
+                          : (item.type == FavoriteType.movie
+                                ? AppIcons.movies
+                                : AppIcons.series),
                       fit: BoxFit.cover,
                       borderRadius: BorderRadius.circular(8),
                       memCacheWidth: 150,
@@ -482,8 +538,11 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                   right: 4,
                   child: GestureDetector(
                     onTap: () async {
-                      await ref.read(favoritesRepositoryProvider).removeFavorite(item.id);
+                      await ref
+                          .read(favoritesRepositoryProvider)
+                          .removeFavorite(item.id);
                       ref.invalidate(favoritesListProvider);
+                      await refreshAllFavoriteIds(ref);
                     },
                     child: Container(
                       padding: const EdgeInsets.all(4),
@@ -491,7 +550,11 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                         color: Colors.black.withAlpha(160),
                         shape: BoxShape.circle,
                       ),
-                      child: const HugeIcon(icon: AppIcons.delete, color: Colors.white70, size: 14),
+                      child: const HugeIcon(
+                        icon: AppIcons.delete,
+                        color: Colors.white70,
+                        size: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -499,7 +562,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                   bottom: 4,
                   left: 4,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withAlpha(180),
                       borderRadius: BorderRadius.circular(4),

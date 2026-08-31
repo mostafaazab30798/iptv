@@ -159,182 +159,182 @@ class _HomeContent extends ConsumerWidget {
                       onRefresh: () => ref
                           .read(homeControllerProvider.notifier)
                           .loadData(forceRefresh: true),
-                      onSecondaryAction: (hero) =>
-                          _handleHeroSecondary(context, hero),
                     ),
                   ),
                 ),
 
-            if (homeState.continueWatching.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  child: RepaintBoundary(
-                    key: const ValueKey('home-continue-watching'),
-                    child: HomeSectionRow<WatchHistoryEntry>(
-                      title: context.l10n.labelContinueWatching,
-                      onSeeAll: () => context.push(Routes.history),
-                      items: homeState.continueWatching,
-                      height: 215,
-                      itemBuilder: (context, entry, _) => HistoryCard(
-                        entry: entry,
-                        onTap: () => _playHistory(context, ref, entry),
-                      ),
+              if (homeState.continueWatching.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
                     ),
-                  ),
-                ),
-              ),
-            if (homeState.continueWatching.isNotEmpty)
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-
-            if (homeState.featuredMovies.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  child: RepaintBoundary(
-                    key: const ValueKey('home-featured-movies'),
-                    child: HomeSectionRow<Movie>(
-                      title: context.l10n.homeFeaturedMovies,
-                      onSeeAll: () => context.push(Routes.movies),
-                      items: homeState.featuredMovies,
-                      height: 215,
-                      itemBuilder: (context, movie, _) => MovieCard(
-                        movie: movie,
-                        onTap: () => _playMovie(context, ref, movie),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (homeState.featuredMovies.isNotEmpty)
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-
-            if (homeState.popularSeries.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  child: RepaintBoundary(
-                    key: const ValueKey('home-popular-series'),
-                    child: HomeSectionRow<Series>(
-                      title: context.l10n.homePopularSeries,
-                      onSeeAll: () => context.push(Routes.series),
-                      items: homeState.popularSeries,
-                      height: 215,
-                      itemBuilder: (context, series, _) => SeriesCard(
-                        series: series,
-                        onTap: () => showSeriesDetailsModal(context, series),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (homeState.popularSeries.isNotEmpty)
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-
-            if (homeState.sportsChannels.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  child: RepaintBoundary(
-                    key: const ValueKey('home-sports-channels'),
-                    child: HomeSectionRow<Channel>(
-                      title: context.l10n.homeSportsChannels,
-                      onSeeAll: () => context.push(Routes.live),
-                      items: homeState.sportsChannels,
-                      height: 135,
-                      itemBuilder: (context, channel, _) => ChannelCard(
-                        channel: channel,
-                        onTap: () => _playChannel(context, ref, channel),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (homeState.sportsChannels.isNotEmpty)
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-
-            if (homeState.newsChannels.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  child: RepaintBoundary(
-                    key: const ValueKey('home-news-channels'),
-                    child: HomeSectionRow<Channel>(
-                      title: context.l10n.homeNewsChannels,
-                      onSeeAll: () => context.push(Routes.live),
-                      items: homeState.newsChannels,
-                      height: 135,
-                      itemBuilder: (context, channel, _) => ChannelCard(
-                        channel: channel,
-                        onTap: () => _playChannel(context, ref, channel),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (homeState.newsChannels.isNotEmpty)
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-
-            if (homeState.favorites.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  child: RepaintBoundary(
-                    key: const ValueKey('home-favorites'),
-                    child: HomeSectionRow<Favorite>(
-                      title: context.l10n.labelFavorites,
-                      onSeeAll: () => context.push(Routes.favorites),
-                      items: homeState.favorites,
-                      height: 135,
-                      itemBuilder: (context, fav, _) => ChannelCard(
-                        channel: Channel(
-                          id: fav.itemId,
-                          serverId: 0,
-                          streamId: fav.itemId,
-                          name: fav.name,
-                          streamIcon: fav.imageUrl,
+                    child: RepaintBoundary(
+                      key: const ValueKey('home-continue-watching'),
+                      child: HomeSectionRow<WatchHistoryEntry>(
+                        title: context.l10n.labelContinueWatching,
+                        onSeeAll: () => context.push(Routes.history),
+                        items: homeState.continueWatching,
+                        height: 215,
+                        itemBuilder: (context, entry, _) => HistoryCard(
+                          entry: entry,
+                          onTap: () => _playHistory(context, ref, entry),
                         ),
-                        showBadge: fav.type == FavoriteType.channel,
-                        onTap: () => _playFavorite(context, ref, fav),
                       ),
                     ),
                   ),
                 ),
-              ),
+              if (homeState.continueWatching.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.md),
+                ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
-          ],
+              if (homeState.featuredMovies.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
+                    child: RepaintBoundary(
+                      key: const ValueKey('home-featured-movies'),
+                      child: HomeSectionRow<Movie>(
+                        title: context.l10n.homeFeaturedMovies,
+                        onSeeAll: () => context.push(Routes.movies),
+                        items: homeState.featuredMovies,
+                        height: 215,
+                        itemBuilder: (context, movie, _) => MovieCard(
+                          movie: movie,
+                          onTap: () => _playMovie(context, ref, movie),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (homeState.featuredMovies.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.md),
+                ),
+
+              if (homeState.popularSeries.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
+                    child: RepaintBoundary(
+                      key: const ValueKey('home-popular-series'),
+                      child: HomeSectionRow<Series>(
+                        title: context.l10n.homePopularSeries,
+                        onSeeAll: () => context.push(Routes.series),
+                        items: homeState.popularSeries,
+                        height: 215,
+                        itemBuilder: (context, series, _) => SeriesCard(
+                          series: series,
+                          onTap: () => showSeriesDetailsModal(context, series),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (homeState.popularSeries.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.md),
+                ),
+
+              if (homeState.sportsChannels.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
+                    child: RepaintBoundary(
+                      key: const ValueKey('home-sports-channels'),
+                      child: HomeSectionRow<Channel>(
+                        title: context.l10n.homeSportsChannels,
+                        onSeeAll: () => context.push(Routes.live),
+                        items: homeState.sportsChannels,
+                        height: 135,
+                        itemBuilder: (context, channel, _) => ChannelCard(
+                          channel: channel,
+                          onTap: () => _playChannel(context, ref, channel),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (homeState.sportsChannels.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.md),
+                ),
+
+              if (homeState.newsChannels.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
+                    child: RepaintBoundary(
+                      key: const ValueKey('home-news-channels'),
+                      child: HomeSectionRow<Channel>(
+                        title: context.l10n.homeNewsChannels,
+                        onSeeAll: () => context.push(Routes.live),
+                        items: homeState.newsChannels,
+                        height: 135,
+                        itemBuilder: (context, channel, _) => ChannelCard(
+                          channel: channel,
+                          onTap: () => _playChannel(context, ref, channel),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (homeState.newsChannels.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.md),
+                ),
+
+              if (homeState.favorites.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
+                    child: RepaintBoundary(
+                      key: const ValueKey('home-favorites'),
+                      child: HomeSectionRow<Favorite>(
+                        title: context.l10n.labelFavorites,
+                        onSeeAll: () => context.push(Routes.favorites),
+                        items: homeState.favorites,
+                        height: 135,
+                        itemBuilder: (context, fav, _) => ChannelCard(
+                          channel: Channel(
+                            id: fav.itemId,
+                            serverId: 0,
+                            streamId: fav.itemId,
+                            name: fav.name,
+                            streamIcon: fav.imageUrl,
+                          ),
+                          showBadge: fav.type == FavoriteType.channel,
+                          onTap: () => _playFavorite(context, ref, fav),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _playHero(BuildContext context, WidgetRef ref, HomeHeroItem hero) {
     if (hero.movie != null) {
       _playMovie(context, ref, hero.movie!);
     } else if (hero.channel != null) {
       _playChannel(context, ref, hero.channel!);
-    }
-  }
-
-  void _handleHeroSecondary(BuildContext context, HomeHeroItem hero) {
-    if (hero.type == HeroItemType.live) {
-      context.push(Routes.guide);
-    } else {
-      context.push(Routes.movies);
     }
   }
 

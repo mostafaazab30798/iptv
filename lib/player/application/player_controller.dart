@@ -66,6 +66,10 @@ class PlayerController extends StateNotifier<PlayerState> {
   bool _deviceProfileInitialized = false;
   Timer? _progressSaveTimer;
 
+  /// Incremented on every [load]/[stop] so late async work from a previous
+  /// channel enter/leave cannot clobber the active playback session.
+  int _playbackEpoch = 0;
+
   PlayerEngine get engine => _engine;
   SmartPlaybackEngine get smartEngine => _smartEngine;
   List<PlayerSource> get channelPlaylist => _channelPlaylist;
@@ -144,27 +148,29 @@ class PlayerController extends StateNotifier<PlayerState> {
       _engine.errorStream.listen((err) {
         if (!mounted) return;
 
+        final errorEpoch = _playbackEpoch;
+
         // Trigger bounded auto-retry (up to 5 attempts)
         final scheduled = _smartEngine.handleError(
           err,
           onExecuteRetry: () async {
-            if (mounted) await retry();
+            if (!mounted || errorEpoch != _playbackEpoch) return;
+            await retry();
           },
           onRetryScheduled: (delay, attempt) {
-            if (mounted) {
-              state = state.copyWith(
-                status: PlayerStatus.error,
-                error: err,
-                isRetrying: true,
-                retryAttempt: attempt,
-                maxRetries: 5,
-                errorMessage: '${err.defaultMessage} (Attempt $attempt/5)...',
-              );
-            }
+            if (!mounted || errorEpoch != _playbackEpoch) return;
+            state = state.copyWith(
+              status: PlayerStatus.error,
+              error: err,
+              isRetrying: true,
+              retryAttempt: attempt,
+              maxRetries: 5,
+              errorMessage: '${err.defaultMessage} (Attempt $attempt/5)...',
+            );
           },
         );
 
-        if (!scheduled && mounted) {
+        if (!scheduled && mounted && errorEpoch == _playbackEpoch) {
           state = state.copyWith(
             status: PlayerStatus.error,
             error: err,
@@ -192,7 +198,10 @@ class PlayerController extends StateNotifier<PlayerState> {
     _subscriptions.add(
       _engine.metricsStream.listen((metrics) {
         if (!mounted) return;
-        state = state.copyWith(metrics: metrics);
+        state = state.copyWith(
+          metrics: metrics,
+          bufferMode: metrics.bufferMode,
+        );
       }),
     );
   }
@@ -322,17 +331,25 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   /// Loads and plays a [PlayerSource], automatically checking saved progress if applicable.
   Future<void> load(PlayerSource source) async {
+    final epoch = ++_playbackEpoch;
+    _smartEngine.cancelRetry();
+
     final canLoad = _canLoadSource;
     if (canLoad != null && !await canLoad(source)) {
+      if (!mounted || epoch != _playbackEpoch) return;
       await _smartEngine.stop();
+      if (!mounted || epoch != _playbackEpoch) return;
       state = state.copyWith(
         status: PlayerStatus.error,
         clearSource: true,
         error: PlayerErrorType.invalidSource,
         errorMessage: 'Content blocked by Kids Mode.',
+        isRetrying: false,
+        retryAttempt: 0,
       );
       return;
     }
+    if (!mounted || epoch != _playbackEpoch) return;
 
     // Drop Live TV mini-preview handoff when loading something outside that
     // playlist (favourites, movies, series, search, etc.).
@@ -347,6 +364,7 @@ class PlayerController extends StateNotifier<PlayerState> {
     // Save progress of any previously playing media before switching
     if (state.source != null && state.position.inSeconds > 0) {
       await savePlaybackProgress();
+      if (!mounted || epoch != _playbackEpoch) return;
     }
 
     var effectiveSource = source;
@@ -361,6 +379,7 @@ class PlayerController extends StateNotifier<PlayerState> {
         type: type,
         itemId: effectiveSource.channelId!,
       );
+      if (!mounted || epoch != _playbackEpoch) return;
 
       final entry = historyRes.when(
         ok: (e) => e,
@@ -380,6 +399,8 @@ class PlayerController extends StateNotifier<PlayerState> {
       status: PlayerStatus.loading,
       capabilities: capabilities,
       clearError: true,
+      isRetrying: false,
+      retryAttempt: 0,
     );
 
     // Record watch history entry in DB
@@ -400,6 +421,7 @@ class PlayerController extends StateNotifier<PlayerState> {
     }
 
     await _smartEngine.open(effectiveSource);
+    if (!mounted || epoch != _playbackEpoch) return;
 
     // Initialise device decode profile on first channel load (async, non-blocking).
     if (!_deviceProfileInitialized) {
@@ -407,8 +429,7 @@ class PlayerController extends StateNotifier<PlayerState> {
       unawaited(_smartEngine.initDeviceProfile());
     }
 
-
-    if (mounted && _engine.currentStatus != state.status) {
+    if (mounted && epoch == _playbackEpoch && _engine.currentStatus != state.status) {
       state = state.copyWith(status: _engine.currentStatus);
     }
   }
@@ -470,6 +491,8 @@ class PlayerController extends StateNotifier<PlayerState> {
   }
 
   Future<void> stop() async {
+    _playbackEpoch++;
+    _clearLazyLivePlaylist();
     await savePlaybackProgress();
     await _smartEngine.stop();
     if (!mounted) return;
@@ -482,7 +505,23 @@ class PlayerController extends StateNotifier<PlayerState> {
       clearError: true,
       availableAudioTracks: const [],
       availableSubtitleTracks: const [],
+      isRetrying: false,
+      retryAttempt: 0,
     );
+  }
+
+  /// Cancels a pending auto-reconnect without tearing down the current source.
+  /// Used when leaving fullscreen Live TV while keeping the mini-preview stream.
+  void cancelAutoReconnect() {
+    if (!mounted) return;
+    _smartEngine.cancelRetry();
+    if (state.isRetrying || state.retryAttempt > 0) {
+      state = state.copyWith(
+        isRetrying: false,
+        retryAttempt: 0,
+        clearError: true,
+      );
+    }
   }
 
   Future<void> seek(Duration position) async {

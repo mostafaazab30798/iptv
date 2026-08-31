@@ -9,7 +9,6 @@ abstract final class ApiConstants {
   static const String actionGetSeries = 'get_series';
   static const String actionGetSeriesInfo = 'get_series_info';
   static const String actionGetVodInfo = 'get_vod_info';
-  static const String actionGetShortEpgForStream = 'get_short_epg_for_stream';
   static const String actionGetSimpleDataTable = 'get_simple_data_table';
 
   // Stream URL templates
@@ -20,9 +19,6 @@ abstract final class ApiConstants {
   // Default stream formats
   static const String defaultLiveFormat = 'ts';
   static const String defaultVodFormat = 'mp4';
-
-  // EPG
-  static const String xmltvPath = '/xmltv.php';
 
   // Headers
   static const String userAgentHeader = 'User-Agent';

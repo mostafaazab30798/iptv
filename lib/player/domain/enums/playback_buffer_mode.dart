@@ -2,16 +2,16 @@ import 'package:iptv/core/platform/device_memory.dart';
 
 /// Playback buffer sizing preset determining latency vs re-buffering tradeoff.
 enum PlaybackBufferMode {
-  /// Compact mode: ~2–4s behind live, minimal RAM.
+  /// Compact mode: ~2–3s behind live, minimal RAM.
   /// Default on low-RAM phones (≤3 GiB).
   compact,
 
-  /// Low Latency mode: ~3–5s behind live.
-  /// Best for sports channels on stable/fast connections.
+  /// Low Latency mode: ~3s behind live.
+  /// Default sports profile on typical devices.
   lowLatency,
 
   /// Balanced mode: ~8–12s behind live.
-  /// Default for typical Wi-Fi and mobile networks.
+  /// Recovery rung after network stress; also fine for casual viewing.
   balanced,
 
   /// Stability mode: ~20–30s behind live.
@@ -22,9 +22,9 @@ enum PlaybackBufferMode {
   int get demuxerReadaheadSecs {
     switch (this) {
       case PlaybackBufferMode.compact:
-        return 3;
+        return 2;
       case PlaybackBufferMode.lowLatency:
-        return 6; // 6s — fast fill, resilient to single-segment network jitter
+        return 3; // Match cache target — one short network blip
       case PlaybackBufferMode.balanced:
         return 5;
       case PlaybackBufferMode.stability:
@@ -36,9 +36,9 @@ enum PlaybackBufferMode {
   int get cacheSecs {
     switch (this) {
       case PlaybackBufferMode.compact:
-        return 4;
+        return 3;
       case PlaybackBufferMode.lowLatency:
-        return 8; // 8s cache — keeps smooth when readahead fills
+        return 3; // Tight sports edge; adaptive escalation recovers if needed
       case PlaybackBufferMode.balanced:
         return 10;
       case PlaybackBufferMode.stability:
@@ -66,7 +66,7 @@ enum PlaybackBufferMode {
       case PlaybackBufferMode.compact:
         return '12MiB';
       case PlaybackBufferMode.lowLatency:
-        return '32MiB';
+        return '24MiB';
       case PlaybackBufferMode.balanced:
         return '64MiB';
       case PlaybackBufferMode.stability:
@@ -80,7 +80,7 @@ enum PlaybackBufferMode {
       case PlaybackBufferMode.compact:
         return '4MiB';
       case PlaybackBufferMode.lowLatency:
-        return '8MiB';
+        return '6MiB';
       case PlaybackBufferMode.balanced:
         return '16MiB';
       case PlaybackBufferMode.stability:

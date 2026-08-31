@@ -83,7 +83,7 @@ class SeriesController extends StateNotifier<SeriesState> {
 
   Future<void> loadData({bool forceRefresh = false}) async {
     final repo = _seriesRepo;
-    if (repo == null) return;
+    if (repo == null || !mounted) return;
 
     if (!forceRefresh &&
         _catalog.isNotEmpty &&
@@ -96,6 +96,7 @@ class SeriesController extends StateNotifier<SeriesState> {
 
     try {
       final catResult = await repo.getCategories(forceRefresh: forceRefresh);
+      if (!mounted) return;
       final categories = catResult.when(
         ok: (cats) => cats,
         err: (_) => <Category>[],
@@ -105,6 +106,7 @@ class SeriesController extends StateNotifier<SeriesState> {
         categoryId: null,
         forceRefresh: forceRefresh,
       );
+      if (!mounted) return;
 
       final list = seriesResult.when(ok: (s) => s, err: (_) => <Series>[]);
 
@@ -139,6 +141,7 @@ class SeriesController extends StateNotifier<SeriesState> {
         visible = const [];
       }
 
+      if (!mounted) return;
       state = state.copyWith(
         categories: categories,
         filteredSeries: visible,
@@ -149,6 +152,7 @@ class SeriesController extends StateNotifier<SeriesState> {
         isLoading: false,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -190,14 +194,17 @@ class SeriesController extends StateNotifier<SeriesState> {
 
   void search(String query) {
     _searchDebounce?.cancel();
+    if (!mounted) return;
     final trimmed = query.trim();
     state = state.copyWith(searchQuery: trimmed);
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
       unawaited(_runSearch(trimmed));
     });
   }
 
   Future<void> _runSearch(String query) async {
+    if (!mounted) return;
     final epoch = ++_searchEpoch;
     final base = state.selectedCategoryId == null
         ? _catalog
@@ -206,7 +213,7 @@ class SeriesController extends StateNotifier<SeriesState> {
               .toList();
 
     if (query.isEmpty) {
-      if (epoch != _searchEpoch) return;
+      if (!mounted || epoch != _searchEpoch) return;
       state = state.copyWith(filteredSeries: base);
       return;
     }
@@ -218,14 +225,14 @@ class SeriesController extends StateNotifier<SeriesState> {
         names,
         query.toLowerCase(),
       ));
-      if (epoch != _searchEpoch) return;
+      if (!mounted || epoch != _searchEpoch) return;
       filtered = [for (final i in indexes) base[i]];
     } else {
       final q = query.toLowerCase();
       filtered = base.where((s) => s.name.toLowerCase().contains(q)).toList();
     }
 
-    if (epoch != _searchEpoch) return;
+    if (!mounted || epoch != _searchEpoch) return;
     state = state.copyWith(filteredSeries: filtered);
   }
 }

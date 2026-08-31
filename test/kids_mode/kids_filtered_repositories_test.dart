@@ -54,6 +54,22 @@ void main() {
     ]);
     expect((await repository.getChannelById(2)).isErr, isTrue);
   });
+
+  test('live also hides the same country packages as normal mode', () async {
+    final repository = KidsFilteredLiveRepository(
+      _FakeLiveRepositoryWithCountryPacks(),
+      _policy,
+    );
+
+    expect((await repository.getCategories()).value.map((e) => e.name), [
+      'KIDS Tv',
+    ]);
+    expect((await repository.getChannels()).value.map((e) => e.name), [
+      'Spacetoon HD',
+    ]);
+    expect((await repository.getChannelById(20)).isErr, isTrue);
+    expect((await repository.getChannels(categoryId: 2)).value, isEmpty);
+  });
 }
 
 class _FakeVodRepository implements VodRepository {
@@ -140,6 +156,58 @@ class _FakeLiveRepository implements LiveRepository {
       categoryId: 5,
     ),
     Channel(id: 2, serverId: 2, streamId: 2, name: 'BBC News', categoryId: 6),
+  ];
+
+  @override
+  Future<Result<List<Category>>> getCategories({
+    bool forceRefresh = false,
+  }) async => const Ok(categories);
+
+  @override
+  Future<Result<List<Channel>>> getChannels({
+    int? categoryId,
+    bool forceRefresh = false,
+  }) async => Ok(
+    categoryId == null
+        ? channels
+        : channels
+              .where((channel) => channel.categoryId == categoryId)
+              .toList(),
+  );
+
+  @override
+  Future<Result<Channel>> getChannelById(int streamId) async =>
+      Ok(channels.firstWhere((channel) => channel.streamId == streamId));
+}
+
+class _FakeLiveRepositoryWithCountryPacks implements LiveRepository {
+  static const categories = [
+    Category(id: 1, serverId: 1, type: CategoryType.live, name: 'KIDS Tv'),
+    Category(id: 2, serverId: 2, type: CategoryType.live, name: 'USA Tv'),
+    Category(id: 3, serverId: 3, type: CategoryType.live, name: 'ENGLAND Tv'),
+  ];
+  static const channels = [
+    Channel(
+      id: 10,
+      serverId: 1,
+      streamId: 10,
+      name: 'Spacetoon HD',
+      categoryId: 1,
+    ),
+    Channel(
+      id: 20,
+      serverId: 2,
+      streamId: 20,
+      name: 'Cartoon Network HD',
+      categoryId: 2,
+    ),
+    Channel(
+      id: 30,
+      serverId: 3,
+      streamId: 30,
+      name: 'Disney Junior HD',
+      categoryId: 3,
+    ),
   ];
 
   @override

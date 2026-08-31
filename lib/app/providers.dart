@@ -15,7 +15,6 @@ import 'package:iptv/data/repositories/app_account_repository_impl.dart';
 import 'package:iptv/data/repositories/auth_repository_impl.dart';
 import 'package:iptv/data/repositories/device_repository_impl.dart';
 import 'package:iptv/data/repositories/entitlement_repository_impl.dart';
-import 'package:iptv/data/repositories/epg_repository_impl.dart';
 import 'package:iptv/data/repositories/favorites_repository_impl.dart';
 import 'package:iptv/data/repositories/history_repository_impl.dart';
 import 'package:iptv/data/repositories/live_repository_impl.dart';
@@ -28,7 +27,6 @@ import 'package:iptv/domain/repositories/app_account_repository.dart';
 import 'package:iptv/domain/repositories/auth_repository.dart';
 import 'package:iptv/domain/repositories/device_repository.dart';
 import 'package:iptv/domain/repositories/entitlement_repository.dart';
-import 'package:iptv/domain/repositories/epg_repository.dart';
 import 'package:iptv/domain/repositories/favorites_repository.dart';
 import 'package:iptv/domain/repositories/history_repository.dart';
 import 'package:iptv/domain/repositories/live_repository.dart';
@@ -41,6 +39,8 @@ import 'package:iptv/features/account/account_controller.dart';
 import 'package:iptv/features/subscription/entitlement_controller.dart';
 import 'package:iptv/domain/repositories/release_repository.dart';
 import 'package:iptv/features/updates/update_controller.dart';
+import 'package:iptv/features/catalog_filter/excluded_categories_live_repository.dart';
+import 'package:iptv/features/catalog_filter/excluded_live_categories_policy.dart';
 import 'package:iptv/features/kids_mode/kids_content_policy.dart';
 import 'package:iptv/features/kids_mode/kids_filtered_repositories.dart';
 import 'package:iptv/features/kids_mode/kids_mode_controller.dart';
@@ -65,6 +65,11 @@ final kidsModeProvider =
 
 final kidsContentPolicyProvider = Provider<KidsContentPolicy>(
   (_) => const KidsContentPolicy(),
+);
+
+final excludedLiveCategoriesPolicyProvider =
+    Provider<ExcludedLiveCategoriesPolicy>(
+  (_) => const ExcludedLiveCategoriesPolicy(),
 );
 
 final databaseProvider = Provider<AppDatabase>(
@@ -164,12 +169,20 @@ final liveRepositoryProvider = Provider<LiveRepository?>((ref) {
   final repository = ref.watch(_rawLiveRepositoryProvider);
   final kidsMode = ref.watch(kidsModeProvider);
   if (repository == null || !kidsMode.isInitialized) return null;
+
+  final excludedPolicy = ref.watch(excludedLiveCategoriesPolicyProvider);
+  // Always hide non–Middle-East country packages; Kids Mode also applies them.
+  final catalogFiltered = ExcludedCategoriesLiveRepository(
+    repository,
+    excludedPolicy,
+  );
   return kidsMode.isEnabled
       ? KidsFilteredLiveRepository(
-          repository,
+          catalogFiltered,
           ref.watch(kidsContentPolicyProvider),
+          excludedCategories: excludedPolicy,
         )
-      : repository;
+      : catalogFiltered;
 });
 
 final vodRepositoryProvider = Provider<VodRepository?>((ref) {
@@ -235,12 +248,6 @@ final kidsAllowedContentProvider = FutureProvider<KidsAllowedContent>((
     movieIds: {for (final item in movies) item.streamId},
     seriesIds: {for (final item in series) item.seriesId},
   );
-});
-
-final epgRepositoryProvider = Provider<EpgRepository?>((ref) {
-  final ds = ref.watch(xtreamDataSourceProvider);
-  if (ds == null) return null;
-  return EpgRepositoryImpl(remoteDataSource: ds);
 });
 
 final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {

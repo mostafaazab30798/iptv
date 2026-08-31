@@ -494,5 +494,8 @@
   "kidsModeEnterPinPrompt": "Enter your 4-digit master PIN to proceed",
   "kidsModeCreatePinPrompt": "Set a 4-digit master PIN to secure Kids Mode",
   "kidsModeConfirmPinPrompt": "Re-enter the 4-digit PIN to confirm",
-  "kidsModeCurrentPinPrompt": "Enter your current 4-digit PIN"
+  "kidsModeCurrentPinPrompt": "Enter your current 4-digit PIN",
+  "exitAppTitle": "Leave HOPE TV?",
+  "exitAppMessage": "Are you sure you want to close the app?",
+  "exitAppConfirm": "Leave"
 }

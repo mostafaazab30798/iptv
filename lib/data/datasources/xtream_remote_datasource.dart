@@ -120,24 +120,6 @@ class XtreamRemoteDataSource {
     }
   }
 
-  /// Short EPG for a specific live stream.
-  Future<List<Map<String, dynamic>>> getShortEpg(int streamId, {int limit = 10}) async {
-    try {
-      final res = await _client.get<Map<String, dynamic>>(
-        'player_api.php',
-        params: {
-          'action': ApiConstants.actionGetShortEpgForStream,
-          'stream_id': streamId.toString(),
-          'limit': limit.toString(),
-        },
-      );
-      final epgList = res['epg_listings'] as List<dynamic>? ?? [];
-      return epgList.whereType<Map<dynamic, dynamic>>().map(Map<String, dynamic>.from).toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
   /// Helper to build direct playback stream URLs.
   static String buildLiveStreamUrl({
     required String serverUrl,

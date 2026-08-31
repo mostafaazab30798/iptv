@@ -4,8 +4,12 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/features/favorites/favorite_channel_ids.dart';
+import 'package:iptv/features/favorites/favorite_ids.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/widgets/favorite_snackbar.dart';
+import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
 /// State-of-the-Art Channel List Tile inspired by top Dribbble & Apple TV OTT designs:
@@ -119,7 +123,15 @@ class ChannelListTile extends ConsumerWidget {
           ],
 
           // Quick Favorite Toggle Button
-          _QuickFavoriteButton(channel: channel),
+          FavoriteToggleButton(
+            type: FavoriteType.channel,
+            itemId: channel.streamId,
+            name: channel.name,
+            imageUrl: channel.streamIcon,
+            size: 20,
+            padding: 4,
+            idleColor: AppColors.textSecondary,
+          ),
           const SizedBox(width: 2),
 
           // 3-Dots Context Menu Button
@@ -240,97 +252,65 @@ class ChannelListTile extends ConsumerWidget {
             onTap();
             break;
           case 'favorite':
-            final ids = ref.read(favoriteChannelIdsProvider);
-            final wasFav = ids.contains(channel.streamId);
-            await ref.read(favoriteChannelIdsProvider.notifier).toggleChannel(
-                  itemId: channel.streamId,
-                  name: channel.name,
-                  imageUrl: channel.streamIcon,
-                );
+            final nowFav =
+                await ref.read(favoriteChannelIdsProvider.notifier).toggleChannel(
+                      itemId: channel.streamId,
+                      name: channel.name,
+                      imageUrl: channel.streamIcon,
+                    );
+            ref.invalidate(favoritesListProvider);
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    wasFav
-                        ? 'Removed ${channel.name} from Favorites'
-                        : 'Added ${channel.name} to Favorites',
-                  ),
-                  duration: const Duration(seconds: 2),
-                ),
+              showFavoriteSnackBar(
+                context,
+                name: channel.name,
+                isFavorite: nowFav,
               );
             }
             break;
         }
       },
-      itemBuilder: (context) => [
-        const PopupMenuItem<String>(
-          value: 'play',
-          child: Row(
-            children: [
-              HugeIcon(icon: AppIcons.play, color: AppColors.accent, size: 18),
-              SizedBox(width: 10),
-              Text('Play Channel', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'favorite',
-          child: Row(
-            children: [
-              HugeIcon(icon: AppIcons.star, color: AppColors.warning, size: 18),
-              SizedBox(width: 10),
-              Text('Toggle Favorite', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Instant 1-tap quick Favorite heart button — membership from a batched ID set.
-class _QuickFavoriteButton extends ConsumerWidget {
-  const _QuickFavoriteButton({required this.channel});
-  final Channel channel;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isFav = ref.watch(
-      favoriteChannelIdsProvider.select((ids) => ids.contains(channel.streamId)),
-    );
-
-    return IconButton(
-      tooltip: isFav ? 'Remove Favorite' : 'Add to Favorites',
-      iconSize: 18,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-      onPressed: () async {
-        await ref.read(favoriteChannelIdsProvider.notifier).toggleChannel(
-              itemId: channel.streamId,
-              name: channel.name,
-              imageUrl: channel.streamIcon,
-            );
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isFav
-                  ? 'Removed ${channel.name} from Favorites'
-                  : 'Added ${channel.name} to Favorites',
+      itemBuilder: (context) {
+        final isFav = ref
+            .watch(favoriteChannelIdsProvider)
+            .contains(channel.streamId);
+        return [
+          const PopupMenuItem<String>(
+            value: 'play',
+            child: Row(
+              children: [
+                HugeIcon(icon: AppIcons.play, color: AppColors.accent, size: 18),
+                SizedBox(width: 10),
+                Text(
+                  'Play Channel',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
-            duration: const Duration(seconds: 1),
           ),
-        );
+          PopupMenuItem<String>(
+            value: 'favorite',
+            child: Row(
+              children: [
+                Icon(
+                  isFav
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: isFav ? AppColors.live : AppColors.textSecondary,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isFav ? 'Remove Favorite' : 'Add to Favorites',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ];
       },
-      icon: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 180),
-        child: HugeIcon(
-          icon: AppIcons.favorites,
-          key: ValueKey(isFav),
-          color: isFav ? AppColors.live : AppColors.textSecondary.withAlpha(160),
-          size: 18,
-        ),
-      ),
     );
   }
 }

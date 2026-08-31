@@ -22,7 +22,8 @@ class FavoriteChannelIdsNotifier extends StateNotifier<Set<int>> {
 
   bool contains(int itemId) => state.contains(itemId);
 
-  Future<void> toggleChannel({
+  /// Returns `true` if the channel is favorited after the toggle.
+  Future<bool> toggleChannel({
     required int itemId,
     required String name,
     String? imageUrl,
@@ -33,22 +34,24 @@ class FavoriteChannelIdsNotifier extends StateNotifier<Set<int>> {
         type: FavoriteType.channel,
         itemId: itemId,
       );
-      if (!mounted) return;
+      if (!mounted) return false;
       state = {...state}..remove(itemId);
-    } else {
-      await _repo.addFavorite(
-        Favorite(
-          id: itemId,
-          type: FavoriteType.channel,
-          itemId: itemId,
-          name: name,
-          imageUrl: imageUrl,
-          addedAt: DateTime.now(),
-        ),
-      );
-      if (!mounted) return;
-      state = {...state, itemId};
+      return false;
     }
+
+    await _repo.addFavorite(
+      Favorite(
+        id: itemId,
+        type: FavoriteType.channel,
+        itemId: itemId,
+        name: name,
+        imageUrl: imageUrl,
+        addedAt: DateTime.now(),
+      ),
+    );
+    if (!mounted) return true;
+    state = {...state, itemId};
+    return true;
   }
 }
 

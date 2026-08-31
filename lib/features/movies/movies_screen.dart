@@ -11,15 +11,18 @@ import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/category.dart';
+import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/features/movies/movies_controller.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/category_card.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
+import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class MoviesScreen extends ConsumerStatefulWidget {
@@ -50,11 +53,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
       _movieSearchController.clear();
       ref.read(moviesControllerProvider.notifier).showCategoriesHub();
     } else {
-      if (context.canPop()) {
-        context.pop();
-      } else {
-        context.go(Routes.home);
-      }
+      popOrGoHome(context);
     }
   }
 
@@ -105,12 +104,11 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
     final isCategorySelected =
         _selectedCategory != null || _isAllMoviesSelected;
 
-    return PopScope(
-      canPop: !isCategorySelected,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && isCategorySelected) {
-          _onBack();
-        }
+    return InnerBackScope(
+      onBack: () {
+        if (_selectedCategory == null && !_isAllMoviesSelected) return false;
+        _onBack();
+        return true;
       },
       child: Scaffold(
         backgroundColor: AppColors.bg0,
@@ -454,6 +452,22 @@ class _MovieGridCard extends StatelessWidget {
             memCacheHeight: 255,
           ),
           Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: PosterTopActions(
+              rating: movie.rating,
+              favoriteButton: FavoriteToggleButton(
+                type: FavoriteType.movie,
+                itemId: movie.streamId,
+                name: movie.name,
+                imageUrl: movie.streamIcon,
+                size: 22,
+                padding: 2,
+              ),
+            ),
+          ),
+          Positioned(
             bottom: 0,
             left: 0,
             right: 0,
@@ -497,38 +511,6 @@ class _MovieGridCard extends StatelessWidget {
               ),
             ),
           ),
-          if (movie.rating != null && movie.rating!.isNotEmpty)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(200),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: AppColors.warning, width: 0.8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const HugeIcon(
-                      icon: AppIcons.star,
-                      color: AppColors.warning,
-                      size: 11,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      movie.rating!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,13 +12,14 @@ import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 
 import 'package:iptv/features/favorites/favorite_channel_ids.dart';
-import 'package:iptv/features/favorites/favorites_screen.dart';
-import 'package:iptv/features/guide/guide_controller.dart';
+import 'package:iptv/features/favorites/favorite_ids.dart';
 import 'package:iptv/features/home/home_controller.dart';
+import 'package:iptv/features/kids_mode/widgets/kids_mode_nav_button.dart';
 import 'package:iptv/features/live/live_controller.dart';
 import 'package:iptv/features/movies/movies_controller.dart';
 import 'package:iptv/features/series/series_controller.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/landscape_gate.dart';
 
 class ShellNavItem {
@@ -84,32 +87,40 @@ class AppShell extends ConsumerWidget {
 
     final isHomePortrait = isPortrait && currentPath == Routes.home;
 
-    return LandscapeGate(
-      child: Scaffold(
-        backgroundColor: AppColors.bg0,
-        extendBody: false,
-        body: Column(
-          children: [
-            if (!isHomePortrait) ...[
-              _ShellTopNav(
-                items: navItems,
-                selectedIndex: selectedIndex,
-                currentPath: currentPath,
-                onItemTap: (index, route) => _onNavigate(context, route),
-                onRefresh: () => _handleSmartRefresh(ref, currentPath),
-              ),
-              const SizedBox(height: AppSpacing.sm),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          unawaited(handleShellSystemBack(context, currentPath));
+        }
+      },
+      child: LandscapeGate(
+        child: Scaffold(
+          backgroundColor: AppColors.bg0,
+          extendBody: false,
+          body: Column(
+            children: [
+              if (!isHomePortrait) ...[
+                _ShellTopNav(
+                  items: navItems,
+                  selectedIndex: selectedIndex,
+                  currentPath: currentPath,
+                  onItemTap: (index, route) => _onNavigate(context, route),
+                  onRefresh: () => _handleSmartRefresh(ref, currentPath),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              Expanded(child: child),
             ],
-            Expanded(child: child),
-          ],
+          ),
+          bottomNavigationBar: isPortrait
+              ? _FloatingGlassDock(
+                  items: navItems,
+                  selectedIndex: selectedIndex,
+                  onItemTap: (index, route) => _onNavigate(context, route),
+                )
+              : null,
         ),
-        bottomNavigationBar: isPortrait
-            ? _FloatingGlassDock(
-                items: navItems,
-                selectedIndex: selectedIndex,
-                onItemTap: (index, route) => _onNavigate(context, route),
-              )
-            : null,
       ),
     );
   }
@@ -120,7 +131,7 @@ class AppShell extends ConsumerWidget {
     if (path.startsWith(Routes.movies)) return 2;
     if (path.startsWith(Routes.series)) return 3;
     if (path.startsWith(Routes.favorites)) return 4;
-    return -1; // e.g. Settings, Guide, History
+    return -1; // e.g. Settings, History
   }
 
   void _onNavigate(BuildContext context, String route) {
@@ -139,8 +150,8 @@ class AppShell extends ConsumerWidget {
     } else if (currentPath.startsWith(Routes.favorites)) {
       ref.invalidate(favoritesListProvider);
       ref.invalidate(favoriteChannelIdsProvider);
-    } else if (currentPath.startsWith(Routes.guide)) {
-      ref.read(guideControllerProvider.notifier).loadData();
+      ref.invalidate(favoriteMovieIdsProvider);
+      ref.invalidate(favoriteSeriesIdsProvider);
     }
   }
 }
@@ -168,10 +179,12 @@ class _ShellTopNav extends StatelessWidget {
     if (currentPath.startsWith(Routes.movies)) return context.l10n.navMovies;
     if (currentPath.startsWith(Routes.series)) return context.l10n.navSeries;
     if (currentPath.startsWith(Routes.live)) return context.l10n.navLive;
-    if (currentPath.startsWith(Routes.favorites)) return context.l10n.labelFavorites;
-    if (currentPath.startsWith(Routes.guide)) return context.l10n.navGuide;
-    if (currentPath.startsWith(Routes.settings)) return context.l10n.navSettings;
-    if (currentPath.startsWith(Routes.history)) return context.l10n.labelContinueWatching;
+    if (currentPath.startsWith(Routes.favorites))
+      return context.l10n.labelFavorites;
+    if (currentPath.startsWith(Routes.settings))
+      return context.l10n.navSettings;
+    if (currentPath.startsWith(Routes.history))
+      return context.l10n.labelContinueWatching;
     return 'Watch';
   }
 
@@ -216,12 +229,13 @@ class _ShellTopNav extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            if (KidsModeNavButton.visibleFor(context)) ...[
+              const KidsModeNavButton(),
+              const SizedBox(width: 10),
+            ],
             // Modern Glass Action Capsule
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 3,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
               decoration: BoxDecoration(
                 color: Colors.black.withAlpha(90),
                 borderRadius: BorderRadius.circular(16),
@@ -308,6 +322,10 @@ class _ShellTopNav extends StatelessWidget {
                   }),
                 ),
               ),
+              if (KidsModeNavButton.visibleFor(context)) ...[
+                const KidsModeNavButton(),
+                const SizedBox(width: 10),
+              ],
               // Glass Action Capsule
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
@@ -740,10 +758,15 @@ class _GlassActionButtonState extends State<_GlassActionButton> {
             decoration: BoxDecoration(
               color: active
                   ? AppColors.accent.withAlpha(35)
-                  : (_hovered ? Colors.white.withAlpha(25) : Colors.transparent),
+                  : (_hovered
+                        ? Colors.white.withAlpha(25)
+                        : Colors.transparent),
               borderRadius: BorderRadius.circular(10),
               border: active
-                  ? Border.all(color: AppColors.accent.withAlpha(120), width: 0.8)
+                  ? Border.all(
+                      color: AppColors.accent.withAlpha(120),
+                      width: 0.8,
+                    )
                   : null,
             ),
             child: Center(

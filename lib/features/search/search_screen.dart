@@ -19,6 +19,7 @@ import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/channel_list_tile.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
@@ -57,74 +58,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(searchControllerProvider);
 
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go(Routes.home);
-          }
-        }
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.bg0,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              // 1. Premium Glassmorphic Search Header
-              _SearchHeader(
-                controller: _textController,
-                focusNode: _focusNode,
-                onChanged: (val) {
-                  setState(() {});
-                  ref.read(searchControllerProvider.notifier).search(val);
-                },
-                onClear: () {
-                  _textController.clear();
-                  ref.read(searchControllerProvider.notifier).clear();
-                  setState(() {});
-                },
+    return Scaffold(
+      backgroundColor: AppColors.bg0,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // 1. Premium Glassmorphic Search Header
+            _SearchHeader(
+              controller: _textController,
+              focusNode: _focusNode,
+              onChanged: (val) {
+                setState(() {});
+                ref.read(searchControllerProvider.notifier).search(val);
+              },
+              onClear: () {
+                _textController.clear();
+                ref.read(searchControllerProvider.notifier).clear();
+                setState(() {});
+              },
+            ),
+
+            // 2. Filter Category Pills (when results exist)
+            if (!searchState.isLoading &&
+                searchState.query.isNotEmpty &&
+                searchState.totalResults > 0)
+              _FilterTabs(
+                selected: _selectedFilter,
+                moviesCount: searchState.movies.length,
+                seriesCount: searchState.series.length,
+                channelsCount: searchState.channels.length,
+                onSelect: (filter) => setState(() => _selectedFilter = filter),
               ),
 
-              // 2. Filter Category Pills (when results exist)
-              if (!searchState.isLoading &&
-                  searchState.query.isNotEmpty &&
-                  searchState.totalResults > 0)
-                _FilterTabs(
-                  selected: _selectedFilter,
-                  moviesCount: searchState.movies.length,
-                  seriesCount: searchState.series.length,
-                  channelsCount: searchState.channels.length,
-                  onSelect: (filter) => setState(() => _selectedFilter = filter),
-                ),
-
-              // 3. Results / Loading / Empty Content View
-              Expanded(
-                child: searchState.isLoading
-                    ? const SearchSkeleton()
-                    : searchState.query.isEmpty
-                        ? _SearchDiscoveryView(
-                            onSuggestionTap: _onSuggestionTap,
-                          )
-                        : searchState.totalResults == 0
-                            ? EmptyState(
-                                title: context.l10n.labelNoResults,
-                                subtitle:
-                                    context.l10n.searchNoResults(searchState.query),
-                                icon: AppIcons.searchOff,
-                              )
-                            : _SearchResultsView(
-                                filter: _selectedFilter,
-                                channels: searchState.channels,
-                                movies: searchState.movies,
-                                series: searchState.series,
-                              ),
-              ),
-            ],
-          ),
+            // 3. Results / Loading / Empty Content View
+            Expanded(
+              child: searchState.isLoading
+                  ? const SearchSkeleton()
+                  : searchState.query.isEmpty
+                  ? _SearchDiscoveryView(onSuggestionTap: _onSuggestionTap)
+                  : searchState.totalResults == 0
+                  ? EmptyState(
+                      title: context.l10n.labelNoResults,
+                      subtitle: context.l10n.searchNoResults(searchState.query),
+                      icon: AppIcons.searchOff,
+                    )
+                  : _SearchResultsView(
+                      filter: _selectedFilter,
+                      channels: searchState.channels,
+                      movies: searchState.movies,
+                      series: searchState.series,
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -173,8 +159,7 @@ class _SearchHeader extends StatelessWidget {
               color: Colors.white,
               size: 20,
             ),
-            onPressed: () =>
-                context.canPop() ? context.pop() : context.go(Routes.home),
+            onPressed: () => popOrGoHome(context),
           ),
           const SizedBox(width: AppSpacing.md),
 
@@ -227,7 +212,9 @@ class _SearchHeader extends StatelessWidget {
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                       ),
                       onChanged: onChanged,
                     ),
@@ -289,7 +276,10 @@ class _FilterTabs extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 8,
+      ),
       child: Row(
         children: [
           _TabPill(
@@ -348,7 +338,9 @@ class _TabPill extends StatelessWidget {
           color: isActive ? const Color(0xFF00C2FF) : const Color(0xFF161A24),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isActive ? const Color(0xFF00C2FF) : Colors.white.withAlpha(20),
+            color: isActive
+                ? const Color(0xFF00C2FF)
+                : Colors.white.withAlpha(20),
             width: 0.8,
           ),
         ),
@@ -400,11 +392,7 @@ class _SearchDiscoveryView extends StatelessWidget {
           // Heading
           const Row(
             children: [
-              HugeIcon(
-                icon: AppIcons.star,
-                color: Color(0xFF00C2FF),
-                size: 18,
-              ),
+              HugeIcon(icon: AppIcons.star, color: Color(0xFF00C2FF), size: 18),
               SizedBox(width: 8),
               Text(
                 'QUICK SEARCH',
@@ -496,14 +484,16 @@ class _SearchResultsView extends ConsumerWidget {
       streamId: channel.streamId,
     );
 
-    ref.read(playerControllerProvider.notifier).load(
-      LiveSource(
-        url: url,
-        channelName: channel.name,
-        channelId: channel.streamId,
-        logoUrl: channel.streamIcon,
-      ),
-    );
+    ref
+        .read(playerControllerProvider.notifier)
+        .load(
+          LiveSource(
+            url: url,
+            channelName: channel.name,
+            channelId: channel.streamId,
+            logoUrl: channel.streamIcon,
+          ),
+        );
 
     context.push(Routes.player);
   }
@@ -520,14 +510,16 @@ class _SearchResultsView extends ConsumerWidget {
       extension: movie.containerExtension ?? 'mp4',
     );
 
-    ref.read(playerControllerProvider.notifier).load(
-      VodSource(
-        movieId: movie.streamId,
-        title: movie.name,
-        url: url,
-        posterUrl: movie.streamIcon,
-      ),
-    );
+    ref
+        .read(playerControllerProvider.notifier)
+        .load(
+          VodSource(
+            movieId: movie.streamId,
+            title: movie.name,
+            url: url,
+            posterUrl: movie.streamIcon,
+          ),
+        );
 
     context.push(Routes.player);
   }
