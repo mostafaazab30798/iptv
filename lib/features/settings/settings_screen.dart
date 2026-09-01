@@ -10,6 +10,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/domain/entities/server_config.dart';
+import 'package:iptv/domain/entities/app_entitlement.dart';
 import 'package:iptv/features/auth/auth_controller.dart';
 import 'package:iptv/features/kids_mode/kids_mode_actions.dart';
 import 'package:iptv/features/kids_mode/kids_mode_controller.dart';
@@ -44,8 +45,28 @@ String _updateStatusLabel(BuildContext context, UpdateState state) {
 }
 
 /// Redesigned Settings Screen using Modern Titanium Bento Architecture
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshExpirations());
+  }
+
+  Future<void> _refreshExpirations() async {
+    await Future.wait([
+      ref.read(sessionProvider.notifier).refreshServerMetadata(),
+      ref
+          .read(entitlementProvider.notifier)
+          .refresh(allowOfflineFallback: true),
+    ]);
+  }
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showGeneralDialog<bool>(
@@ -109,8 +130,9 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider).valueOrNull;
+    final entitlementState = ref.watch(entitlementProvider);
     final currentLocale = ref.watch(localeProvider).languageCode;
     final kidsMode = ref.watch(kidsModeProvider);
     final updateState = ref.watch(updateProvider);
@@ -136,6 +158,18 @@ class SettingsScreen extends ConsumerWidget {
             child: _LanguageSegmentedControl(
               currentLocale: currentLocale,
               onLocaleSelected: (code) => _setLocale(ref, code),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // --- 2. Access expiry dates ---
+          _BentoCard(
+            title: context.l10n.settingsAccessExpiry,
+            icon: AppIcons.time,
+            child: _ExpiryCard(
+              entitlement: entitlementState.entitlement,
+              entitlementLoading: entitlementState.loading,
+              serverExpiresAt: session?.expiresAt,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -188,6 +222,126 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatExpiry(BuildContext context, DateTime? value) {
+  if (value == null) return context.l10n.settingsExpiryUnavailable;
+  final local = value.toLocal();
+  final material = MaterialLocalizations.of(context);
+  final date = material.formatFullDate(local);
+  final time = material.formatTimeOfDay(
+    TimeOfDay.fromDateTime(local),
+    alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+  );
+  return '$date · $time';
+}
+
+class _ExpiryCard extends StatelessWidget {
+  const _ExpiryCard({
+    required this.entitlement,
+    required this.entitlementLoading,
+    required this.serverExpiresAt,
+  });
+
+  final AppEntitlement? entitlement;
+  final bool entitlementLoading;
+  final DateTime? serverExpiresAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final appLabel = entitlement?.accessStatus == AccessStatus.trialing
+        ? context.l10n.settingsTrialExpiry
+        : context.l10n.settingsSubscriptionExpiry;
+    final appValue = entitlementLoading && entitlement == null
+        ? context.l10n.settingsExpiryChecking
+        : _formatExpiry(context, entitlement?.validUntil);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF11141D),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withAlpha(14), width: 0.8),
+      ),
+      child: Column(
+        children: [
+          _ExpiryRow(
+            icon: AppIcons.timer,
+            label: appLabel,
+            value: appValue,
+          ),
+          const Divider(color: AppColors.border, height: 1),
+          _ExpiryRow(
+            icon: AppIcons.server,
+            label: context.l10n.settingsIptvServerExpiry,
+            value: _formatExpiry(context, serverExpiresAt),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExpiryRow extends StatelessWidget {
+  const _ExpiryRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final List<List<dynamic>> icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 14,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withAlpha(18),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppColors.accent.withAlpha(45),
+                width: 0.8,
+              ),
+            ),
+            child: HugeIcon(icon: icon, color: AppColors.accent, size: 18),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

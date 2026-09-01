@@ -5,12 +5,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { AppError } from "./errors.ts";
 import {
+  type AuthedUser,
   bearerToken,
   getAnonKey,
   getServiceRoleKey,
   getSupabaseUrl,
   requireUser,
-  type AuthedUser,
 } from "./auth.ts";
 
 export type AdminRole = "owner" | "analyst" | "support" | "release_manager";
@@ -30,6 +30,7 @@ export type AdminCapability =
   | "reactivate_account"
   | "entitlement_override"
   | "billing_sync"
+  | "delete_user"
   | "publish_config"
   | "publish_release"
   | "view_audit"
@@ -45,7 +46,9 @@ function decodeJwtAal(token: string): string | null {
   try {
     const parts = token.split(".");
     if (parts.length < 2) return null;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
     return typeof payload.aal === "string" ? payload.aal : null;
   } catch {
     return null;
@@ -75,10 +78,13 @@ export async function requireAdmin(
   }
 
   if (capability) {
-    const { data: allowed, error: capError } = await admin.rpc("admin_has_capability", {
-      p_user_id: user.id,
-      p_capability: capability,
-    });
+    const { data: allowed, error: capError } = await admin.rpc(
+      "admin_has_capability",
+      {
+        p_user_id: user.id,
+        p_capability: capability,
+      },
+    );
     if (capError || !allowed) {
       throw new AppError("forbidden", "Insufficient admin capability.", 403);
     }
@@ -92,7 +98,9 @@ export async function requireAdmin(
   return { user, role, aal };
 }
 
-export function parseAdminPath(url: URL): { route: string; params: Record<string, string> } {
+export function parseAdminPath(
+  url: URL,
+): { route: string; params: Record<string, string> } {
   // Local proxy: /admin-api/v1/...
   // Deployed Edge Function: /functions/v1/admin-api/v1/...
   const adminApiMarker = "/admin-api";
@@ -123,7 +131,10 @@ export function parseAdminPath(url: URL): { route: string; params: Record<string
     return { route: "subscriptions/sync", params: { subscriptionId: id } };
   }
   if (resource === "entitlement-overrides" && id) {
-    return { route: "entitlement-overrides/delete", params: { overrideId: id } };
+    return {
+      route: "entitlement-overrides/delete",
+      params: { overrideId: id },
+    };
   }
   if (resource === "config" && segments[2] === "drafts") {
     const draftId = segments[3];
@@ -138,7 +149,10 @@ export function parseAdminPath(url: URL): { route: string; params: Record<string
   }
   if (resource === "releases" && id) {
     const releaseAction = segments[3];
-    return { route: `releases/${releaseAction ?? "detail"}`, params: { releaseId: id } };
+    return {
+      route: `releases/${releaseAction ?? "detail"}`,
+      params: { releaseId: id },
+    };
   }
 
   return { route: resource, params: {} };

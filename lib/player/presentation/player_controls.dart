@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
@@ -8,6 +11,8 @@ import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
+typedef SeekPreviewCallback = Future<Uint8List?> Function(Duration position);
+
 /// Compact, non-interfering interactive playback controls overlay.
 /// Positioned neatly at the top, center, and bottom to allow background gestures
 /// on left/right screen edges without any interference, clutter, or layout overflow.
@@ -16,7 +21,9 @@ class PlayerControls extends StatelessWidget {
     super.key,
     required this.playerState,
     required this.onPlayPause,
-    required this.onSeek,
+    required this.onRequestSeekPreview,
+    required this.onScrubStart,
+    required this.onScrubEnd,
     required this.onSeekRelative,
     required this.onVolumeChanged,
     required this.onToggleMute,
@@ -34,7 +41,9 @@ class PlayerControls extends StatelessWidget {
 
   final PlayerState playerState;
   final VoidCallback onPlayPause;
-  final ValueChanged<Duration> onSeek;
+  final SeekPreviewCallback onRequestSeekPreview;
+  final VoidCallback onScrubStart;
+  final ValueChanged<Duration> onScrubEnd;
   final ValueChanged<Duration> onSeekRelative;
   final ValueChanged<double> onVolumeChanged;
   final VoidCallback onToggleMute;
@@ -288,10 +297,6 @@ class PlayerControls extends StatelessWidget {
                       if (!isLive && playerState.duration > Duration.zero) ...[
                         Builder(
                           builder: (context) {
-                            final maxSecs = playerState.duration.inSeconds.toDouble();
-                            final posSecs = playerState.position.inSeconds.toDouble().clamp(0.0, maxSecs);
-                            final bufSecs = (playerState.bufferedFraction * maxSecs).clamp(0.0, maxSecs);
-
                             return Directionality(
                               textDirection: TextDirection.ltr,
                               child: Row(
@@ -316,25 +321,18 @@ class PlayerControls extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 8),
 
-                                  // Sleek Modern Scrubbing Bar
+                                  // Interactive scrubbing bar. Decoder seeks are
+                                  // throttled while dragging and committed exactly
+                                  // once at the end of the gesture.
                                   Expanded(
-                                    child: SliderTheme(
-                                      data: SliderTheme.of(context).copyWith(
-                                        trackShape: const _ModernPlayerSliderTrackShape(),
-                                        thumbShape: const _ModernPlayerSliderThumbShape(),
-                                        overlayShape: SliderComponentShape.noOverlay,
-                                        activeTrackColor: AppColors.accent,
-                                        secondaryActiveTrackColor: Colors.white.withValues(alpha: 0.35),
-                                        inactiveTrackColor: Colors.white.withValues(alpha: 0.16),
-                                        thumbColor: AppColors.accent,
-                                        trackHeight: 4.5,
-                                      ),
-                                      child: Slider(
-                                        value: posSecs,
-                                        secondaryTrackValue: bufSecs,
-                                        max: maxSecs,
-                                        onChanged: (v) => onSeek(Duration(seconds: v.toInt())),
-                                      ),
+                                    child: _InteractiveSeekBar(
+                                      position: playerState.position,
+                                      duration: playerState.duration,
+                                      bufferedPosition: playerState.bufferedPosition,
+                                      formatDuration: _formatDuration,
+                                      onRequestSeekPreview: onRequestSeekPreview,
+                                      onScrubStart: onScrubStart,
+                                      onScrubEnd: onScrubEnd,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -627,6 +625,274 @@ class _CompactGlassActionButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A responsive seek control that keeps the thumb under the pointer while the
+/// media engine catches up. While dragging, the main video is updated at a
+/// controlled cadence to provide frame previews without flooding the decoder.
+class _InteractiveSeekBar extends StatefulWidget {
+  const _InteractiveSeekBar({
+    required this.position,
+    required this.duration,
+    required this.bufferedPosition,
+    required this.formatDuration,
+    required this.onRequestSeekPreview,
+    required this.onScrubStart,
+    required this.onScrubEnd,
+  });
+
+  final Duration position;
+  final Duration duration;
+  final Duration bufferedPosition;
+  final String Function(Duration) formatDuration;
+  final SeekPreviewCallback onRequestSeekPreview;
+  final VoidCallback onScrubStart;
+  final ValueChanged<Duration> onScrubEnd;
+
+  @override
+  State<_InteractiveSeekBar> createState() => _InteractiveSeekBarState();
+}
+
+class _InteractiveSeekBarState extends State<_InteractiveSeekBar> {
+  static const _previewWidth = 132.0;
+  double? _scrubMilliseconds;
+  double? _pendingPreviewMilliseconds;
+  Uint8List? _previewFrame;
+  bool _previewRequestRunning = false;
+  int _previewSession = 0;
+  bool _isScrubbing = false;
+
+  double get _maxMilliseconds =>
+      widget.duration.inMilliseconds.toDouble().clamp(1.0, double.infinity);
+
+  double get _displayMilliseconds {
+    if (_isScrubbing && _scrubMilliseconds != null) {
+      return _scrubMilliseconds!.clamp(0.0, _maxMilliseconds);
+    }
+    return widget.position.inMilliseconds
+        .toDouble()
+        .clamp(0.0, _maxMilliseconds);
+  }
+
+  double? get _previewMilliseconds =>
+      _isScrubbing ? _scrubMilliseconds : null;
+
+  void _startScrubbing(double value) {
+    _previewSession++;
+    widget.onScrubStart();
+    setState(() {
+      _isScrubbing = true;
+      _scrubMilliseconds = value;
+      _previewFrame = null;
+    });
+    _queuePreview(value);
+  }
+
+  void _updateScrubbing(double value) {
+    setState(() => _scrubMilliseconds = value);
+    _queuePreview(value);
+  }
+
+  void _finishScrubbing(double value) {
+    _previewSession++;
+    _pendingPreviewMilliseconds = null;
+    widget.onScrubEnd(Duration(milliseconds: value.round()));
+    setState(() {
+      _isScrubbing = false;
+      _scrubMilliseconds = null;
+      _previewFrame = null;
+    });
+  }
+
+  void _queuePreview(double value) {
+    _pendingPreviewMilliseconds = value;
+    if (!_previewRequestRunning) {
+      unawaited(_drainPreviewRequests(_previewSession));
+    }
+  }
+
+  Future<void> _drainPreviewRequests(int session) async {
+    _previewRequestRunning = true;
+    try {
+      while (mounted && session == _previewSession) {
+        final target = _pendingPreviewMilliseconds;
+        if (target == null) break;
+        _pendingPreviewMilliseconds = null;
+
+        final frame = await widget.onRequestSeekPreview(
+          Duration(milliseconds: target.round()),
+        );
+        if (!mounted || session != _previewSession) break;
+        if (frame != null && frame.isNotEmpty) {
+          setState(() => _previewFrame = frame);
+        }
+      }
+    } finally {
+      _previewRequestRunning = false;
+      if (mounted && _pendingPreviewMilliseconds != null) {
+        unawaited(_drainPreviewRequests(_previewSession));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buffered = widget.bufferedPosition.inMilliseconds
+        .toDouble()
+        .clamp(0.0, _maxMilliseconds);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final previewValue = _previewMilliseconds;
+        final availablePreviewTravel =
+            (constraints.maxWidth - _previewWidth).clamp(0.0, double.infinity);
+        final previewLeft = previewValue == null
+            ? 0.0
+            : ((previewValue / _maxMilliseconds) * constraints.maxWidth -
+                    _previewWidth / 2)
+                .clamp(0.0, availablePreviewTravel);
+
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: SizedBox(
+            height: 38,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackShape: const _ModernPlayerSliderTrackShape(),
+                      thumbShape: const _ModernPlayerSliderThumbShape(),
+                      overlayShape: const RoundSliderOverlayShape(
+                        overlayRadius: 15,
+                      ),
+                      overlayColor: AppColors.accent.withValues(alpha: 0.13),
+                      activeTrackColor: AppColors.accent,
+                      secondaryActiveTrackColor:
+                          Colors.white.withValues(alpha: 0.35),
+                      inactiveTrackColor: Colors.white.withValues(alpha: 0.16),
+                      thumbColor: AppColors.accent,
+                      trackHeight: 4.5,
+                    ),
+                    child: Semantics(
+                      label: 'Playback position',
+                      value: widget.formatDuration(
+                        Duration(milliseconds: _displayMilliseconds.round()),
+                      ),
+                      child: Slider(
+                        key: const ValueKey('interactive-player-seek-bar'),
+                        value: _displayMilliseconds,
+                        secondaryTrackValue: buffered,
+                        max: _maxMilliseconds,
+                        onChangeStart: _startScrubbing,
+                        onChanged: _updateScrubbing,
+                        onChangeEnd: _finishScrubbing,
+                      ),
+                    ),
+                  ),
+                ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 70),
+                  curve: Curves.easeOutCubic,
+                  left: previewLeft,
+                  bottom: 34,
+                  width: _previewWidth,
+                  child: IgnorePointer(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 140),
+                      reverseDuration: const Duration(milliseconds: 100),
+                      child: previewValue == null
+                          ? const SizedBox.shrink()
+                          : _SeekPreviewCard(
+                              key: const ValueKey('player-seek-preview'),
+                              frame: _previewFrame,
+                              time: widget.formatDuration(
+                                Duration(milliseconds: previewValue.round()),
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SeekPreviewCard extends StatelessWidget {
+  const _SeekPreviewCard({
+    super.key,
+    required this.frame,
+    required this.time,
+  });
+
+  final Uint8List? frame;
+  final String time;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 78,
+      decoration: BoxDecoration(
+        color: const Color(0xF21A1A1A),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x99000000), blurRadius: 14, offset: Offset(0, 5)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (frame != null)
+            Image.memory(
+              frame!,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.low,
+            )
+          else
+            const Center(
+              child: SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Color(0xE6000000)],
+                stops: [0.35, 1],
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                time,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                  shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

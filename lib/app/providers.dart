@@ -107,6 +107,21 @@ class SessionNotifier extends StateNotifier<AsyncValue<ServerConfig?>> {
     state = AsyncValue.data(config);
   }
 
+  /// Refreshes provider-owned account metadata without discarding a working
+  /// IPTV session when the provider is temporarily unreachable.
+  Future<bool> refreshServerMetadata() async {
+    final current = state.valueOrNull;
+    if (current == null || !current.isValid) return false;
+    final result = await _authRepo.authenticate(
+      serverUrl: current.serverUrl,
+      username: current.username,
+      password: current.password,
+    );
+    if (result.isErr) return false;
+    state = AsyncValue.data(result.value);
+    return true;
+  }
+
   Future<void> clearSession() async {
     await _authRepo.signOut();
     state = const AsyncValue.data(null);

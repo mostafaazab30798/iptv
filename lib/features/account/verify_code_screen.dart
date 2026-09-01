@@ -10,6 +10,8 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_motion.dart';
 import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
+import 'package:iptv/core/commercial/commercial_api_config.dart';
+import 'package:iptv/domain/entities/app_entitlement.dart';
 import 'package:iptv/features/account/account_auth_errors.dart';
 import 'package:iptv/features/account/account_controller.dart';
 import 'package:iptv/features/account/widgets/auth_announcer.dart';
@@ -152,6 +154,11 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen>
       }
       if (!mounted) return;
 
+      if (CommercialApiConfig.accessGateEnabled) {
+        final ready = await _confirmCommercialAccess();
+        if (!ready || !mounted) return;
+      }
+
       final iptv = ref.read(sessionProvider).valueOrNull;
       if (iptv != null && iptv.isValid) {
         context.go(Routes.home);
@@ -179,6 +186,80 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen>
         context.go(Routes.signIn);
       }
     }
+  }
+
+  Future<bool> _confirmCommercialAccess() async {
+    final l10n = AppLocalizations.of(context)!;
+
+    while (mounted) {
+      await ref
+          .read(entitlementProvider.notifier)
+          .refresh(allowOfflineFallback: false);
+      if (!mounted) return false;
+
+      final entitlement = ref.read(entitlementProvider).entitlement;
+      if (entitlement?.accessStatus == AccessStatus.trialing) {
+        final end = entitlement?.validUntil;
+        final formattedEnd = end == null
+            ? l10n.trialActiveUnknownEnd
+            : MaterialLocalizations.of(context).formatMediumDate(end.toLocal());
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            icon: const Icon(Icons.verified_rounded, color: AppColors.success),
+            title: Text(l10n.trialStartedTitle),
+            content: Text(l10n.trialStartedBody(formattedEnd)),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.trialStartedContinue),
+              ),
+            ],
+          ),
+        );
+        return true;
+      }
+
+      if (entitlement?.allowsPremium == true) return true;
+
+      final retry = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(Icons.error_outline_rounded, color: AppColors.error),
+          title: Text(l10n.trialActivationFailedTitle),
+          content: Text(l10n.trialActivationFailedBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.trialActivationSignOut),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.trialActivationRetry),
+            ),
+          ],
+        ),
+      );
+
+      if (retry != true) {
+        await ref.read(appAccountSessionProvider.notifier).signOut();
+        if (mounted) context.go(Routes.signIn);
+        return false;
+      }
+
+      try {
+        await ref
+            .read(appAccountSessionProvider.notifier)
+            .synchronizeVerifiedAccount();
+      } catch (_) {
+        // The next loop renders the same explicit retry state. Never continue
+        // to IPTV onboarding without a server-authoritative entitlement.
+      }
+    }
+
+    return false;
   }
 
   Future<void> _resend() async {

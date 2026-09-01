@@ -28,6 +28,9 @@ class PlayerOverlay extends StatefulWidget {
     required this.playerState,
     required this.onPlayPause,
     required this.onSeek,
+    required this.onRequestSeekPreview,
+    required this.onScrubStart,
+    required this.onScrubEnd,
     required this.onSeekRelative,
     required this.onSelectPlaybackRate,
     required this.onVolumeChanged,
@@ -47,6 +50,9 @@ class PlayerOverlay extends StatefulWidget {
   final PlayerState playerState;
   final VoidCallback onPlayPause;
   final ValueChanged<Duration> onSeek;
+  final SeekPreviewCallback onRequestSeekPreview;
+  final VoidCallback onScrubStart;
+  final ValueChanged<Duration> onScrubEnd;
   final ValueChanged<Duration> onSeekRelative;
   final ValueChanged<double> onSelectPlaybackRate;
   final ValueChanged<double> onVolumeChanged;
@@ -504,7 +510,18 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                       child: PlayerControls(
                         playerState: widget.playerState,
                         onPlayPause: widget.onPlayPause,
-                        onSeek: widget.onSeek,
+                        onRequestSeekPreview: widget.onRequestSeekPreview,
+                        onScrubStart: () {
+                          _hideControlsTimer?.cancel();
+                          if (!_controlsVisible && mounted) {
+                            setState(() => _controlsVisible = true);
+                          }
+                          widget.onScrubStart();
+                        },
+                        onScrubEnd: (position) {
+                          widget.onScrubEnd(position);
+                          _scheduleHide();
+                        },
                         onSeekRelative: (offset) {
                           widget.onSeekRelative(offset);
                           _showSeekRippleOnly(

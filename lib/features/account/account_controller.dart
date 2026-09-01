@@ -262,6 +262,28 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
     state = state.copyWith(clearAccount: true, clearPendingEmail: true);
   }
 
+  /// Re-runs the server-authoritative account bootstrap after OTP verification.
+  ///
+  /// This calls `me` again (which provisions the one-time trial), then requires
+  /// device registration to succeed. Unlike background bootstrap, errors are
+  /// deliberately surfaced so the OTP UI can offer a safe retry.
+  Future<void> synchronizeVerifiedAccount() async {
+    if (debugEmailOtpPreviewEnabled) return;
+    final account = await _accounts.refreshProfile();
+    if (account == null) {
+      throw StateError('Verified account could not be synchronized.');
+    }
+    final deviceId = await _devices.registerCurrentDevice();
+    _analytics.updateDeviceId(deviceId);
+    state = state.copyWith(
+      loading: false,
+      configured: true,
+      account: account,
+      clearError: true,
+      clearPendingEmail: true,
+    );
+  }
+
   Future<void> _registerDeviceQuietly() async {
     try {
       final deviceId = await _devices.registerCurrentDevice();

@@ -56,13 +56,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         context.go(Routes.signIn);
         return;
       }
-      unawaited(ref.read(entitlementProvider.notifier).refresh());
     }
 
     final iptv = ref.read(sessionProvider).valueOrNull;
 
     if (iptv != null && iptv.isValid) {
-      context.go(Routes.home);
+      if (CommercialApiConfig.accessGateEnabled) {
+        await ref.read(entitlementProvider.notifier).refresh();
+        if (!mounted) return;
+        final entitlement = ref.read(entitlementProvider);
+        context.go(
+          entitlement.allowsPremium ? Routes.home : Routes.accessRequired,
+        );
+      } else {
+        context.go(Routes.home);
+      }
     } else {
       context.go(Routes.onboarding);
     }

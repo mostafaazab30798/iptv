@@ -11,6 +11,32 @@ import 'package:url_launcher/url_launcher.dart';
 class AccessRequiredScreen extends ConsumerWidget {
   const AccessRequiredScreen({super.key});
 
+  Future<void> _refreshAccess(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      await ref
+          .read(appAccountSessionProvider.notifier)
+          .synchronizeVerifiedAccount();
+      await ref
+          .read(entitlementProvider.notifier)
+          .refresh(allowOfflineFallback: false);
+      if (!context.mounted) return;
+      if (ref.read(entitlementProvider).allowsPremium) {
+        final iptv = ref.read(sessionProvider).valueOrNull;
+        context.go(iptv != null && iptv.isValid ? Routes.home : Routes.onboarding);
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.trialActivationFailedBody)),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.trialActivationFailedBody)),
+      );
+    }
+  }
+
   Future<void> _changeServer(BuildContext context, WidgetRef ref) async {
     await ref.read(sessionProvider.notifier).clearSession();
     if (context.mounted) context.go(Routes.onboarding);
@@ -70,8 +96,7 @@ class AccessRequiredScreen extends ConsumerWidget {
               ],
               const Spacer(),
               FilledButton(
-                onPressed: () =>
-                    ref.read(entitlementProvider.notifier).refresh(),
+                onPressed: () => _refreshAccess(context, ref),
                 child: Text(l10n.accessRequiredRefresh),
               ),
               const SizedBox(height: 12),

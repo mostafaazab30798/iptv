@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
@@ -588,6 +589,38 @@ class MediaKitPlayerEngine implements PlayerEngine {
     if (target < Duration.zero) target = Duration.zero;
     if (target > maxDur) target = maxDur;
     await seek(target);
+  }
+
+  @override
+  Future<void> seekForPreview(Duration position) async {
+    if (_currentSource?.profile.isLive ?? false) return;
+    final player = _player;
+    if (player == null) return;
+
+    try {
+      final seconds = (position.inMilliseconds / 1000).toStringAsFixed(3);
+      await (player.platform as dynamic).command([
+        'seek',
+        seconds,
+        'absolute+exact',
+      ]);
+    } catch (_) {
+      // Web and alternate backends may not expose libmpv's raw command API.
+      await player.seek(position);
+    }
+  }
+
+  @override
+  Future<Uint8List?> captureFrame() async {
+    try {
+      return await _player?.screenshot(
+        format: 'image/jpeg',
+        includeLibassSubtitles: false,
+      );
+    } catch (e) {
+      PlayerLogger.error('Error capturing seek preview', message: e.toString());
+      return null;
+    }
   }
 
   @override

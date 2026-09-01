@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:iptv/player/domain/entities/player_metrics.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
@@ -28,6 +30,12 @@ abstract interface class PlayerEngine {
 
   /// Seeks relatively by [offset] (e.g. +10s or -10s).
   Future<void> seekRelative(Duration offset);
+
+  /// Performs an exact seek intended for frame-accurate scrub previews.
+  Future<void> seekForPreview(Duration position);
+
+  /// Captures the currently rendered video frame as a JPEG image.
+  Future<Uint8List?> captureFrame();
 
   /// Sets playback speed multiplier (0.25x to 2.0x).
   Future<void> setPlaybackRate(double rate);

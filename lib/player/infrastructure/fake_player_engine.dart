@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:iptv/player/domain/entities/player_metrics.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
@@ -163,6 +164,12 @@ class FakePlayerEngine implements PlayerEngine {
     _position = target;
     _emitPosition(target);
   }
+
+  @override
+  Future<void> seekForPreview(Duration position) => seek(position);
+
+  @override
+  Future<Uint8List?> captureFrame() async => null;
 
   @override
   Future<void> setPlaybackRate(double rate) async {

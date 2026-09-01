@@ -4,12 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 import 'package:iptv/features/player/player_screen.dart';
 import 'package:iptv/player/application/player_controller.dart';
+import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/infrastructure/fake_player_engine.dart';
 import 'package:iptv/player/presentation/buffering_indicator.dart';
 import 'package:iptv/player/presentation/player_error_view.dart';
+import 'package:iptv/player/presentation/player_controls.dart';
 import 'package:iptv/player/presentation/player_view.dart';
 
 void main() {
@@ -253,5 +255,78 @@ void main() {
 
       await finishPlayerTest(tester);
     });
+  });
+
+  testWidgets('seek bar previews while dragging and commits the final position',
+      (tester) async {
+    final seeks = <Duration>[];
+    final previews = <Duration>[];
+    final source = PlayerSource.vod(
+      url: 'http://test.vod/movie.mp4',
+      title: 'Scrub Test',
+      movieId: 99,
+      posterUrl: null,
+    );
+    final state = PlayerState(
+      status: PlayerStatus.playing,
+      source: source,
+      position: const Duration(minutes: 10),
+      duration: const Duration(minutes: 90),
+      bufferedPosition: const Duration(minutes: 30),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: SizedBox.expand(
+            child: PlayerControls(
+              playerState: state,
+              onPlayPause: () {},
+              onRequestSeekPreview: (position) async {
+                previews.add(position);
+                return null;
+              },
+              onScrubStart: () {},
+              onScrubEnd: seeks.add,
+              onSeekRelative: (_) {},
+              onVolumeChanged: (_) {},
+              onToggleMute: () {},
+              onNextChannel: () {},
+              onPreviousChannel: () {},
+              onCycleAspectRatio: () {},
+              onSelectPlaybackRate: (_) {},
+              onOpenAudioTracks: () {},
+              onOpenSubtitles: () {},
+              onToggleLock: () {},
+              onOpenQuickSettings: () {},
+              onToggleFullscreen: () {},
+              onClose: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final slider = find.byKey(const ValueKey('interactive-player-seek-bar'));
+    expect(slider, findsOneWidget);
+
+    final rect = tester.getRect(slider);
+    final gesture = await tester.startGesture(
+      rect.centerLeft + Offset(rect.width * 0.2, 0),
+    );
+    await gesture.moveTo(rect.centerLeft + Offset(rect.width * 0.75, 0));
+    await tester.pump(const Duration(milliseconds: 150));
+
+    expect(find.byKey(const ValueKey('player-seek-preview')), findsOneWidget);
+
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 180));
+
+    expect(previews, isNotEmpty);
+    expect(seeks, hasLength(1));
+    expect(seeks.last, greaterThan(const Duration(minutes: 45)));
   });
 }

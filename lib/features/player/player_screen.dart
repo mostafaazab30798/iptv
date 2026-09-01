@@ -276,6 +276,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
                 }
               },
               onSeek: controller.seek,
+              onRequestSeekPreview: controller.createSeekPreview,
+              onScrubStart: controller.beginSeekScrub,
+              onScrubEnd: controller.finishSeekScrub,
               onSeekRelative: controller.seekRelative,
               onSelectPlaybackRate: controller.setPlaybackRate,
               onVolumeChanged: controller.setVolume,

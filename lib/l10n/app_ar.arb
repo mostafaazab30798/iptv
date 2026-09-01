@@ -184,6 +184,12 @@
   "settingsUser": "المستخدم",
   "settingsLanguage": "اللغة",
   "settingsAccount": "الحساب",
+  "settingsAccessExpiry": "انتهاء صلاحية الوصول",
+  "settingsTrialExpiry": "انتهاء تجربة HOPE TV",
+  "settingsSubscriptionExpiry": "انتهاء اشتراك HOPE TV",
+  "settingsIptvServerExpiry": "انتهاء اشتراك خادم IPTV",
+  "settingsExpiryUnavailable": "لم يتم توفير تاريخ انتهاء",
+  "settingsExpiryChecking": "جارٍ التحقق…",
   "settingsAbout": "حول التطبيق",
   "settingsVersion": "الإصدار",
   "settingsEnglish": "English",
@@ -412,6 +418,19 @@
   "accessRequiredSubscribe": "اشترك عبر موقعنا",
   "accessRequiredChangeServer": "استخدام خادم IPTV آخر",
   "subscriptionPortalNotConfigured": "موقع الاشتراك غير مُعد بعد.",
+  "trialStartedTitle": "تم تفعيل تجربتك لمدة 7 أيام",
+  "trialStartedBody": "لديك الآن وصول كامل إلى HOPE TV حتى {endDate}.",
+  "@trialStartedBody": {
+    "placeholders": {
+      "endDate": { "type": "String" }
+    }
+  },
+  "trialStartedContinue": "متابعة",
+  "trialActiveUnknownEnd": "نهاية الفترة التجريبية",
+  "trialActivationFailedTitle": "لم يكتمل تفعيل الفترة التجريبية",
+  "trialActivationFailedBody": "تم التحقق من بريدك الإلكتروني، لكن تعذر تأكيد فترة تجريبية نشطة من الخادم. أعد المحاولة بعد نشر الواجهة الخلفية؛ لن يستهلك التطبيق تجربتك أو يعيد ضبطها.",
+  "trialActivationRetry": "إعادة محاولة التفعيل",
+  "trialActivationSignOut": "تسجيل الخروج",
 
   "updateAvailableTitle": "تحديث متاح",
   "updateAvailableBody": "HOPE TV {version} متاح ({size}).",

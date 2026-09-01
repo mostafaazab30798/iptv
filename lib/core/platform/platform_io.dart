@@ -19,7 +19,13 @@ Future<void> setPlatformFullScreen(bool isFullScreen) async {
       await windowManager.ensureInitialized();
       await windowManager.setFullScreen(isFullScreen);
     } catch (_) {}
-  } else if (Platform.isAndroid || Platform.isIOS) {
+  } else if (Platform.isAndroid) {
+    // Fullscreen is the app-wide Android policy, including after leaving the
+    // video player. Never restore the battery/Wi-Fi status bar here.
+    try {
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } catch (_) {}
+  } else if (Platform.isIOS) {
     try {
       if (isFullScreen) {
         await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
@@ -40,4 +46,3 @@ Future<bool> isPlatformFullScreen() async {
   }
   return false;
 }
-

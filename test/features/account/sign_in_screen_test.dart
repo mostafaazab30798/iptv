@@ -5,6 +5,7 @@ import 'package:iptv/app/router.dart';
 import 'package:iptv/features/account/widgets/auth_brand_panel.dart';
 import 'package:iptv/features/account/widgets/auth_card.dart';
 import 'package:iptv/features/account/widgets/auth_email_field.dart';
+import 'package:iptv/features/account/widgets/auth_language_switcher.dart';
 import 'package:iptv/features/account/widgets/auth_primary_button.dart';
 import 'package:iptv/features/account/sign_in_screen.dart';
 import 'package:iptv/features/account/verify_code_screen.dart';
@@ -62,7 +63,8 @@ void main() {
   });
 
   testWidgets(
-    'wide layout on a desktop/TV width shows the two-region composition',
+    'wide layout on a desktop/TV width shows the two-region composition '
+    'and language switcher without overlying the form card',
     (tester) async {
       setSurfaceSize(tester, const Size(1920, 1080));
       final harness = AccountTestHarness();
@@ -73,6 +75,32 @@ void main() {
       expect(find.byType(AuthBrandPanel), findsOneWidget);
       expect(find.byType(AuthCard), findsOneWidget);
       expect(find.text(en.accountBrandTagline), findsOneWidget);
+
+      final switcherFinder = find.byType(AuthLanguageSwitcher);
+      final cardFinder = find.byType(AuthCard);
+      expect(switcherFinder, findsOneWidget);
+      expect(cardFinder, findsOneWidget);
+
+      final switcherRect = tester.getRect(switcherFinder);
+      final cardRect = tester.getRect(cardFinder);
+      expect(switcherRect.overlaps(cardRect), isFalse);
+      expect(switcherRect.bottom <= cardRect.top, isTrue);
+    },
+  );
+
+  testWidgets(
+    'language switcher does not overlay card on mid-range wide breakpoint (1024x768)',
+    (tester) async {
+      setSurfaceSize(tester, const Size(1024, 768));
+      final harness = AccountTestHarness();
+      await tester.pumpWidget(pumpableApp(harness));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final switcherRect = tester.getRect(find.byType(AuthLanguageSwitcher));
+      final cardRect = tester.getRect(find.byType(AuthCard));
+      expect(switcherRect.overlaps(cardRect), isFalse);
+      expect(switcherRect.bottom <= cardRect.top, isTrue);
     },
   );
 

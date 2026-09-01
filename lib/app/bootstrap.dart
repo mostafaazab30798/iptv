@@ -1,6 +1,5 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,8 +51,19 @@ Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
 
-  // Hide system status bar / immersive full screen
-  unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
+  // Android is a permanently immersive app: keep status/navigation bars hidden
+  // at startup and restore immersive mode if the OS temporarily reveals them.
+  final isAndroidHost =
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  if (isAndroidHost) {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    SystemChrome.setSystemUIChangeCallback((systemOverlaysAreVisible) async {
+      if (!systemOverlaysAreVisible) return;
+      // Android blocks UI-visibility changes briefly after the keyboard closes.
+      await Future<void>.delayed(const Duration(seconds: 1));
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    });
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

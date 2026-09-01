@@ -28,26 +28,20 @@ class AuthShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return AmbientBackground(
       child: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= wideBreakpoint;
-                  if (isWide) {
-                    return _WideLayout(formCard: formCard);
-                  }
-                  return _CompactLayout(formCard: formCard);
-                },
-              ),
-            ),
-            if (topTrailing != null)
-              PositionedDirectional(
-                top: AppSpacing.md,
-                end: AppSpacing.lg,
-                child: topTrailing!,
-              ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= wideBreakpoint;
+            if (isWide) {
+              return _WideLayout(
+                formCard: formCard,
+                topTrailing: topTrailing,
+              );
+            }
+            return _CompactLayout(
+              formCard: formCard,
+              topTrailing: topTrailing,
+            );
+          },
         ),
       ),
     );
@@ -55,42 +49,64 @@ class AuthShell extends StatelessWidget {
 }
 
 class _WideLayout extends StatelessWidget {
-  const _WideLayout({required this.formCard});
+  const _WideLayout({
+    required this.formCard,
+    this.topTrailing,
+  });
 
   final Widget formCard;
+  final Widget? topTrailing;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Expanded(
-            flex: 6,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.x5l,
-                AppSpacing.x3l,
-                AppSpacing.xxl,
-                AppSpacing.xxl,
-              ),
-              child: AuthBrandPanel(),
-            ),
-          ),
-          Expanded(
-            flex: 5,
-            child: Padding(
+          if (topTrailing != null)
+            Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xxl,
-                AppSpacing.x3l,
-                AppSpacing.xxl,
-                AppSpacing.xxl,
+                AppSpacing.x5l,
+                AppSpacing.md,
+                AppSpacing.x5l,
+                0,
               ),
               child: Align(
-                alignment: Alignment.topCenter,
-                child: formCard,
+                alignment: AlignmentDirectional.centerEnd,
+                child: topTrailing,
               ),
             ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                flex: 6,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.x5l,
+                    AppSpacing.xl,
+                    AppSpacing.xxl,
+                    AppSpacing.xxl,
+                  ),
+                  child: AuthBrandPanel(),
+                ),
+              ),
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xxl,
+                    AppSpacing.xl,
+                    AppSpacing.x5l,
+                    AppSpacing.xxl,
+                  ),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: formCard,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -99,17 +115,20 @@ class _WideLayout extends StatelessWidget {
 }
 
 class _CompactLayout extends StatelessWidget {
-  const _CompactLayout({required this.formCard});
+  const _CompactLayout({
+    required this.formCard,
+    this.topTrailing,
+  });
 
   final Widget formCard;
+  final Widget? topTrailing;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        // Leave room for the language switcher when present.
-        AppSpacing.x3l + AppSpacing.md,
+        topTrailing != null ? AppSpacing.md : AppSpacing.xl,
         AppSpacing.lg,
         AppSpacing.xxl,
       ),
@@ -118,6 +137,14 @@ class _CompactLayout extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (topTrailing != null)
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: topTrailing,
+                ),
+              ),
             const AuthBrandPanel(compact: true),
             const SizedBox(height: AppSpacing.xl),
             formCard,

@@ -44,7 +44,10 @@ Deno.test("rejects forbidden IPTV properties", () => {
 });
 
 Deno.test("accepts safe properties", () => {
-  const props = sanitizeProperties({ reason: "trial_expired", platform: "android" });
+  const props = sanitizeProperties({
+    reason: "trial_expired",
+    platform: "android",
+  });
   if (props.reason !== "trial_expired") {
     throw new Error("safe property stripped incorrectly");
   }
@@ -54,7 +57,7 @@ Deno.test("validateAndSanitizeEvent accepts valid payload", () => {
   const event = validateAndSanitizeEvent({
     eventId: "22222222-2222-4222-8222-222222222222",
     eventName: "session_started",
-    occurredAt: "2026-08-29T12:00:00.000Z",
+    occurredAt: new Date().toISOString(),
     platform: "android",
     properties: { foreground: true },
   });

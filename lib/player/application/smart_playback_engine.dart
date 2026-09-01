@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:iptv/player/application/device_decode_prober.dart';
 import 'package:iptv/player/domain/entities/device_decode_profile.dart';
 import 'package:iptv/player/domain/entities/player_metrics.dart';
@@ -532,6 +533,9 @@ class SmartPlaybackEngine {
 
   Future<void> seek(Duration position) => _engine.seek(position);
   Future<void> seekRelative(Duration offset) => _engine.seekRelative(offset);
+  Future<void> seekForPreview(Duration position) =>
+      _engine.seekForPreview(position);
+  Future<Uint8List?> captureFrame() => _engine.captureFrame();
   Future<void> setPlaybackRate(double rate) => _engine.setPlaybackRate(rate);
   Future<void> setVolume(double volume) => _engine.setVolume(volume);
   Future<void> setMuted(bool muted) => _engine.setMuted(muted);

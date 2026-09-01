@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/domain/entities/channel.dart';
@@ -65,6 +68,9 @@ class PlayerController extends StateNotifier<PlayerState> {
   int _currentChannelIndex = -1;
   bool _deviceProfileInitialized = false;
   Timer? _progressSaveTimer;
+  bool _seekScrubActive = false;
+  bool _resumeAfterSeekScrub = false;
+  Future<void>? _seekScrubPauseOperation;
 
   /// Incremented on every [load]/[stop] so late async work from a previous
   /// channel enter/leave cannot clobber the active playback session.
@@ -492,6 +498,9 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   Future<void> stop() async {
     _playbackEpoch++;
+    _seekScrubActive = false;
+    _resumeAfterSeekScrub = false;
+    _seekScrubPauseOperation = null;
     _clearLazyLivePlaylist();
     await savePlaybackProgress();
     await _smartEngine.stop();
@@ -527,6 +536,89 @@ class PlayerController extends StateNotifier<PlayerState> {
   Future<void> seek(Duration position) async {
     await _smartEngine.seek(position);
     await savePlaybackProgress();
+  }
+
+  /// Starts a scrub session and freezes playback until the thumb is released.
+  void beginSeekScrub() {
+    if (!mounted || state.isLive || _seekScrubActive) return;
+    _seekScrubActive = true;
+    _resumeAfterSeekScrub = state.isPlaying;
+    _seekScrubPauseOperation = _resumeAfterSeekScrub
+        ? _smartEngine.pause().then((_) {
+            if (mounted && _seekScrubActive) {
+              state = state.copyWith(status: PlayerStatus.paused);
+            }
+          })
+        : Future<void>.value();
+  }
+
+  /// Commits the final scrub position, then restores the pre-scrub play state.
+  Future<void> finishSeekScrub(Duration position) async {
+    if (!_seekScrubActive) {
+      await seek(position);
+      return;
+    }
+
+    final shouldResume = _resumeAfterSeekScrub;
+    final pauseOperation = _seekScrubPauseOperation;
+    _seekScrubActive = false;
+    _resumeAfterSeekScrub = false;
+    _seekScrubPauseOperation = null;
+
+    await pauseOperation;
+    if (!mounted) return;
+    await _smartEngine.seek(position);
+    await savePlaybackProgress();
+    if (shouldResume && mounted) {
+      await _smartEngine.play();
+      if (mounted) state = state.copyWith(status: PlayerStatus.playing);
+    }
+  }
+
+  /// Seeks without persisting watch history, waits for the decoder to render
+  /// the requested position, then returns that real frame for the scrub HUD.
+  Future<Uint8List?> createSeekPreview(Duration position) async {
+    if (!mounted || state.isLive || state.duration <= Duration.zero) return null;
+
+    if (!_seekScrubActive) beginSeekScrub();
+    await _seekScrubPauseOperation;
+    if (!mounted || !_seekScrubActive) return null;
+
+    final frameBeforeSeek = await _smartEngine.captureFrame();
+    if (!mounted || !_seekScrubActive) return null;
+    await _smartEngine.seekForPreview(position);
+    if (!mounted || !_seekScrubActive) return null;
+    // Some backends briefly resume after a seek even if they were paused.
+    await _smartEngine.pause();
+
+    // A libmpv seek command is acknowledged before the target frame finishes
+    // decoding. Wait until its playback clock reaches the requested region.
+    for (var attempt = 0;
+        attempt < 12 && mounted && _seekScrubActive;
+        attempt++) {
+      final delta =
+          (state.position.inMilliseconds - position.inMilliseconds).abs();
+      if (delta <= 1200) break;
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+
+    // The playback clock can advance one tick before the video texture. Poll
+    // until the screenshot really changes, instead of repeatedly returning the
+    // pre-seek frame. Static scenes safely fall back after the bounded timeout.
+    Uint8List? latestFrame;
+    for (var attempt = 0;
+        attempt < 5 && mounted && _seekScrubActive;
+        attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      latestFrame = await _smartEngine.captureFrame();
+      if (latestFrame != null &&
+          latestFrame.isNotEmpty &&
+          (frameBeforeSeek == null ||
+              !listEquals(latestFrame, frameBeforeSeek))) {
+        return latestFrame;
+      }
+    }
+    return mounted && _seekScrubActive ? latestFrame : null;
   }
 
   /// Relative seek (e.g. -10 seconds or +10 seconds).

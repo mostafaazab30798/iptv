@@ -154,7 +154,7 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
                     Text(
                       context.l10n.actionWatch,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.accent,
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,

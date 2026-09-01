@@ -28,6 +28,7 @@ class SecureStorage {
   static const String _keyServerUrl = 'server_url';
   static const String _keyUsername = 'username';
   static const String _keyPassword = 'password';
+  static const String _keyServerExpiresAt = 'server_expires_at';
   static const String _keyKidsModeEnabled = 'kids_mode_enabled';
   static const String _keyKidsPinSalt = 'kids_mode_pin_salt';
   static const String _keyKidsPinVerifier = 'kids_mode_pin_verifier';
@@ -49,12 +50,20 @@ class SecureStorage {
     required String serverUrl,
     required String username,
     required String password,
+    DateTime? serverExpiresAt,
   }) async {
     try {
       await Future.wait([
         _storage.write(key: _keyServerUrl, value: serverUrl),
         _storage.write(key: _keyUsername, value: username),
         _storage.write(key: _keyPassword, value: password),
+        if (serverExpiresAt != null)
+          _storage.write(
+            key: _keyServerExpiresAt,
+            value: serverExpiresAt.toUtc().toIso8601String(),
+          )
+        else
+          _storage.delete(key: _keyServerExpiresAt),
       ]);
     } catch (e) {
       AppLogger.error('SecureStorage write warning: $e', feature: 'storage');
@@ -75,22 +84,32 @@ class SecureStorage {
     }
   }
 
-  Future<({String serverUrl, String username, String password})?>
+  Future<
+    ({
+      String serverUrl,
+      String username,
+      String password,
+      DateTime? serverExpiresAt,
+    })?
+  >
   loadCredentials() async {
     // 1. Prefer FlutterSecureStorage
     String? serverUrl;
     String? username;
     String? password;
+    DateTime? serverExpiresAt;
 
     try {
       final results = await Future.wait([
         _storage.read(key: _keyServerUrl),
         _storage.read(key: _keyUsername),
         _storage.read(key: _keyPassword),
+        _storage.read(key: _keyServerExpiresAt),
       ]);
       serverUrl = results[0];
       username = results[1];
       password = results[2];
+      serverExpiresAt = DateTime.tryParse(results[3] ?? '')?.toUtc();
     } catch (e) {
       AppLogger.error('SecureStorage read warning: $e', feature: 'storage');
     }
@@ -106,7 +125,12 @@ class SecureStorage {
             .saveAuthIdentity(serverUrl: serverUrl, username: username)
             .catchError((_) {}),
       );
-      return (serverUrl: serverUrl, username: username, password: password);
+      return (
+        serverUrl: serverUrl,
+        username: username,
+        password: password,
+        serverExpiresAt: serverExpiresAt,
+      );
     }
 
     // 2. One-time migrate legacy Base64 password from preferences, then clear it.
@@ -132,6 +156,7 @@ class SecureStorage {
             serverUrl: prefUrl,
             username: prefUser,
             password: decodedPass,
+            serverExpiresAt: null,
           );
         }
       }
@@ -146,6 +171,7 @@ class SecureStorage {
         _storage.delete(key: _keyServerUrl),
         _storage.delete(key: _keyUsername),
         _storage.delete(key: _keyPassword),
+        _storage.delete(key: _keyServerExpiresAt),
       ]);
     } catch (e) {
       AppLogger.error('SecureStorage clear warning: $e', feature: 'storage');

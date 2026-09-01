@@ -9,6 +9,21 @@ import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/server_config.dart';
 import 'package:iptv/domain/repositories/auth_repository.dart';
 
+DateTime? parseXtreamExpiry(Object? value) {
+  if (value == null) return null;
+  final raw = value.toString().trim();
+  if (raw.isEmpty || raw == '0' || raw.toLowerCase() == 'null') return null;
+
+  final epochSeconds = int.tryParse(raw);
+  if (epochSeconds != null && epochSeconds > 0) {
+    return DateTime.fromMillisecondsSinceEpoch(
+      epochSeconds * 1000,
+      isUtc: true,
+    );
+  }
+  return DateTime.tryParse(raw)?.toUtc();
+}
+
 class AuthRepositoryImpl implements AuthRepository {
   const AuthRepositoryImpl({required this.secureStorage});
 
@@ -64,11 +79,14 @@ class AuthRepositoryImpl implements AuthRepository {
         return Err(AppResultError('Account is $status. Please contact your provider.'));
       }
 
+      final serverExpiresAt = parseXtreamExpiry(userInfo['exp_date']);
+
       // Save verified credentials to secure storage
       await secureStorage.saveCredentials(
         serverUrl: normalizedUrl,
         username: user,
         password: pass,
+        serverExpiresAt: serverExpiresAt,
       );
 
       tempClient.close();
@@ -77,6 +95,7 @@ class AuthRepositoryImpl implements AuthRepository {
         serverUrl: normalizedUrl,
         username: user,
         password: pass,
+        expiresAt: serverExpiresAt,
       ));
     } catch (e) {
       if (kDebugMode) {
@@ -97,6 +116,7 @@ class AuthRepositoryImpl implements AuthRepository {
       serverUrl: creds.serverUrl,
       username: creds.username,
       password: creds.password,
+      expiresAt: creds.serverExpiresAt,
     );
   }
 

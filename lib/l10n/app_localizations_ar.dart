@@ -432,6 +432,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsAccount => 'الحساب';
 
   @override
+  String get settingsAccessExpiry => 'انتهاء صلاحية الوصول';
+
+  @override
+  String get settingsTrialExpiry => 'انتهاء تجربة HOPE TV';
+
+  @override
+  String get settingsSubscriptionExpiry => 'انتهاء اشتراك HOPE TV';
+
+  @override
+  String get settingsIptvServerExpiry => 'انتهاء اشتراك خادم IPTV';
+
+  @override
+  String get settingsExpiryUnavailable => 'لم يتم توفير تاريخ انتهاء';
+
+  @override
+  String get settingsExpiryChecking => 'جارٍ التحقق…';
+
+  @override
   String get settingsAbout => 'حول التطبيق';
 
   @override
@@ -979,6 +997,33 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get subscriptionPortalNotConfigured => 'موقع الاشتراك غير مُعد بعد.';
+
+  @override
+  String get trialStartedTitle => 'تم تفعيل تجربتك لمدة 7 أيام';
+
+  @override
+  String trialStartedBody(String endDate) {
+    return 'لديك الآن وصول كامل إلى HOPE TV حتى $endDate.';
+  }
+
+  @override
+  String get trialStartedContinue => 'متابعة';
+
+  @override
+  String get trialActiveUnknownEnd => 'نهاية الفترة التجريبية';
+
+  @override
+  String get trialActivationFailedTitle => 'لم يكتمل تفعيل الفترة التجريبية';
+
+  @override
+  String get trialActivationFailedBody =>
+      'تم التحقق من بريدك الإلكتروني، لكن تعذر تأكيد فترة تجريبية نشطة من الخادم. أعد المحاولة بعد نشر الواجهة الخلفية؛ لن يستهلك التطبيق تجربتك أو يعيد ضبطها.';
+
+  @override
+  String get trialActivationRetry => 'إعادة محاولة التفعيل';
+
+  @override
+  String get trialActivationSignOut => 'تسجيل الخروج';
 
   @override
   String get updateAvailableTitle => 'تحديث متاح';

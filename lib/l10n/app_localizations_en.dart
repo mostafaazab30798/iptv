@@ -422,6 +422,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAccount => 'Account';
 
   @override
+  String get settingsAccessExpiry => 'Access expiration';
+
+  @override
+  String get settingsTrialExpiry => 'HOPE TV trial expires';
+
+  @override
+  String get settingsSubscriptionExpiry => 'HOPE TV subscription expires';
+
+  @override
+  String get settingsIptvServerExpiry => 'IPTV server expires';
+
+  @override
+  String get settingsExpiryUnavailable => 'No expiration date provided';
+
+  @override
+  String get settingsExpiryChecking => 'Checking…';
+
+  @override
   String get settingsAbout => 'About';
 
   @override
@@ -974,6 +992,33 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get subscriptionPortalNotConfigured =>
       'Subscription website is not configured yet.';
+
+  @override
+  String get trialStartedTitle => 'Your 7-day trial is active';
+
+  @override
+  String trialStartedBody(String endDate) {
+    return 'You now have full HOPE TV access through $endDate.';
+  }
+
+  @override
+  String get trialStartedContinue => 'Continue';
+
+  @override
+  String get trialActiveUnknownEnd => 'the end of your trial';
+
+  @override
+  String get trialActivationFailedTitle => 'Trial activation did not complete';
+
+  @override
+  String get trialActivationFailedBody =>
+      'Your email was verified, but HOPE TV could not confirm an active trial from the server. Retry after the backend is deployed; the app will not consume or reset your trial.';
+
+  @override
+  String get trialActivationRetry => 'Retry activation';
+
+  @override
+  String get trialActivationSignOut => 'Sign out';
 
   @override
   String get updateAvailableTitle => 'Update available';

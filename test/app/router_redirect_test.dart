@@ -71,5 +71,20 @@ void main() {
         Routes.accessRequired,
       );
     });
+
+    test('unresolved entitlement uses splash instead of access required', () {
+      expect(
+        routeRedirectForSession(
+          location: Routes.home,
+          iptvAuthenticated: true,
+          appAccountSignedIn: true,
+          accessGateEnabled: true,
+          entitlementAllowsPremium: false,
+          entitlementLoading: false,
+          entitlementInitialized: false,
+        ),
+        Routes.splash,
+      );
+    });
   });
 }

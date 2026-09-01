@@ -830,6 +830,42 @@ abstract class AppLocalizations {
   /// **'Account'**
   String get settingsAccount;
 
+  /// No description provided for @settingsAccessExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Access expiration'**
+  String get settingsAccessExpiry;
+
+  /// No description provided for @settingsTrialExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'HOPE TV trial expires'**
+  String get settingsTrialExpiry;
+
+  /// No description provided for @settingsSubscriptionExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'HOPE TV subscription expires'**
+  String get settingsSubscriptionExpiry;
+
+  /// No description provided for @settingsIptvServerExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'IPTV server expires'**
+  String get settingsIptvServerExpiry;
+
+  /// No description provided for @settingsExpiryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No expiration date provided'**
+  String get settingsExpiryUnavailable;
+
+  /// No description provided for @settingsExpiryChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get settingsExpiryChecking;
+
   /// No description provided for @settingsAbout.
   ///
   /// In en, this message translates to:
@@ -1807,6 +1843,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Subscription website is not configured yet.'**
   String get subscriptionPortalNotConfigured;
+
+  /// No description provided for @trialStartedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your 7-day trial is active'**
+  String get trialStartedTitle;
+
+  /// No description provided for @trialStartedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You now have full HOPE TV access through {endDate}.'**
+  String trialStartedBody(String endDate);
+
+  /// No description provided for @trialStartedContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get trialStartedContinue;
+
+  /// No description provided for @trialActiveUnknownEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'the end of your trial'**
+  String get trialActiveUnknownEnd;
+
+  /// No description provided for @trialActivationFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trial activation did not complete'**
+  String get trialActivationFailedTitle;
+
+  /// No description provided for @trialActivationFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your email was verified, but HOPE TV could not confirm an active trial from the server. Retry after the backend is deployed; the app will not consume or reset your trial.'**
+  String get trialActivationFailedBody;
+
+  /// No description provided for @trialActivationRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry activation'**
+  String get trialActivationRetry;
+
+  /// No description provided for @trialActivationSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get trialActivationSignOut;
 
   /// No description provided for @updateAvailableTitle.
   ///

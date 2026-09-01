@@ -15,12 +15,14 @@ import 'package:iptv/domain/repositories/entitlement_repository.dart';
 class EntitlementState {
   const EntitlementState({
     required this.loading,
+    this.initialized = false,
     this.entitlement,
     this.errorMessage,
     this.offline = false,
   });
 
   final bool loading;
+  final bool initialized;
   final AppEntitlement? entitlement;
   final String? errorMessage;
   final bool offline;
@@ -29,6 +31,7 @@ class EntitlementState {
 
   EntitlementState copyWith({
     bool? loading,
+    bool? initialized,
     AppEntitlement? entitlement,
     String? errorMessage,
     bool? offline,
@@ -37,6 +40,7 @@ class EntitlementState {
   }) {
     return EntitlementState(
       loading: loading ?? this.loading,
+      initialized: initialized ?? this.initialized,
       entitlement: clearEntitlement ? null : (entitlement ?? this.entitlement),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       offline: offline ?? this.offline,
@@ -75,7 +79,7 @@ class EntitlementController extends StateNotifier<EntitlementState> {
 
   Future<void> refresh({bool allowOfflineFallback = true}) async {
     if (!CommercialApiConfig.isConfigured) {
-      state = const EntitlementState(loading: false);
+      state = const EntitlementState(loading: false, initialized: true);
       return;
     }
 
@@ -84,6 +88,7 @@ class EntitlementController extends StateNotifier<EntitlementState> {
     if (deviceId == null) {
       state = state.copyWith(
         loading: false,
+        initialized: true,
         errorMessage: 'Device registration required.',
         clearEntitlement: true,
       );
@@ -94,6 +99,7 @@ class EntitlementController extends StateNotifier<EntitlementState> {
       final entitlement = await _entitlements.refresh(deviceId: deviceId);
       state = EntitlementState(
         loading: false,
+        initialized: true,
         entitlement: entitlement,
         offline: false,
       );
@@ -109,6 +115,7 @@ class EntitlementController extends StateNotifier<EntitlementState> {
         if (offline != null) {
           state = EntitlementState(
             loading: false,
+            initialized: true,
             entitlement: offline,
             offline: true,
           );
@@ -117,6 +124,7 @@ class EntitlementController extends StateNotifier<EntitlementState> {
       }
       state = state.copyWith(
         loading: false,
+        initialized: true,
         errorMessage: e.toString(),
         clearEntitlement: true,
       );

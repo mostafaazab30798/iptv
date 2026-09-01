@@ -184,6 +184,12 @@
   "settingsUser": "User",
   "settingsLanguage": "Language",
   "settingsAccount": "Account",
+  "settingsAccessExpiry": "Access expiration",
+  "settingsTrialExpiry": "HOPE TV trial expires",
+  "settingsSubscriptionExpiry": "HOPE TV subscription expires",
+  "settingsIptvServerExpiry": "IPTV server expires",
+  "settingsExpiryUnavailable": "No expiration date provided",
+  "settingsExpiryChecking": "Checking…",
   "settingsAbout": "About",
   "settingsVersion": "Version",
   "settingsEnglish": "English",
@@ -432,6 +438,19 @@
   "accessRequiredSubscribe": "Subscribe on our website",
   "accessRequiredChangeServer": "Use another IPTV server",
   "subscriptionPortalNotConfigured": "Subscription website is not configured yet.",
+  "trialStartedTitle": "Your 7-day trial is active",
+  "trialStartedBody": "You now have full HOPE TV access through {endDate}.",
+  "@trialStartedBody": {
+    "placeholders": {
+      "endDate": { "type": "String" }
+    }
+  },
+  "trialStartedContinue": "Continue",
+  "trialActiveUnknownEnd": "the end of your trial",
+  "trialActivationFailedTitle": "Trial activation did not complete",
+  "trialActivationFailedBody": "Your email was verified, but HOPE TV could not confirm an active trial from the server. Retry after the backend is deployed; the app will not consume or reset your trial.",
+  "trialActivationRetry": "Retry activation",
+  "trialActivationSignOut": "Sign out",
 
   "updateAvailableTitle": "Update available",
   "updateAvailableBody": "HOPE TV {version} is available ({size}).",

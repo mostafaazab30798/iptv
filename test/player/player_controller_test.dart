@@ -108,6 +108,28 @@ void main() {
       expect(controller.state.position, equals(const Duration(seconds: 30)));
     });
 
+    test('scrubbing stays paused until release and then resumes', () async {
+      final source = PlayerSource.vod(
+        url: 'http://test.vod/movie.mp4',
+        title: 'Scrub Session',
+        movieId: 506,
+      );
+      await controller.load(source);
+      expect(fakeEngine.currentStatus, PlayerStatus.playing);
+
+      controller.beginSeekScrub();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(fakeEngine.currentStatus, PlayerStatus.paused);
+      expect(controller.state.isPlaying, isFalse);
+
+      await controller.finishSeekScrub(const Duration(minutes: 25));
+
+      expect(fakeEngine.currentPosition, const Duration(minutes: 25));
+      expect(fakeEngine.currentStatus, PlayerStatus.playing);
+      expect(controller.state.isPlaying, isTrue);
+    });
+
     test('setPlaybackRate updates playback speed', () async {
       expect(controller.state.playbackRate, equals(1.0));
       await controller.setPlaybackRate(1.5);

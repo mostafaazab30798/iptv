@@ -48,9 +48,8 @@ abstract final class Routes {
 
 /// Resolves navigation from the two independent authentication layers.
 ///
-/// A valid IPTV provider session is sufficient to use the IPTV app. HOPE TV
-/// account authentication is only required for account-management routes and
-/// must never turn a successful provider login into an access-denied screen.
+/// When the commercial gate is enabled, an IPTV session is only routed to
+/// premium screens after entitlement resolution has completed.
 String? routeRedirectForSession({
   required String location,
   required bool iptvAuthenticated,
@@ -58,6 +57,7 @@ String? routeRedirectForSession({
   bool accessGateEnabled = false,
   bool entitlementAllowsPremium = false,
   bool entitlementLoading = false,
+  bool entitlementInitialized = true,
 }) {
   final onAppAuthRoute =
       location == Routes.signIn || location == Routes.verifyCode;
@@ -78,6 +78,7 @@ String? routeRedirectForSession({
         iptvAuthenticated &&
         !onAccountRoute &&
         !onAppAuthRoute) {
+      if (!entitlementInitialized) return Routes.splash;
       if (entitlementAllowsPremium) {
         return onAccessRequired ? Routes.home : null;
       }
@@ -143,6 +144,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         accessGateEnabled: CommercialApiConfig.accessGateEnabled,
         entitlementAllowsPremium: entitlement.allowsPremium,
         entitlementLoading: entitlement.loading,
+        entitlementInitialized: entitlement.initialized,
       );
     },
     routes: [
