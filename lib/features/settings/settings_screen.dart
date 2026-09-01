@@ -675,7 +675,7 @@ class _SegmentItem extends StatelessWidget {
 // 4. System & Software Bento Card
 // ---------------------------------------------------------------------------
 
-class _SystemInfoCard extends StatelessWidget {
+class _SystemInfoCard extends ConsumerWidget {
   const _SystemInfoCard({
     required this.statusLabel,
     required this.isChecking,
@@ -687,7 +687,11 @@ class _SystemInfoCard extends StatelessWidget {
   final VoidCallback? onCheckUpdates;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final versionAsync = ref.watch(appVersionStringProvider);
+    final versionText = versionAsync.valueOrNull ??
+        'v${AppConstants.appVersion} (${AppConstants.appBuildNumber})';
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF11141D),
@@ -747,9 +751,9 @@ class _SystemInfoCard extends StatelessWidget {
                       width: 0.6,
                     ),
                   ),
-                  child: const Text(
-                    'v${AppConstants.appVersion}',
-                    style: TextStyle(
+                  child: Text(
+                    versionText,
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,

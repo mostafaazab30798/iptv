@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/bootstrap.dart';
+import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/core/identity/installation_identity.dart';
 import 'package:iptv/core/identity/trusted_time_service.dart';
 import 'package:iptv/core/network/api_client.dart';
 import 'package:iptv/core/network/api_config.dart';
+import 'package:iptv/core/releases/installed_app_info.dart';
 import 'package:iptv/core/storage/database/app_database.dart' hide Channel;
 import 'package:iptv/core/storage/preferences_storage.dart';
 import 'package:iptv/core/storage/secure_storage.dart';
@@ -360,6 +362,22 @@ final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
 
 final releaseRepositoryProvider = Provider<ReleaseRepository>((ref) {
   return ReleaseRepositoryImpl();
+});
+
+final installedAppInfoProvider = Provider<InstalledAppInfo>((ref) {
+  return PackageInfoInstalledAppInfo();
+});
+
+final appVersionStringProvider = FutureProvider<String>((ref) async {
+  final appInfo = ref.watch(installedAppInfoProvider);
+  try {
+    final version = await appInfo.getVersion();
+    final build = await appInfo.getBuildNumber();
+    if (version.isNotEmpty) {
+      return build != null ? 'v$version ($build)' : 'v$version';
+    }
+  } catch (_) {}
+  return 'v${AppConstants.appVersion} (${AppConstants.appBuildNumber})';
 });
 
 final updateProvider = StateNotifierProvider<UpdateController, UpdateState>((

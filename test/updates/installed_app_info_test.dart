@@ -1,4 +1,6 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv/app/providers.dart';
 import 'package:iptv/core/releases/installed_app_info.dart';
 
 void main() {
@@ -46,6 +48,22 @@ void main() {
     test('rejects invalid build numbers', () async {
       final info = FakeInstalledAppInfo(version: '1.0.0', buildNumber: null);
       expect(await info.getBuildNumber(), isNull);
+    });
+  });
+
+  group('appVersionStringProvider', () {
+    test('formats version with build number', () async {
+      final container = ProviderContainer(
+        overrides: [
+          installedAppInfoProvider.overrideWithValue(
+            FakeInstalledAppInfo(version: '1.0.0', buildNumber: 1),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final version = await container.read(appVersionStringProvider.future);
+      expect(version, 'v1.0.0 (1)');
     });
   });
 }

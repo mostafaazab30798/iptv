@@ -13,6 +13,10 @@ class CommercialEdgeFunctionsClient {
     Map<String, String>? queryParameters,
     bool requireSession = true,
   }) async {
+    final ok = await SupabaseClientFactory.ensureInitialized();
+    if (!ok) {
+      throw StateError('Commercial Supabase client is not configured.');
+    }
     final client = SupabaseClientFactory.client;
     if (requireSession && client.auth.currentSession == null) {
       throw StateError('Not signed in to app account.');
