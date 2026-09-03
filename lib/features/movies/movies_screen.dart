@@ -17,7 +17,6 @@ import 'package:iptv/features/movies/movies_controller.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
-import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/category_card.dart';
@@ -434,10 +433,19 @@ class _MovieGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FocusableCard(
+    return PosterHeartCard(
       onTap: onTap,
-      padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(AppRadius.card),
+      favorite: (heartFocus, onHeartDirection) => FavoriteToggleButton(
+        type: FavoriteType.movie,
+        itemId: movie.streamId,
+        name: movie.name,
+        imageUrl: movie.streamIcon,
+        size: 22,
+        padding: 2,
+        focusNode: heartFocus,
+        onDirection: onHeartDirection,
+      ),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -455,16 +463,8 @@ class _MovieGridCard extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            child: PosterTopActions(
-              rating: movie.rating,
-              favoriteButton: FavoriteToggleButton(
-                type: FavoriteType.movie,
-                itemId: movie.streamId,
-                name: movie.name,
-                imageUrl: movie.streamIcon,
-                size: 22,
-                padding: 2,
-              ),
+            child: IgnorePointer(
+              child: PosterTopActions(rating: movie.rating),
             ),
           ),
           Positioned(

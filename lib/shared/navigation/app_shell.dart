@@ -18,9 +18,13 @@ import 'package:iptv/features/kids_mode/widgets/kids_mode_nav_button.dart';
 import 'package:iptv/features/live/live_controller.dart';
 import 'package:iptv/features/movies/movies_controller.dart';
 import 'package:iptv/features/series/series_controller.dart';
+import 'package:iptv/player/handoff/presentation/companion_scanner_modal.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
+import 'package:iptv/shared/navigation/shell_focus_bridge.dart';
 import 'package:iptv/shared/widgets/landscape_gate.dart';
+import 'package:dpad/dpad.dart';
 
 class ShellNavItem {
   const ShellNavItem({
@@ -94,32 +98,46 @@ class AppShell extends ConsumerWidget {
           unawaited(handleShellSystemBack(context, currentPath));
         }
       },
-      child: LandscapeGate(
-        child: Scaffold(
-          backgroundColor: AppColors.bg0,
-          extendBody: false,
-          body: Column(
-            children: [
-              if (!isHomePortrait) ...[
-                _ShellTopNav(
-                  items: navItems,
-                  selectedIndex: selectedIndex,
-                  currentPath: currentPath,
-                  onItemTap: (index, route) => _onNavigate(context, route),
-                  onRefresh: () => _handleSmartRefresh(ref, currentPath),
+      child: _ShellNavFocusScope(
+        child: LandscapeGate(
+          child: Scaffold(
+            backgroundColor: AppColors.bg0,
+            extendBody: false,
+            body: Column(
+              children: [
+                if (!isHomePortrait) ...[
+                  DpadRegion(
+                    memoryKey: 'shell/nav',
+                    debugLabel: 'shell-nav',
+                    child: _ShellTopNav(
+                      items: navItems,
+                      selectedIndex: selectedIndex,
+                      currentPath: currentPath,
+                      onItemTap: (index, route) =>
+                          _onNavigate(context, route),
+                      onRefresh: () =>
+                          _handleSmartRefresh(ref, currentPath),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+                Expanded(
+                  child: child,
                 ),
-                const SizedBox(height: AppSpacing.sm),
               ],
-              Expanded(child: child),
-            ],
+            ),
+            bottomNavigationBar: isPortrait
+                ? DpadRegion(
+                    memoryKey: 'shell/dock',
+                    debugLabel: 'shell-dock',
+                    child: _FloatingGlassDock(
+                      items: navItems,
+                      selectedIndex: selectedIndex,
+                      onItemTap: (index, route) => _onNavigate(context, route),
+                    ),
+                  )
+                : null,
           ),
-          bottomNavigationBar: isPortrait
-              ? _FloatingGlassDock(
-                  items: navItems,
-                  selectedIndex: selectedIndex,
-                  onItemTap: (index, route) => _onNavigate(context, route),
-                )
-              : null,
         ),
       ),
     );
@@ -156,6 +174,39 @@ class AppShell extends ConsumerWidget {
   }
 }
 
+/// Holds the shell top-nav entry [FocusNode] for explicit D-pad Up from content.
+class _ShellNavFocusScope extends StatefulWidget {
+  const _ShellNavFocusScope({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_ShellNavFocusScope> createState() => _ShellNavFocusScopeState();
+}
+
+class _ShellNavFocusScopeState extends State<_ShellNavFocusScope> {
+  late final FocusNode _navEntry =
+      FocusNode(debugLabel: 'shell-nav-entry');
+  late final FocusNode _heroChromeEntry =
+      FocusNode(debugLabel: 'hero-chrome-entry');
+
+  @override
+  void dispose() {
+    _navEntry.dispose();
+    _heroChromeEntry.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ShellFocusBridge(
+      navEntry: _navEntry,
+      heroChromeEntry: _heroChromeEntry,
+      child: widget.child,
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Shell Top Navigation Bar (TV / Landscape Rail / Top Action Header)
 // ---------------------------------------------------------------------------
@@ -176,16 +227,25 @@ class _ShellTopNav extends StatelessWidget {
   final VoidCallback onRefresh;
 
   String _getTitle(BuildContext context, String currentPath) {
-    if (currentPath.startsWith(Routes.movies)) return context.l10n.navMovies;
-    if (currentPath.startsWith(Routes.series)) return context.l10n.navSeries;
-    if (currentPath.startsWith(Routes.live)) return context.l10n.navLive;
-    if (currentPath.startsWith(Routes.favorites))
+    if (currentPath.startsWith(Routes.movies)) {
+      return context.l10n.navMovies;
+    }
+    if (currentPath.startsWith(Routes.series)) {
+      return context.l10n.navSeries;
+    }
+    if (currentPath.startsWith(Routes.live)) {
+      return context.l10n.navLive;
+    }
+    if (currentPath.startsWith(Routes.favorites)) {
       return context.l10n.labelFavorites;
-    if (currentPath.startsWith(Routes.settings))
+    }
+    if (currentPath.startsWith(Routes.settings)) {
       return context.l10n.navSettings;
-    if (currentPath.startsWith(Routes.history))
+    }
+    if (currentPath.startsWith(Routes.history)) {
       return context.l10n.labelContinueWatching;
-    return 'Watch';
+    }
+    return context.l10n.actionWatch;
   }
 
   @override
@@ -198,14 +258,17 @@ class _ShellTopNav extends StatelessWidget {
       final topPadding = MediaQueryData.fromView(View.of(context)).padding.top;
       final topInset = topPadding > 0 ? (topPadding + 10.0) : 48.0;
 
-      // Portrait Top Header matching Home screen hero banner exactly
-      return Container(
+      final headerContent = Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             stops: [0.0, 0.70, 1.0],
-            colors: [Color(0xF5080B12), Color(0xDC080B12), Colors.transparent],
+            colors: [
+              Color(0xF5080B12),
+              Color(0xDC080B12),
+              Colors.transparent,
+            ],
           ),
         ),
         padding: EdgeInsets.fromLTRB(
@@ -220,8 +283,10 @@ class _ShellTopNav extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: currentPath == Routes.home
+                    ? AppColors.accent
+                    : Colors.white,
                 fontSize: 28,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.5,
@@ -260,6 +325,15 @@ class _ShellTopNav extends StatelessWidget {
                     isActive: currentPath == Routes.search,
                     tooltip: context.l10n.actionSearch,
                     onTap: () => context.push(Routes.search),
+                    focusNode: ShellFocusBridge.heroChromeEntryOf(context),
+                  ),
+                  const SizedBox(width: 3),
+                  _GlassActionButton(
+                    icon: AppIcons.generalTv,
+                    activeIcon: AppIcons.generalTv,
+                    isActive: false,
+                    tooltip: 'TV Remote & Mouse',
+                    onTap: () => CompanionScannerModal.show(context),
                   ),
                   const SizedBox(width: 3),
                   _SpinningRefreshButton(
@@ -280,6 +354,8 @@ class _ShellTopNav extends StatelessWidget {
           ],
         ),
       );
+
+      return headerContent;
     }
 
     // Landscape / Desktop / TV Header with High-Performance Gradient
@@ -304,7 +380,7 @@ class _ShellTopNav extends StatelessWidget {
           ),
           child: Row(
             children: [
-              _BrandLogo(onTap: () => context.go(Routes.home)),
+              _BrandLogo(onTap: () => context.go(Routes.home), entry: true),
               const SizedBox(width: AppSpacing.xl),
               Expanded(
                 child: Row(
@@ -353,6 +429,14 @@ class _ShellTopNav extends StatelessWidget {
                       isActive: currentPath == Routes.search,
                       tooltip: context.l10n.actionSearch,
                       onTap: () => context.push(Routes.search),
+                    ),
+                    const SizedBox(width: 4),
+                    _GlassActionButton(
+                      icon: AppIcons.generalTv,
+                      activeIcon: AppIcons.generalTv,
+                      isActive: false,
+                      tooltip: 'TV Remote & Mouse',
+                      onTap: () => CompanionScannerModal.show(context),
                     ),
                     const SizedBox(width: 4),
                     _SpinningRefreshButton(
@@ -481,63 +565,65 @@ class _DockNavItemState extends State<_DockNavItem> {
   Widget build(BuildContext context) {
     final isSelected = widget.isSelected;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
+    return TvFocusable(
+      onSelect: widget.onTap,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
         child: AnimatedContainer(
-          duration: MotionPolicy.of(context).standard,
-          curve: AppMotion.curveEnter,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: isSelected
-                ? AppColors.accent.withAlpha(28)
-                : _hovered
-                ? Colors.white.withAlpha(12)
-                : Colors.transparent,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedScale(
-                scale: isSelected ? 1.15 : (_hovered ? 1.05 : 1.0),
-                duration: MotionPolicy.of(context).focus,
-                curve: AppMotion.curveEnter,
-                child: HugeIcon(
-                  icon: isSelected ? widget.item.activeIcon : widget.item.icon,
-                  size: widget.isCompact ? 20 : 22,
-                  color: isSelected
-                      ? AppColors.accent
-                      : (_hovered
+            duration: MotionPolicy.of(context).standard,
+            curve: AppMotion.curveEnter,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: isSelected
+                  ? AppColors.accent.withAlpha(28)
+                  : _hovered
+                      ? Colors.white.withAlpha(12)
+                      : Colors.transparent,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  scale: isSelected ? 1.15 : (_hovered ? 1.05 : 1.0),
+                  duration: MotionPolicy.of(context).focus,
+                  curve: AppMotion.curveEnter,
+                  child: HugeIcon(
+                    icon: isSelected
+                        ? widget.item.activeIcon
+                        : widget.item.icon,
+                    size: widget.isCompact ? 20 : 22,
+                    color: isSelected
+                        ? AppColors.accent
+                        : (_hovered
                             ? AppColors.textPrimary
                             : AppColors.textSecondary),
+                  ),
                 ),
-              ),
-              if (!widget.isCompact) ...[
-                const SizedBox(height: 3),
-                Text(
-                  widget.item.label,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected
-                        ? Colors.white
-                        : (_hovered
+                if (!widget.isCompact) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    widget.item.label,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : (_hovered
                               ? AppColors.textPrimary
                               : AppColors.textSecondary),
-                    letterSpacing: 0.2,
+                      letterSpacing: 0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-      ),
     );
   }
 }
@@ -565,12 +651,12 @@ class _GlassHeaderNavItemState extends State<_GlassHeaderNavItem> {
     final isSelected = widget.isSelected;
     final isActive = isSelected || _hovered;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
+    return TvFocusable(
+      onSelect: widget.onTap,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
         child: AnimatedContainer(
           duration: MotionPolicy.of(context).standard,
           margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -680,20 +766,21 @@ class _SpinningRefreshButtonState extends State<_SpinningRefreshButton>
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: SystemMouseCursors.click,
-      child: Tooltip(
-        message: widget.tooltip,
-        child: GestureDetector(
-          onTap: _handleTap,
+    return TvFocusable(
+      onSelect: _handleTap,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
+        child: Tooltip(
+          message: widget.tooltip,
           child: AnimatedContainer(
             duration: MotionPolicy.of(context).focus,
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: _hovered ? Colors.white.withAlpha(25) : Colors.transparent,
+              color:
+                  _hovered ? Colors.white.withAlpha(25) : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
             ),
             child: RotationTransition(
@@ -725,6 +812,7 @@ class _GlassActionButton extends StatefulWidget {
     required this.isActive,
     required this.tooltip,
     required this.onTap,
+    this.focusNode,
   });
 
   final List<List<dynamic>> icon;
@@ -732,6 +820,7 @@ class _GlassActionButton extends StatefulWidget {
   final bool isActive;
   final String tooltip;
   final VoidCallback onTap;
+  final FocusNode? focusNode;
 
   @override
   State<_GlassActionButton> createState() => _GlassActionButtonState();
@@ -743,14 +832,15 @@ class _GlassActionButtonState extends State<_GlassActionButton> {
   @override
   Widget build(BuildContext context) {
     final active = widget.isActive;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: SystemMouseCursors.click,
-      child: Tooltip(
-        message: widget.tooltip,
-        child: GestureDetector(
-          onTap: widget.onTap,
+    return TvFocusable(
+      focusNode: widget.focusNode,
+      onSelect: widget.onTap,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
+        child: Tooltip(
+          message: widget.tooltip,
           child: AnimatedContainer(
             duration: MotionPolicy.of(context).focus,
             width: 34,
@@ -759,8 +849,8 @@ class _GlassActionButtonState extends State<_GlassActionButton> {
               color: active
                   ? AppColors.accent.withAlpha(35)
                   : (_hovered
-                        ? Colors.white.withAlpha(25)
-                        : Colors.transparent),
+                      ? Colors.white.withAlpha(25)
+                      : Colors.transparent),
               borderRadius: BorderRadius.circular(10),
               border: active
                   ? Border.all(
@@ -786,8 +876,10 @@ class _GlassActionButtonState extends State<_GlassActionButton> {
 }
 
 class _BrandLogo extends StatefulWidget {
-  const _BrandLogo({required this.onTap});
+  const _BrandLogo({required this.onTap, this.entry = false});
+
   final VoidCallback onTap;
+  final bool entry;
 
   @override
   State<_BrandLogo> createState() => _BrandLogoState();
@@ -798,13 +890,15 @@ class _BrandLogoState extends State<_BrandLogo> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
+    final navEntry = ShellFocusBridge.navEntryOf(context);
+    return TvFocusable(
+      entry: widget.entry,
+      focusNode: navEntry,
+      onSelect: widget.onTap,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
         child: AnimatedScale(
           scale: _hovered ? 1.04 : 1.0,
           duration: MotionPolicy.of(context).focus,

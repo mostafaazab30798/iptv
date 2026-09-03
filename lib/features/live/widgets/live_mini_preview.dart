@@ -110,9 +110,10 @@ class LiveMiniPreview extends ConsumerWidget {
           // Video Surface Stage
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
+            child: RepaintBoundary(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
                 if (showVideoSurface)
                   PlayerView(
                     aspectRatioIndex: aspectRatioIndex,
@@ -216,6 +217,7 @@ class LiveMiniPreview extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
             ),
           ),
 

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/domain/entities/epg_program.dart';
 import 'package:iptv/domain/repositories/live_repository.dart';
 import 'package:iptv/features/catalog_filter/excluded_categories_live_repository.dart';
 import 'package:iptv/features/catalog_filter/excluded_live_categories_policy.dart';
@@ -93,4 +94,11 @@ class _FakeLiveRepository implements LiveRepository {
   @override
   Future<Result<Channel>> getChannelById(int streamId) async =>
       Ok(channels.firstWhere((channel) => channel.streamId == streamId));
+
+  @override
+  Future<Result<List<EpgProgram>>> getShortEpg(
+    int streamId, {
+    int limit = 4,
+  }) async =>
+      const Ok([]);
 }

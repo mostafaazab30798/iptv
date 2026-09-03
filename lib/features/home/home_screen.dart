@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +23,7 @@ import 'package:iptv/features/home/widgets/cards/series_card.dart';
 import 'package:iptv/features/home/widgets/home_hero_banner.dart';
 import 'package:iptv/features/home/widgets/home_section_row.dart';
 import 'package:iptv/features/series/series_screen.dart';
+
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
@@ -57,27 +60,85 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // Home Content — Scrollable cinematic rows with dynamic content loading
 // ---------------------------------------------------------------------------
 
-class _HomeContent extends ConsumerWidget {
+class _HomeContent extends ConsumerStatefulWidget {
   const _HomeContent();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends ConsumerState<_HomeContent> {
+  bool _heroAutoPlay = true;
+  Timer? _resumeHeroTimer;
+
+  @override
+  void dispose() {
+    _resumeHeroTimer?.cancel();
+    super.dispose();
+  }
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    // Only react to the outer vertical Home scroller, not nested rows.
+    if (notification.depth != 0) return false;
+    if (notification.metrics.axis != Axis.vertical) return false;
+
+    if (notification is ScrollStartNotification ||
+        notification is ScrollUpdateNotification) {
+      _resumeHeroTimer?.cancel();
+      if (_heroAutoPlay) {
+        setState(() => _heroAutoPlay = false);
+      }
+    } else if (notification is ScrollEndNotification) {
+      _resumeHeroTimer?.cancel();
+      _resumeHeroTimer = Timer(const Duration(milliseconds: 700), () {
+        if (mounted && !_heroAutoPlay) {
+          setState(() => _heroAutoPlay = true);
+        }
+      });
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final sessionAsync = ref.watch(sessionProvider);
-    final homeState = ref.watch(homeControllerProvider);
+    final kidsReady = ref.watch(
+      kidsModeProvider.select((s) => s.isInitialized),
+    );
+    final liveRepoReady = ref.watch(liveRepositoryProvider) != null;
+    final boot = ref.watch(
+      homeControllerProvider.select(
+        (s) => (
+          isLoading: s.isLoading,
+          error: s.error,
+          hasContent: s.heroItem != null ||
+              s.continueWatching.isNotEmpty ||
+              s.liveChannels.isNotEmpty ||
+              s.favorites.isNotEmpty ||
+              s.featuredMovies.isNotEmpty ||
+              s.popularSeries.isNotEmpty ||
+              s.sportsChannels.isNotEmpty ||
+              s.newsChannels.isNotEmpty,
+        ),
+      ),
+    );
 
-    final hasContent =
-        homeState.heroItem != null ||
-        homeState.continueWatching.isNotEmpty ||
-        homeState.liveChannels.isNotEmpty ||
-        homeState.favorites.isNotEmpty ||
-        homeState.featuredMovies.isNotEmpty ||
-        homeState.popularSeries.isNotEmpty;
+    final session = sessionAsync.valueOrNull;
+    final sessionReady = session != null && session.isValid;
 
-    if (sessionAsync.isLoading || (homeState.isLoading && !hasContent)) {
+    // Wait for session + kids-mode (which gates catalog repos) before treating
+    // an empty HomeState as a real "no media" result.
+    final waitingForCatalog =
+        sessionAsync.isLoading ||
+        !kidsReady ||
+        (sessionReady && !liveRepoReady) ||
+        (boot.isLoading && !boot.hasContent);
+
+    if (waitingForCatalog) {
       return const HomeSkeleton();
     }
 
-    if (homeState.error != null && !hasContent) {
+    if (boot.error != null && !boot.hasContent) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -121,7 +182,7 @@ class _HomeContent extends ConsumerWidget {
       );
     }
 
-    if (!hasContent) {
+    if (!boot.hasContent) {
       return EmptyState(
         title: context.l10n.homeEmptyPlaylist,
         subtitle: context.l10n.homeEmptyPlaylistSubtitle,
@@ -133,212 +194,311 @@ class _HomeContent extends ConsumerWidget {
       );
     }
 
-    return ResponsiveBuilder(
-      builder: (context, size) => RefreshIndicator(
-        onRefresh: () => ref
-            .read(homeControllerProvider.notifier)
-            .loadData(forceRefresh: true),
-        child: MediaQuery.removePadding(
-          context: context,
-          removeTop: true,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScrollNotification,
+      child: ResponsiveBuilder(
+        builder: (context, size) => RefreshIndicator(
+          onRefresh: () => ref
+              .read(homeControllerProvider.notifier)
+              .loadData(forceRefresh: true),
+          child: MediaQuery.removePadding(
+            context: context,
+            removeTop: true,
+            child: CustomScrollView(
+              // Platform-default physics; AlwaysScrollable enables pull-to-refresh.
+              physics: const AlwaysScrollableScrollPhysics(),
+              cacheExtent: 160,
+              slivers: [
+                _HomeHeroSliver(autoPlay: _heroAutoPlay),
+                const _HomeContinueWatchingSliver(),
+                const _HomeFeaturedMoviesSliver(),
+                const _HomePopularSeriesSliver(),
+                const _HomeSportsChannelsSliver(),
+                const _HomeNewsChannelsSliver(),
+                const _HomeFavoritesSliver(),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.xxl),
+                ),
+              ],
             ),
-            cacheExtent: 350,
-            slivers: [
-              // 1. Full-Width Cinematic Hero Banner
-              if (homeState.heroItem != null || homeState.heroItems.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: RepaintBoundary(
-                    key: const ValueKey('home-hero'),
-                    child: HomeHeroBanner(
-                      item: homeState.heroItem,
-                      items: homeState.heroItems,
-                      onPlay: (hero) => _playHero(context, ref, hero),
-                      onRefresh: () => ref
-                          .read(homeControllerProvider.notifier)
-                          .loadData(forceRefresh: true),
-                    ),
-                  ),
-                ),
-
-              if (homeState.continueWatching.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                    ),
-                    child: RepaintBoundary(
-                      key: const ValueKey('home-continue-watching'),
-                      child: HomeSectionRow<WatchHistoryEntry>(
-                        title: context.l10n.labelContinueWatching,
-                        onSeeAll: () => context.push(Routes.history),
-                        items: homeState.continueWatching,
-                        height: 215,
-                        itemBuilder: (context, entry, _) => HistoryCard(
-                          entry: entry,
-                          onTap: () => _playHistory(context, ref, entry),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (homeState.continueWatching.isNotEmpty)
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppSpacing.md),
-                ),
-
-              if (homeState.featuredMovies.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                    ),
-                    child: RepaintBoundary(
-                      key: const ValueKey('home-featured-movies'),
-                      child: HomeSectionRow<Movie>(
-                        title: context.l10n.homeFeaturedMovies,
-                        onSeeAll: () => context.push(Routes.movies),
-                        items: homeState.featuredMovies,
-                        height: 215,
-                        itemBuilder: (context, movie, _) => MovieCard(
-                          movie: movie,
-                          onTap: () => _playMovie(context, ref, movie),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (homeState.featuredMovies.isNotEmpty)
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppSpacing.md),
-                ),
-
-              if (homeState.popularSeries.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                    ),
-                    child: RepaintBoundary(
-                      key: const ValueKey('home-popular-series'),
-                      child: HomeSectionRow<Series>(
-                        title: context.l10n.homePopularSeries,
-                        onSeeAll: () => context.push(Routes.series),
-                        items: homeState.popularSeries,
-                        height: 215,
-                        itemBuilder: (context, series, _) => SeriesCard(
-                          series: series,
-                          onTap: () => showSeriesDetailsModal(context, series),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (homeState.popularSeries.isNotEmpty)
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppSpacing.md),
-                ),
-
-              if (homeState.sportsChannels.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                    ),
-                    child: RepaintBoundary(
-                      key: const ValueKey('home-sports-channels'),
-                      child: HomeSectionRow<Channel>(
-                        title: context.l10n.homeSportsChannels,
-                        onSeeAll: () => context.push(Routes.live),
-                        items: homeState.sportsChannels,
-                        height: 135,
-                        itemBuilder: (context, channel, _) => ChannelCard(
-                          channel: channel,
-                          onTap: () => _playChannel(context, ref, channel),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (homeState.sportsChannels.isNotEmpty)
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppSpacing.md),
-                ),
-
-              if (homeState.newsChannels.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                    ),
-                    child: RepaintBoundary(
-                      key: const ValueKey('home-news-channels'),
-                      child: HomeSectionRow<Channel>(
-                        title: context.l10n.homeNewsChannels,
-                        onSeeAll: () => context.push(Routes.live),
-                        items: homeState.newsChannels,
-                        height: 135,
-                        itemBuilder: (context, channel, _) => ChannelCard(
-                          channel: channel,
-                          onTap: () => _playChannel(context, ref, channel),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (homeState.newsChannels.isNotEmpty)
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppSpacing.md),
-                ),
-
-              if (homeState.favorites.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                    ),
-                    child: RepaintBoundary(
-                      key: const ValueKey('home-favorites'),
-                      child: HomeSectionRow<Favorite>(
-                        title: context.l10n.labelFavorites,
-                        onSeeAll: () => context.push(Routes.favorites),
-                        items: homeState.favorites,
-                        height: 135,
-                        itemBuilder: (context, fav, _) => ChannelCard(
-                          channel: Channel(
-                            id: fav.itemId,
-                            serverId: 0,
-                            streamId: fav.itemId,
-                            name: fav.name,
-                            streamIcon: fav.imageUrl,
-                          ),
-                          showBadge: fav.type == FavoriteType.channel,
-                          onTap: () => _playFavorite(context, ref, fav),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
-            ],
           ),
         ),
       ),
     );
   }
+}
 
-  void _playHero(BuildContext context, WidgetRef ref, HomeHeroItem hero) {
+class _HomeHeroSliver extends ConsumerWidget {
+  const _HomeHeroSliver({required this.autoPlay});
+
+  final bool autoPlay;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hero = ref.watch(
+      homeControllerProvider.select(
+        (s) => (item: s.heroItem, items: s.heroItems),
+      ),
+    );
+    if (hero.item == null && hero.items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: RepaintBoundary(
+        key: const ValueKey('home-hero'),
+        child: HomeHeroBanner(
+          item: hero.item,
+          items: hero.items,
+          autoPlay: autoPlay,
+          onPlay: (item) => _HomePlayback.playHero(context, ref, item),
+          onRefresh: () => ref
+              .read(homeControllerProvider.notifier)
+              .loadData(forceRefresh: true),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeContinueWatchingSliver extends ConsumerWidget {
+  const _HomeContinueWatchingSliver();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(
+      homeControllerProvider.select((s) => s.continueWatching),
+    );
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: RepaintBoundary(
+          key: const ValueKey('home-continue-watching'),
+          child: HomeSectionRow<WatchHistoryEntry>(
+            title: context.l10n.labelContinueWatching,
+            onSeeAll: () => context.push(Routes.history),
+            items: items,
+            height: 215,
+            itemWidth: 120,
+            itemBuilder: (context, entry, _) => HistoryCard(
+              key: ValueKey('hist-${entry.itemId}-${entry.type}'),
+              entry: entry,
+              onTap: () => _HomePlayback.playHistory(context, ref, entry),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeFeaturedMoviesSliver extends ConsumerWidget {
+  const _HomeFeaturedMoviesSliver();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(
+      homeControllerProvider.select((s) => s.featuredMovies),
+    );
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: RepaintBoundary(
+          key: const ValueKey('home-featured-movies'),
+          child: HomeSectionRow<Movie>(
+            title: context.l10n.homeFeaturedMovies,
+            onSeeAll: () => context.push(Routes.movies),
+            items: items,
+            height: 215,
+            itemWidth: 120,
+            itemBuilder: (context, movie, _) => MovieCard(
+              key: ValueKey('movie-${movie.streamId}'),
+              movie: movie,
+              onTap: () => _HomePlayback.playMovie(context, ref, movie),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomePopularSeriesSliver extends ConsumerWidget {
+  const _HomePopularSeriesSliver();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(
+      homeControllerProvider.select((s) => s.popularSeries),
+    );
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: RepaintBoundary(
+          key: const ValueKey('home-popular-series'),
+          child: HomeSectionRow<Series>(
+            title: context.l10n.homePopularSeries,
+            onSeeAll: () => context.push(Routes.series),
+            items: items,
+            height: 215,
+            itemWidth: 120,
+            itemBuilder: (context, series, _) => SeriesCard(
+              key: ValueKey(
+                'series-${series.seriesId != 0 ? series.seriesId : series.id}',
+              ),
+              series: series,
+              onTap: () => showSeriesDetailsModal(context, series),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeSportsChannelsSliver extends ConsumerWidget {
+  const _HomeSportsChannelsSliver();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(
+      homeControllerProvider.select((s) => s.sportsChannels),
+    );
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: RepaintBoundary(
+          key: const ValueKey('home-sports-channels'),
+          child: HomeSectionRow<Channel>(
+            title: context.l10n.homeSportsChannels,
+            onSeeAll: () => context.push(Routes.live),
+            items: items,
+            height: 135,
+            itemWidth: 148,
+            itemBuilder: (context, channel, _) => ChannelCard(
+              key: ValueKey('sports-${channel.streamId}'),
+              channel: channel,
+              onTap: () => _HomePlayback.playChannel(context, ref, channel),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeNewsChannelsSliver extends ConsumerWidget {
+  const _HomeNewsChannelsSliver();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(
+      homeControllerProvider.select((s) => s.newsChannels),
+    );
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: RepaintBoundary(
+          key: const ValueKey('home-news-channels'),
+          child: HomeSectionRow<Channel>(
+            title: context.l10n.homeNewsChannels,
+            onSeeAll: () => context.push(Routes.live),
+            items: items,
+            height: 135,
+            itemWidth: 148,
+            itemBuilder: (context, channel, _) => ChannelCard(
+              key: ValueKey('news-${channel.streamId}'),
+              channel: channel,
+              onTap: () => _HomePlayback.playChannel(context, ref, channel),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeFavoritesSliver extends ConsumerWidget {
+  const _HomeFavoritesSliver();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(
+      homeControllerProvider.select((s) => s.favorites),
+    );
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: RepaintBoundary(
+          key: const ValueKey('home-favorites'),
+          child: HomeSectionRow<Favorite>(
+            title: context.l10n.labelFavorites,
+            onSeeAll: () => context.push(Routes.favorites),
+            items: items,
+            height: 135,
+            itemWidth: 148,
+            itemBuilder: (context, fav, _) => ChannelCard(
+              key: ValueKey('fav-${fav.type}-${fav.itemId}'),
+              channel: Channel(
+                id: fav.itemId,
+                serverId: 0,
+                streamId: fav.itemId,
+                name: fav.name,
+                streamIcon: fav.imageUrl,
+              ),
+              showBadge: fav.type == FavoriteType.channel,
+              onTap: () => _HomePlayback.playFavorite(context, ref, fav),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Playback helpers shared by home section slivers.
+abstract final class _HomePlayback {
+  static void playHero(
+    BuildContext context,
+    WidgetRef ref,
+    HomeHeroItem hero,
+  ) {
     if (hero.movie != null) {
-      _playMovie(context, ref, hero.movie!);
+      playMovie(context, ref, hero.movie!);
     } else if (hero.channel != null) {
-      _playChannel(context, ref, hero.channel!);
+      playChannel(context, ref, hero.channel!);
     }
   }
 
-  void _playChannel(BuildContext context, WidgetRef ref, Channel channel) {
+  static void playChannel(
+    BuildContext context,
+    WidgetRef ref,
+    Channel channel,
+  ) {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
@@ -363,7 +523,7 @@ class _HomeContent extends ConsumerWidget {
     context.push(Routes.player);
   }
 
-  void _playMovie(BuildContext context, WidgetRef ref, Movie movie) {
+  static void playMovie(BuildContext context, WidgetRef ref, Movie movie) {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
@@ -389,7 +549,7 @@ class _HomeContent extends ConsumerWidget {
     context.push(Routes.player);
   }
 
-  void _playHistory(
+  static void playHistory(
     BuildContext context,
     WidgetRef ref,
     WatchHistoryEntry entry,
@@ -459,7 +619,11 @@ class _HomeContent extends ConsumerWidget {
     context.push(Routes.player);
   }
 
-  void _playFavorite(BuildContext context, WidgetRef ref, Favorite fav) {
+  static void playFavorite(
+    BuildContext context,
+    WidgetRef ref,
+    Favorite fav,
+  ) {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 

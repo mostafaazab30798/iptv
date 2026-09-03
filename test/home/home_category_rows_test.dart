@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv/core/sports/big_match_detector.dart';
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/data/repositories/live_repository_impl.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/domain/entities/epg_program.dart';
 import 'package:iptv/domain/entities/favorite.dart';
+import 'package:iptv/domain/entities/live_fixture.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/domain/entities/series.dart';
 import 'package:iptv/domain/entities/season.dart';
@@ -20,11 +23,13 @@ class _FakeLiveRepo implements LiveRepository {
     required this.categories,
     required this.channelsByCategory,
     required this.allChannels,
+    this.epgTitles = const {},
   });
 
   final List<Category> categories;
   final Map<int, List<Channel>> channelsByCategory;
   final List<Channel> allChannels;
+  final Map<int, String> epgTitles;
 
   int getChannelsCalls = 0;
   int getChannelsAllCalls = 0;
@@ -56,6 +61,25 @@ class _FakeLiveRepo implements LiveRepository {
     final match = allChannels.where((c) => c.streamId == streamId);
     if (match.isEmpty) return const Err(AppResultError('missing'));
     return Ok(match.first);
+  }
+
+  @override
+  Future<Result<List<EpgProgram>>> getShortEpg(
+    int streamId, {
+    int limit = 4,
+  }) async {
+    final title = epgTitles[streamId];
+    if (title == null) return const Ok([]);
+    final now = DateTime.now();
+    return Ok([
+      EpgProgram(
+        id: streamId,
+        epgId: '$streamId',
+        title: title,
+        start: now.subtract(const Duration(minutes: 10)),
+        end: now.add(const Duration(minutes: 80)),
+      ),
+    ]);
   }
 }
 
@@ -131,6 +155,40 @@ class _EmptyVod implements VodRepository {
   @override
   Future<Result<Movie>> getMovieById(int streamId) async =>
       const Err(AppResultError('none'));
+}
+
+class _MovieVod implements VodRepository {
+  @override
+  Future<Result<List<Category>>> getCategories({bool forceRefresh = false}) async =>
+      const Ok([]);
+
+  @override
+  Future<Result<List<Movie>>> getMovies({
+    int? categoryId,
+    bool forceRefresh = false,
+  }) async =>
+      const Ok([
+        Movie(
+          id: 99,
+          serverId: 1,
+          streamId: 99,
+          name: 'The Matrix',
+          rating: '9.0',
+        ),
+      ]);
+
+  @override
+  Future<Result<Movie>> getMovieById(int streamId) async =>
+      const Err(AppResultError('none'));
+}
+
+class _FakeScores implements LiveScoreSource {
+  _FakeScores(this.fixtures);
+
+  final List<LiveFixture> fixtures;
+
+  @override
+  Future<List<LiveFixture>> fetchLiveBigMatches() async => fixtures;
 }
 
 class _EmptySeries implements SeriesRepository {
@@ -309,5 +367,61 @@ void main() {
     expect(controller.state.liveChannels, hasLength(2));
     expect(controller.state.sportsChannels, isEmpty);
     expect(liveRepo.requestedCategoryIds, isNot(contains(7)));
+  });
+
+  test('live scoreboard binds the match to a beIN/Arabic sports channel, not club TV', () async {
+    final channels = [
+      _ch(id: 1, name: 'Barcelona TV 4K', categoryId: 1),
+      _ch(id: 2, name: 'AD Sports 1 HD', categoryId: 1),
+      _ch(id: 3, name: 'beIN Sports 1 4K', categoryId: 1),
+      _ch(id: 4, name: 'Sky Sports Main Event', categoryId: 1),
+    ];
+    final liveRepo = _FakeLiveRepo(
+      categories: const [
+        Category(id: 1, serverId: 1, type: CategoryType.live, name: 'Sports'),
+      ],
+      channelsByCategory: {1: channels},
+      allChannels: channels,
+      epgTitles: {
+        2: 'Barcelona vs Real Madrid',
+        3: 'Studio',
+      },
+    );
+
+    final controller = HomeController(
+      liveRepo: liveRepo,
+      vodRepo: _MovieVod(),
+      seriesRepo: _EmptySeries(),
+      favoritesRepo: _EmptyFavorites(),
+      historyRepo: _EmptyHistory(),
+      liveScores: _FakeScores([
+        LiveFixture(
+          homeName: 'Barcelona',
+          awayName: 'Real Madrid',
+          teams: BigMatchDetector.teamsIn('Barcelona Real Madrid'),
+          state: 'in',
+          clock: "34'",
+          bannerUrl: 'https://cdn.example/el-clasico-banner.jpg',
+          posterUrl: 'https://cdn.example/el-clasico-poster.jpg',
+        ),
+      ]),
+    );
+
+    for (var i = 0; i < 50; i++) {
+      final hero = controller.state.heroItem;
+      if (hero != null && hero.type == HeroItemType.live) break;
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+
+    final hero = controller.state.heroItem;
+    expect(hero, isNotNull);
+    expect(hero!.type, HeroItemType.live);
+    expect(hero.movie, isNull);
+    expect(hero.channel?.streamId, 2);
+    expect(hero.channel?.name, contains('AD Sports'));
+    expect(hero.title.toLowerCase(), contains('barcelona'));
+    expect(hero.backdropUrl, 'https://cdn.example/el-clasico-banner.jpg');
+    expect(hero.posterUrl, 'https://cdn.example/el-clasico-poster.jpg');
+    expect(controller.state.featuredMovies, isNotEmpty);
   });
 }

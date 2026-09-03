@@ -578,18 +578,18 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: SizedBox(
+                  SizedBox(
+                    width: 70,
+                    height: 100,
+                    child: CachedImage(
+                      imageUrl: widget.series.cover,
                       width: 70,
                       height: 100,
-                      child: CachedImage(
-                        imageUrl: widget.series.cover,
-                        width: 70,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        fallbackIcon: AppIcons.series,
-                      ),
+                      fit: BoxFit.cover,
+                      borderRadius: BorderRadius.circular(8),
+                      fallbackIcon: AppIcons.series,
+                      memCacheWidth: 140,
+                      memCacheHeight: 200,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -809,9 +809,17 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
                                                     height: 48,
                                                     child: CachedImage(
                                                       imageUrl: ep.cover,
+                                                      width: 72,
+                                                      height: 48,
                                                       fit: BoxFit.cover,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
                                                       fallbackIcon:
                                                           AppIcons.movies,
+                                                      memCacheWidth: 144,
+                                                      memCacheHeight: 96,
                                                     ),
                                                   ),
                                                   Container(
@@ -943,10 +951,19 @@ class _SeriesPosterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FocusableCard(
+    return PosterHeartCard(
       onTap: onTap,
-      padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(AppRadius.card),
+      favorite: (heartFocus, onHeartDirection) => FavoriteToggleButton(
+        type: FavoriteType.series,
+        itemId: series.seriesId != 0 ? series.seriesId : series.id,
+        name: series.name,
+        imageUrl: series.cover,
+        size: 22,
+        padding: 2,
+        focusNode: heartFocus,
+        onDirection: onHeartDirection,
+      ),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -962,16 +979,8 @@ class _SeriesPosterCard extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            child: PosterTopActions(
-              rating: series.rating,
-              favoriteButton: FavoriteToggleButton(
-                type: FavoriteType.series,
-                itemId: series.seriesId != 0 ? series.seriesId : series.id,
-                name: series.name,
-                imageUrl: series.cover,
-                size: 22,
-                padding: 2,
-              ),
+            child: IgnorePointer(
+              child: PosterTopActions(rating: series.rating),
             ),
           ),
           Positioned(

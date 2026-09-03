@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -193,7 +194,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
               subtitle: context.l10n.homeCheckConnection,
               icon: AppIcons.empty,
             )
-          : ListView.separated(
+          : DpadRegion(
+              memoryKey: 'live/categories',
+              debugLabel: 'live-categories',
+              child: ListView.separated(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.md,
@@ -224,6 +228,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                   onTap: () => _selectCategory(category),
                 );
               },
+            ),
             ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
@@ -5,6 +6,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 class HomeSectionRow<T> extends StatelessWidget {
   const HomeSectionRow({
@@ -16,6 +18,7 @@ class HomeSectionRow<T> extends StatelessWidget {
     required this.items,
     required this.itemBuilder,
     this.height = 140,
+    this.itemWidth,
   });
 
   final String title;
@@ -26,6 +29,9 @@ class HomeSectionRow<T> extends StatelessWidget {
   final Widget Function(BuildContext context, T item, int index) itemBuilder;
   final double height;
 
+  /// When set, enables fixed [ListView] item extents (width + gap) for cheaper layout.
+  final double? itemWidth;
+
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
@@ -34,7 +40,10 @@ class HomeSectionRow<T> extends StatelessWidget {
 
     final isRtl = Directionality.of(context) == TextDirection.rtl;
 
-    return Column(
+    return DpadRegion(
+      memoryKey: 'home/${title.toLowerCase()}',
+      debugLabel: title,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section Header
@@ -71,53 +80,70 @@ class HomeSectionRow<T> extends StatelessWidget {
               ],
               const Spacer(),
               if (onSeeAll != null)
-                TextButton(
-                  onPressed: onSeeAll,
-                  style: TextButton.styleFrom(
+                TvFocusable(
+                  onSelect: onSeeAll,
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        context.l10n.actionSeeAll,
-                        style: const TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          context.l10n.actionSeeAll,
+                          style: const TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      HugeIcon(
-                        icon: isRtl ? AppIcons.chevronLeft : AppIcons.chevronRight,
-                        color: AppColors.accent,
-                        size: 12,
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        HugeIcon(
+                          icon: isRtl ? AppIcons.chevronLeft : AppIcons.chevronRight,
+                          color: AppColors.accent,
+                          size: 12,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
             ],
           ),
         ),
 
-        // Horizontal scrolling items
+        // Horizontal scrolling items — extra height so scaled TV focus isn't clipped.
         SizedBox(
-          height: height,
-          child: ListView.separated(
+          height: height + 20,
+          child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            cacheExtent: 350,
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            primary: false,
+            // Keep off-screen card FocusNodes / images from staying warm forever.
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: true,
+            // Small cache: decoding/painting off-screen posters is a top jank source.
+            cacheExtent: 120,
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
             itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, index) =>
-                itemBuilder(context, items[index], index),
+            itemExtent: itemWidth == null ? null : itemWidth! + 12,
+            itemBuilder: (context, index) {
+              final child = itemBuilder(context, items[index], index);
+              if (itemWidth == null) {
+                return Padding(
+                  padding: EdgeInsetsDirectional.only(
+                    end: index == items.length - 1 ? 0 : 12,
+                  ),
+                  child: child,
+                );
+              }
+              return Padding(
+                padding: const EdgeInsetsDirectional.only(end: 12),
+                child: SizedBox(width: itemWidth, child: child),
+              );
+            },
           ),
         ),
 
         const SizedBox(height: AppSpacing.xl),
       ],
+    ),
     );
   }
 

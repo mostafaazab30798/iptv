@@ -14,8 +14,9 @@ class HomeSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isPortrait =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
     final bannerHeight = isPortrait ? 260.0 : (screenWidth > 1200 ? 360.0 : 300.0);
 
     return Shimmer(

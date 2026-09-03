@@ -8,6 +8,7 @@ import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/features/favorites/favorite_channel_ids.dart';
 import 'package:iptv/features/favorites/favorite_ids.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/favorite_snackbar.dart';
 import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
@@ -41,103 +42,105 @@ class ChannelListTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasEpgOrTime = timeOrEpg != null && timeOrEpg!.trim().isNotEmpty;
 
-    return FocusableCard(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      backgroundColor: isPlaying
-          ? AppColors.accent.withAlpha(28)
-          : const Color(0xFF10131B),
-      borderColor: isPlaying
-          ? AppColors.accent.withAlpha(160)
-          : Colors.white.withAlpha(18),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        children: [
-          // 1. Left 44x44 Squircle Logo Stage
-          _buildLogoStage(),
-          const SizedBox(width: 14),
-
-          // 2. Middle Content Column: Channel Name (+ EPG info if available)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+    return Row(
+      children: [
+        Expanded(
+          child: FocusableCard(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            backgroundColor: isPlaying
+                ? AppColors.accent.withAlpha(28)
+                : const Color(0xFF10131B),
+            borderColor: isPlaying
+                ? AppColors.accent.withAlpha(160)
+                : Colors.white.withAlpha(18),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
               children: [
-                // Main Channel Name
-                Text(
-                  channel.name,
-                  style: TextStyle(
-                    color: isPlaying ? AppColors.accent : AppColors.textPrimary,
-                    fontSize: 15.0,
-                    fontWeight: isPlaying ? FontWeight.w800 : FontWeight.w600,
-                    letterSpacing: 0.2,
-                    shadows: isPlaying
-                        ? [
-                            Shadow(
-                              color: AppColors.accent.withAlpha(150),
-                              blurRadius: 10,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                if (hasEpgOrTime) ...[
-                  const SizedBox(height: 3),
-                  // Time / EPG Tag
-                  Row(
+                _buildLogoStage(),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      HugeIcon(
-                        icon: AppIcons.history,
-                        size: 11.5,
-                        color: isPlaying ? AppColors.accent : AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          timeOrEpg!,
-                          style: TextStyle(
-                            color: isPlaying ? AppColors.accent : AppColors.textSecondary,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        channel.name,
+                        style: TextStyle(
+                          color: isPlaying
+                              ? AppColors.accent
+                              : AppColors.textPrimary,
+                          fontSize: 15.0,
+                          fontWeight:
+                              isPlaying ? FontWeight.w800 : FontWeight.w600,
+                          letterSpacing: 0.2,
+                          shadows: isPlaying
+                              ? [
+                                  Shadow(
+                                    color: AppColors.accent.withAlpha(150),
+                                    blurRadius: 10,
+                                  ),
+                                ]
+                              : null,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (hasEpgOrTime) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            HugeIcon(
+                              icon: AppIcons.history,
+                              size: 11.5,
+                              color: isPlaying
+                                  ? AppColors.accent
+                                  : AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                timeOrEpg!,
+                                style: TextStyle(
+                                  color: isPlaying
+                                      ? AppColors.accent
+                                      : AppColors.textSecondary,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
+                ),
+                if (isPlaying) ...[
+                  const SizedBox(width: 10),
+                  _buildLiveEqualizerBadge(),
                 ],
               ],
             ),
           ),
-          const SizedBox(width: 10),
-
-          // 3. Right Status & Actions Area
-          if (isPlaying) ...[
-            _buildLiveEqualizerBadge(),
-            const SizedBox(width: 8),
-          ],
-
-          // Quick Favorite Toggle Button
-          FavoriteToggleButton(
-            type: FavoriteType.channel,
-            itemId: channel.streamId,
-            name: channel.name,
-            imageUrl: channel.streamIcon,
-            size: 20,
-            padding: 4,
-            idleColor: AppColors.textSecondary,
-          ),
-          const SizedBox(width: 2),
-
-          // 3-Dots Context Menu Button
-          _buildMoreMenu(context, ref),
-        ],
-      ),
+        ),
+        FavoriteToggleButton(
+          type: FavoriteType.channel,
+          itemId: channel.streamId,
+          name: channel.name,
+          imageUrl: channel.streamIcon,
+          size: 20,
+          padding: 4,
+          idleColor: AppColors.textSecondary,
+        ),
+        _ChannelMoreButton(
+          channel: channel,
+          onPlay: onTap,
+        ),
+      ],
     );
   }
 
@@ -223,94 +226,124 @@ class ChannelListTile extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildMoreMenu(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<String>(
-      tooltip: 'Options',
-      padding: EdgeInsets.zero,
+class _ChannelMoreButton extends ConsumerWidget {
+  const _ChannelMoreButton({
+    required this.channel,
+    required this.onPlay,
+  });
+
+  final Channel channel;
+  final VoidCallback onPlay;
+
+  Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !context.mounted) return;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+
+    final origin = box.localToGlobal(Offset.zero, ancestor: overlay);
+    final selected = await showMenu<String>(
+      context: context,
       color: AppColors.bg2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: const BorderSide(color: AppColors.border, width: 0.8),
       ),
-      icon: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: Colors.white.withAlpha(8),
+      position: RelativeRect.fromRect(
+        origin & box.size,
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        const PopupMenuItem<String>(
+          value: 'play',
+          child: Row(
+            children: [
+              HugeIcon(icon: AppIcons.play, color: AppColors.accent, size: 18),
+              SizedBox(width: 10),
+              Text(
+                'Play Channel',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
         ),
-        child: const HugeIcon(
-          icon: AppIcons.moreVert,
-          size: 18,
-          color: AppColors.textSecondary,
+        PopupMenuItem<String>(
+          value: 'favorite',
+          child: Builder(
+            builder: (context) {
+              final isFav = ref
+                  .read(favoriteChannelIdsProvider)
+                  .contains(channel.streamId);
+              return Row(
+                children: [
+                  Icon(
+                    isFav
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    color: isFav ? AppColors.live : AppColors.textSecondary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    isFav ? 'Remove Favorite' : 'Add to Favorites',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+
+    if (!context.mounted || selected == null) return;
+    switch (selected) {
+      case 'play':
+        onPlay();
+      case 'favorite':
+        final nowFav =
+            await ref.read(favoriteChannelIdsProvider.notifier).toggleChannel(
+                  itemId: channel.streamId,
+                  name: channel.name,
+                  imageUrl: channel.streamIcon,
+                );
+        ref.invalidate(favoritesListProvider);
+        if (context.mounted) {
+          showFavoriteSnackBar(
+            context,
+            name: channel.name,
+            isFavorite: nowFav,
+          );
+        }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TvFocusable(
+      onSelect: () => _openMenu(context, ref),
+      child: Tooltip(
+        message: 'Options',
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white.withAlpha(8),
+          ),
+          child: const HugeIcon(
+            icon: AppIcons.moreVert,
+            size: 18,
+            color: AppColors.textSecondary,
+          ),
         ),
       ),
-      onSelected: (value) async {
-        switch (value) {
-          case 'play':
-            onTap();
-            break;
-          case 'favorite':
-            final nowFav =
-                await ref.read(favoriteChannelIdsProvider.notifier).toggleChannel(
-                      itemId: channel.streamId,
-                      name: channel.name,
-                      imageUrl: channel.streamIcon,
-                    );
-            ref.invalidate(favoritesListProvider);
-            if (context.mounted) {
-              showFavoriteSnackBar(
-                context,
-                name: channel.name,
-                isFavorite: nowFav,
-              );
-            }
-            break;
-        }
-      },
-      itemBuilder: (context) {
-        final isFav = ref
-            .watch(favoriteChannelIdsProvider)
-            .contains(channel.streamId);
-        return [
-          const PopupMenuItem<String>(
-            value: 'play',
-            child: Row(
-              children: [
-                HugeIcon(icon: AppIcons.play, color: AppColors.accent, size: 18),
-                SizedBox(width: 10),
-                Text(
-                  'Play Channel',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
-          PopupMenuItem<String>(
-            value: 'favorite',
-            child: Row(
-              children: [
-                Icon(
-                  isFav
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                  color: isFav ? AppColors.live : AppColors.textSecondary,
-                  size: 18,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  isFav ? 'Remove Favorite' : 'Add to Favorites',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ];
-      },
     );
   }
 }

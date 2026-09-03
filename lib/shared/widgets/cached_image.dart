@@ -84,6 +84,9 @@ class CachedImage extends StatelessWidget {
         alignment: alignment,
         memCacheWidth: resolvedCacheWidth,
         memCacheHeight: resolvedCacheHeight,
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
+        filterQuality: FilterQuality.low,
         httpHeaders: const {
           if (!kIsWeb)
             'User-Agent':

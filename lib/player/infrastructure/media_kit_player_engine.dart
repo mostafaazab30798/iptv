@@ -404,6 +404,8 @@ class MediaKitPlayerEngine implements PlayerEngine {
         platform.getProperty('hwdec-current'),
       ]);
 
+      if (_status == PlayerStatus.disposed || _player == null) return;
+
       final cacheDurStr = adaptiveResults[0];
       final cacheStateStr = adaptiveResults[1];
       final frameDropStr = adaptiveResults[2];
@@ -421,6 +423,7 @@ class MediaKitPlayerEngine implements PlayerEngine {
           platform.getProperty('video-codec'),
           platform.getProperty('video-params/pixelformat'),
         ]);
+        if (_status == PlayerStatus.disposed || _player == null) return;
         fpsStr = diagnosticsResults[0];
         bitrateStr = diagnosticsResults[1];
         videoCodecStr = diagnosticsResults[2];
@@ -713,7 +716,12 @@ class MediaKitPlayerEngine implements PlayerEngine {
     }
     _subscriptions.clear();
 
-    await _player?.dispose();
+    try {
+      await _player?.stop();
+    } catch (_) {}
+    try {
+      await _player?.dispose();
+    } catch (_) {}
     _player = null;
     _videoController = null;
 

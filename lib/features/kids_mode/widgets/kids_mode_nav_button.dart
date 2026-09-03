@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_motion.dart';
 import 'package:iptv/features/kids_mode/kids_mode_actions.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 /// Compact labeled Kids Mode action for large-screen top navigation.
 ///
@@ -37,7 +40,7 @@ class _KidsModeNavButtonState extends ConsumerState<KidsModeNavButton> {
     final state = ref.read(kidsModeProvider);
     if (!state.isInitialized || state.isLockedOut) return;
 
-    HapticFeedback.lightImpact();
+    unawaited(HapticFeedback.lightImpact());
     setState(() => _busy = true);
     try {
       await confirmKidsModeChange(
@@ -63,21 +66,22 @@ class _KidsModeNavButtonState extends ConsumerState<KidsModeNavButton> {
         ? context.l10n.kidsModeDisableAction
         : context.l10n.kidsModeEnableAction;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      cursor: canPress ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      child: Semantics(
-        button: true,
-        enabled: canPress,
-        selected: isEnabled,
-        label: context.l10n.kidsModeTitle,
-        hint: tooltip,
-        child: Tooltip(
-          message: tooltip,
-          child: GestureDetector(
-            key: KidsModeNavButton.buttonKey,
-            onTap: canPress ? _onPressed : null,
+    return TvFocusable(
+      key: KidsModeNavButton.buttonKey,
+      enabled: canPress,
+      onSelect: canPress ? () => unawaited(_onPressed()) : null,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: canPress ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: Semantics(
+          button: true,
+          enabled: canPress,
+          selected: isEnabled,
+          label: context.l10n.kidsModeTitle,
+          hint: tooltip,
+          child: Tooltip(
+            message: tooltip,
             child: AnimatedOpacity(
               duration: MotionPolicy.of(context).focus,
               opacity: canPress ? 1 : 0.45,

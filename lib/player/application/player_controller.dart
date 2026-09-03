@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, VoidCallback;
+import 'package:flutter/widgets.dart' show ValueNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/providers.dart';
 import 'package:iptv/domain/entities/channel.dart';
@@ -17,6 +18,7 @@ import 'package:iptv/player/domain/enums/playback_profile.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/domain/interfaces/player_engine.dart';
+import 'package:iptv/player/handoff/application/audio_handoff_server_controller.dart';
 import 'package:iptv/player/infrastructure/media_kit_player_engine.dart';
 import 'package:iptv/player/utils/player_logger.dart';
 
@@ -27,6 +29,8 @@ class PlayerController extends StateNotifier<PlayerState> {
     HistoryRepository? historyRepository,
     PlaybackBufferMode? initialBufferMode,
     Future<bool> Function(PlayerSource source)? canLoadSource,
+    VoidCallback? onStopCallback,
+    void Function(PlayerSource source)? onSourceChanged,
   })  : _engine = engine ??
             MediaKitPlayerEngine(
               initialBufferMode:
@@ -34,6 +38,8 @@ class PlayerController extends StateNotifier<PlayerState> {
             ),
         _historyRepository = historyRepository,
         _canLoadSource = canLoadSource,
+        _onStopCallback = onStopCallback,
+        _onSourceChanged = onSourceChanged,
         super(
           PlayerState.initial.copyWith(
             bufferMode: initialBufferMode ??
@@ -52,6 +58,8 @@ class PlayerController extends StateNotifier<PlayerState> {
   final PlayerEngine _engine;
   final HistoryRepository? _historyRepository;
   final Future<bool> Function(PlayerSource source)? _canLoadSource;
+  final VoidCallback? _onStopCallback;
+  final void Function(PlayerSource source)? _onSourceChanged;
   late final SmartPlaybackEngine _smartEngine;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
@@ -75,6 +83,18 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Incremented on every [load]/[stop] so late async work from a previous
   /// channel enter/leave cannot clobber the active playback session.
   int _playbackEpoch = 0;
+
+  /// High-frequency seek-bar / time-label channel — do not mirror into Riverpod.
+  final ValueNotifier<Duration> positionListenable =
+      ValueNotifier(Duration.zero);
+
+  /// High-frequency buffered range for the seek-bar secondary track.
+  final ValueNotifier<Duration> bufferedPositionListenable =
+      ValueNotifier(Duration.zero);
+
+  static const _riverpodProgressThrottle = Duration(milliseconds: 250);
+  DateTime? _lastPositionStateEmit;
+  DateTime? _lastBufferStateEmit;
 
   PlayerEngine get engine => _engine;
   SmartPlaybackEngine get smartEngine => _smartEngine;
@@ -132,7 +152,17 @@ class PlayerController extends StateNotifier<PlayerState> {
     _subscriptions.add(
       _engine.positionStream.listen((pos) {
         if (!mounted) return;
-        state = state.copyWith(position: pos);
+        // Seek UI consumes this notifier every tick; Riverpod stays coarse.
+        if (positionListenable.value != pos) {
+          positionListenable.value = pos;
+        }
+        final now = DateTime.now();
+        final due = _lastPositionStateEmit == null ||
+            now.difference(_lastPositionStateEmit!) >= _riverpodProgressThrottle;
+        if (due && state.position != pos) {
+          _lastPositionStateEmit = now;
+          state = state.copyWith(position: pos);
+        }
       }),
     );
 
@@ -146,7 +176,16 @@ class PlayerController extends StateNotifier<PlayerState> {
     _subscriptions.add(
       _engine.bufferStream.listen((buf) {
         if (!mounted) return;
-        state = state.copyWith(bufferedPosition: buf);
+        if (bufferedPositionListenable.value != buf) {
+          bufferedPositionListenable.value = buf;
+        }
+        final now = DateTime.now();
+        final due = _lastBufferStateEmit == null ||
+            now.difference(_lastBufferStateEmit!) >= _riverpodProgressThrottle;
+        if (due && state.bufferedPosition != buf) {
+          _lastBufferStateEmit = now;
+          state = state.copyWith(bufferedPosition: buf);
+        }
       }),
     );
 
@@ -306,7 +345,7 @@ class PlayerController extends StateNotifier<PlayerState> {
     if (source == null || source.channelId == null || _historyRepository == null) return;
 
     final type = _determineHistoryType(source);
-    final posSecs = state.position.inSeconds;
+    final posSecs = positionListenable.value.inSeconds;
     final durSecs = state.duration.inSeconds;
 
     if (posSecs > 0 || durSecs > 0) {
@@ -400,6 +439,10 @@ class PlayerController extends StateNotifier<PlayerState> {
     }
 
     final capabilities = PlayerCapabilityService.getCapabilities(streamType: effectiveSource.streamType);
+    positionListenable.value = effectiveSource.startAt ?? Duration.zero;
+    bufferedPositionListenable.value = Duration.zero;
+    _lastPositionStateEmit = null;
+    _lastBufferStateEmit = null;
     state = state.copyWith(
       source: effectiveSource,
       status: PlayerStatus.loading,
@@ -408,6 +451,7 @@ class PlayerController extends StateNotifier<PlayerState> {
       isRetrying: false,
       retryAttempt: 0,
     );
+    _onSourceChanged?.call(effectiveSource);
 
     // Record watch history entry in DB
     if (effectiveSource.channelId != null && _historyRepository != null) {
@@ -428,6 +472,7 @@ class PlayerController extends StateNotifier<PlayerState> {
 
     await _smartEngine.open(effectiveSource);
     if (!mounted || epoch != _playbackEpoch) return;
+    _onSourceChanged?.call(effectiveSource);
 
     // Initialise device decode profile on first channel load (async, non-blocking).
     if (!_deviceProfileInitialized) {
@@ -504,7 +549,12 @@ class PlayerController extends StateNotifier<PlayerState> {
     _clearLazyLivePlaylist();
     await savePlaybackProgress();
     await _smartEngine.stop();
+    _onStopCallback?.call();
     if (!mounted) return;
+    positionListenable.value = Duration.zero;
+    bufferedPositionListenable.value = Duration.zero;
+    _lastPositionStateEmit = null;
+    _lastBufferStateEmit = null;
     state = state.copyWith(
       status: PlayerStatus.stopped,
       clearSource: true,
@@ -597,7 +647,8 @@ class PlayerController extends StateNotifier<PlayerState> {
         attempt < 12 && mounted && _seekScrubActive;
         attempt++) {
       final delta =
-          (state.position.inMilliseconds - position.inMilliseconds).abs();
+          (positionListenable.value.inMilliseconds - position.inMilliseconds)
+              .abs();
       if (delta <= 1200) break;
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
@@ -722,6 +773,8 @@ class PlayerController extends StateNotifier<PlayerState> {
     }
     _subscriptions.clear();
     _smartEngine.dispose();
+    positionListenable.dispose();
+    bufferedPositionListenable.dispose();
     super.dispose();
   }
 }
@@ -730,8 +783,20 @@ class PlayerController extends StateNotifier<PlayerState> {
 final playerControllerProvider =
     StateNotifierProvider<PlayerController, PlayerState>((ref) {
   final historyRepo = ref.watch(historyRepositoryProvider);
-  return PlayerController(
+  PlayerController? controller;
+  controller = PlayerController(
     historyRepository: historyRepo,
+    onStopCallback: () {
+      ref.read(audioHandoffServerProvider.notifier).unbindPlayback();
+    },
+    onSourceChanged: (source) {
+      final player = controller;
+      if (player == null) return;
+      ref.read(audioHandoffServerProvider.notifier).bindPlayback(
+            player,
+            source: source,
+          );
+    },
     canLoadSource: (source) async {
       final mode = ref.read(kidsModeProvider);
       if (!mode.isInitialized) return false;
@@ -740,4 +805,5 @@ final playerControllerProvider =
       return allowed.allowsSource(source);
     },
   );
+  return controller;
 });

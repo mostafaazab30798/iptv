@@ -554,6 +554,18 @@ abstract class AppLocalizations {
   /// **'Sports Channels'**
   String get homeSportsChannels;
 
+  /// No description provided for @homeLiveMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Match'**
+  String get homeLiveMatch;
+
+  /// No description provided for @homeWatchOnChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch on {channel}'**
+  String homeWatchOnChannel(String channel);
+
   /// No description provided for @homeNewsChannels.
   ///
   /// In en, this message translates to:
@@ -2179,6 +2191,492 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leave'**
   String get exitAppConfirm;
+
+  /// No description provided for @handoffConnectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to TV Audio'**
+  String get handoffConnectTitle;
+
+  /// No description provided for @handoffConnectSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen in headphones while TV plays on the big screen'**
+  String get handoffConnectSubtitle;
+
+  /// No description provided for @handoffFoundTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Found TV on your Wi-Fi / Hotspot'**
+  String get handoffFoundTv;
+
+  /// No description provided for @handoffSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for TV on your network...'**
+  String get handoffSearching;
+
+  /// No description provided for @handoffSearchingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Make sure TV is playing and both devices are on the same Wi-Fi / Hotspot'**
+  String get handoffSearchingHint;
+
+  /// No description provided for @handoffScanQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan TV QR'**
+  String get handoffScanQr;
+
+  /// No description provided for @handoffManualIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual IP'**
+  String get handoffManualIp;
+
+  /// No description provided for @handoffBackToAutoDetect.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Auto-Detect'**
+  String get handoffBackToAutoDetect;
+
+  /// No description provided for @handoffPointCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Point camera at TV QR Code'**
+  String get handoffPointCamera;
+
+  /// No description provided for @handoffManualTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual IP & PIN'**
+  String get handoffManualTitle;
+
+  /// No description provided for @handoffIpAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'TV IP Address'**
+  String get handoffIpAddress;
+
+  /// No description provided for @handoffPin.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN'**
+  String get handoffPin;
+
+  /// No description provided for @handoffPasteQrLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Or paste QR link (http://...)'**
+  String get handoffPasteQrLink;
+
+  /// No description provided for @handoffConnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to TV'**
+  String get handoffConnectAction;
+
+  /// No description provided for @handoffConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get handoffConnect;
+
+  /// No description provided for @handoffListeningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Companion Listening'**
+  String get handoffListeningTitle;
+
+  /// No description provided for @handoffListeningSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Headphone Audio Synchronized'**
+  String get handoffListeningSubtitle;
+
+  /// No description provided for @handoffInSync.
+  ///
+  /// In en, this message translates to:
+  /// **'IN SYNC'**
+  String get handoffInSync;
+
+  /// No description provided for @handoffBuffering.
+  ///
+  /// In en, this message translates to:
+  /// **'BUFFERING'**
+  String get handoffBuffering;
+
+  /// No description provided for @handoffBtDelayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth Audio Sync'**
+  String get handoffBtDelayTitle;
+
+  /// No description provided for @handoffBtDelaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust if audio is slightly ahead or behind video'**
+  String get handoffBtDelaySubtitle;
+
+  /// No description provided for @handoffAudioAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Ahead'**
+  String get handoffAudioAhead;
+
+  /// No description provided for @handoffAudioBehind.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Behind'**
+  String get handoffAudioBehind;
+
+  /// No description provided for @handoffMuteTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute TV Speakers'**
+  String get handoffMuteTv;
+
+  /// No description provided for @handoffUnmuteTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute TV Speakers'**
+  String get handoffUnmuteTv;
+
+  /// No description provided for @handoffDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get handoffDisconnect;
+
+  /// No description provided for @handoffTvDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen on Phone'**
+  String get handoffTvDialogTitle;
+
+  /// No description provided for @handoffTvDialogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR code or use companion app to listen privately'**
+  String get handoffTvDialogSubtitle;
+
+  /// No description provided for @handoffTvConnectedClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected Devices'**
+  String get handoffTvConnectedClients;
+
+  /// No description provided for @handoffQuickActionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Handoff'**
+  String get handoffQuickActionLabel;
+
+  /// No description provided for @settingsHandoffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Companion Listening (Audio Handoff)'**
+  String get settingsHandoffTitle;
+
+  /// No description provided for @settingsHandoffSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair with TV or desktop to stream audio with zero latency'**
+  String get settingsHandoffSubtitle;
+
+  /// No description provided for @settingsHandoffActiveHud.
+  ///
+  /// In en, this message translates to:
+  /// **'Active HUD'**
+  String get settingsHandoffActiveHud;
+
+  /// No description provided for @companionRemoteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'TV Remote & Mouse'**
+  String get companionRemoteTitle;
+
+  /// No description provided for @companionRemoteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Touchpad, Keyboard & Controls'**
+  String get companionRemoteSubtitle;
+
+  /// No description provided for @companionTabTouchpad.
+  ///
+  /// In en, this message translates to:
+  /// **'Touchpad Mouse'**
+  String get companionTabTouchpad;
+
+  /// No description provided for @companionTabRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Keyboard'**
+  String get companionTabRemote;
+
+  /// No description provided for @companionSensitivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensitivity'**
+  String get companionSensitivity;
+
+  /// No description provided for @companionLeftClick.
+  ///
+  /// In en, this message translates to:
+  /// **'Left Click'**
+  String get companionLeftClick;
+
+  /// No description provided for @companionRightClick.
+  ///
+  /// In en, this message translates to:
+  /// **'Right Click'**
+  String get companionRightClick;
+
+  /// No description provided for @companionTouchpadHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to move pointer • Tap to click\n2 fingers to scroll'**
+  String get companionTouchpadHint;
+
+  /// No description provided for @companionKeyboardHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type text to send to TV / PC search fields...'**
+  String get companionKeyboardHint;
+
+  /// No description provided for @companionSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get companionSearch;
+
+  /// No description provided for @companionClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get companionClear;
+
+  /// No description provided for @companionSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'SELECT'**
+  String get companionSelect;
+
+  /// No description provided for @companionBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get companionBack;
+
+  /// No description provided for @companionHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get companionHome;
+
+  /// No description provided for @companionMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu'**
+  String get companionMenu;
+
+  /// No description provided for @companionExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get companionExit;
+
+  /// No description provided for @companionVolUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Vol +'**
+  String get companionVolUp;
+
+  /// No description provided for @companionVolDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Vol -'**
+  String get companionVolDown;
+
+  /// No description provided for @companionMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get companionMute;
+
+  /// No description provided for @companionAudioTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private Audio Streaming (Headphones)'**
+  String get companionAudioTitle;
+
+  /// No description provided for @companionAudioSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream TV sound directly to this device'**
+  String get companionAudioSubtitle;
+
+  /// No description provided for @companionDeviceDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'DEVICE DETECTED ON WI-FI'**
+  String get companionDeviceDetected;
+
+  /// No description provided for @companionTapToControl.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to Control'**
+  String get companionTapToControl;
+
+  /// No description provided for @companionDevicesFoundOnWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'DEVICES FOUND ON LOCAL WI-FI'**
+  String get companionDevicesFoundOnWifi;
+
+  /// No description provided for @companionSearchDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for devices on local Wi-Fi...'**
+  String get companionSearchDevices;
+
+  /// No description provided for @companionSearchDevicesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Make sure the app is open on your Tablet, TV, or PC connected to the same Wi-Fi.'**
+  String get companionSearchDevicesHint;
+
+  /// No description provided for @companionRescanWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescan Wi-Fi Network'**
+  String get companionRescanWifi;
+
+  /// No description provided for @companionConnectToDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to Device / Screen'**
+  String get companionConnectToDevice;
+
+  /// No description provided for @companionConnectToDeviceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Touchpad Mouse, Keyboard & Remote Control'**
+  String get companionConnectToDeviceSubtitle;
+
+  /// No description provided for @companionConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'CONNECTED'**
+  String get companionConnected;
+
+  /// No description provided for @disconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnect;
+
+  /// No description provided for @companionScannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'TV Companion'**
+  String get companionScannerTitle;
+
+  /// No description provided for @companionScannerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wireless remote, mouse & audio sync'**
+  String get companionScannerSubtitle;
+
+  /// No description provided for @companionTabNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby'**
+  String get companionTabNearby;
+
+  /// No description provided for @companionTabScanQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR'**
+  String get companionTabScanQr;
+
+  /// No description provided for @companionTabDirectIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct IP'**
+  String get companionTabDirectIp;
+
+  /// No description provided for @companionAvailableScreens.
+  ///
+  /// In en, this message translates to:
+  /// **'AVAILABLE SCREENS'**
+  String get companionAvailableScreens;
+
+  /// No description provided for @companionScanningNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning for nearby screens...'**
+  String get companionScanningNearby;
+
+  /// No description provided for @companionScanningHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the app on your TV, PC, or Tablet'**
+  String get companionScanningHint;
+
+  /// No description provided for @companionDirectIpAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'TV IP Address'**
+  String get companionDirectIpAddress;
+
+  /// No description provided for @companionDirectPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get companionDirectPort;
+
+  /// No description provided for @companionDirectPin.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN (Optional)'**
+  String get companionDirectPin;
+
+  /// No description provided for @companionConnectToScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to Screen'**
+  String get companionConnectToScreen;
+
+  /// No description provided for @companionReadyToConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to Connect'**
+  String get companionReadyToConnect;
+
+  /// No description provided for @companionNowPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Now Playing: {title}'**
+  String companionNowPlaying(String title);
+
+  /// No description provided for @companionEnterIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter TV IP address'**
+  String get companionEnterIp;
+
+  /// No description provided for @companionInvalidQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid QR code. Please try again.'**
+  String get companionInvalidQr;
+
+  /// No description provided for @companionCouldNotReach.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reach TV at {address}'**
+  String companionCouldNotReach(String address);
 }
 
 class _AppLocalizationsDelegate

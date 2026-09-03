@@ -105,6 +105,13 @@
   "homeFeaturedMovies": "Featured Movies",
   "homePopularSeries": "Popular Series",
   "homeSportsChannels": "Sports Channels",
+  "homeLiveMatch": "Live Match",
+  "homeWatchOnChannel": "Watch on {channel}",
+  "@homeWatchOnChannel": {
+    "placeholders": {
+      "channel": { "type": "String" }
+    }
+  },
   "homeNewsChannels": "News & Current Affairs",
   "homeTvGuide": "TV Guide",
   "homeAllMovies": "All Movies",
@@ -516,5 +523,102 @@
   "kidsModeCurrentPinPrompt": "Enter your current 4-digit PIN",
   "exitAppTitle": "Leave HOPE TV?",
   "exitAppMessage": "Are you sure you want to close the app?",
-  "exitAppConfirm": "Leave"
+  "exitAppConfirm": "Leave",
+  "handoffConnectTitle": "Connect to TV Audio",
+  "handoffConnectSubtitle": "Listen in headphones while TV plays on the big screen",
+  "handoffFoundTv": "Found TV on your Wi-Fi / Hotspot",
+  "handoffSearching": "Searching for TV on your network...",
+  "handoffSearchingHint": "Make sure TV is playing and both devices are on the same Wi-Fi / Hotspot",
+  "handoffScanQr": "Scan TV QR",
+  "handoffManualIp": "Manual IP",
+  "handoffBackToAutoDetect": "Back to Auto-Detect",
+  "handoffPointCamera": "Point camera at TV QR Code",
+  "handoffManualTitle": "Manual IP & PIN",
+  "handoffIpAddress": "TV IP Address",
+  "handoffPin": "PIN",
+  "handoffPasteQrLink": "Or paste QR link (http://...)",
+  "handoffConnectAction": "Connect to TV",
+  "handoffConnect": "Connect",
+  "handoffListeningTitle": "Companion Listening",
+  "handoffListeningSubtitle": "Headphone Audio Synchronized",
+  "handoffInSync": "IN SYNC",
+  "handoffBuffering": "BUFFERING",
+  "handoffBtDelayTitle": "Bluetooth Audio Sync",
+  "handoffBtDelaySubtitle": "Adjust if audio is slightly ahead or behind video",
+  "handoffAudioAhead": "Audio Ahead",
+  "handoffAudioBehind": "Audio Behind",
+  "handoffMuteTv": "Mute TV Speakers",
+  "handoffUnmuteTv": "Unmute TV Speakers",
+  "handoffDisconnect": "Disconnect",
+  "handoffTvDialogTitle": "Listen on Phone",
+  "handoffTvDialogSubtitle": "Scan QR code or use companion app to listen privately",
+  "handoffTvConnectedClients": "Connected Devices",
+  "handoffQuickActionLabel": "Handoff",
+  "settingsHandoffTitle": "Companion Listening (Audio Handoff)",
+  "settingsHandoffSubtitle": "Pair with TV or desktop to stream audio with zero latency",
+  "settingsHandoffActiveHud": "Active HUD",
+  "companionRemoteTitle": "TV Remote & Mouse",
+  "companionRemoteSubtitle": "Touchpad, Keyboard & Controls",
+  "companionTabTouchpad": "Touchpad Mouse",
+  "companionTabRemote": "Live Keyboard",
+  "companionSensitivity": "Sensitivity",
+  "companionLeftClick": "Left Click",
+  "companionRightClick": "Right Click",
+  "companionTouchpadHint": "Swipe to move pointer • Tap to click\n2 fingers to scroll",
+  "companionKeyboardHint": "Type text to send to TV / PC search fields...",
+  "companionSearch": "Search",
+  "companionClear": "Clear",
+  "companionSelect": "SELECT",
+  "companionBack": "Back",
+  "companionHome": "Home",
+  "companionMenu": "Menu",
+  "companionExit": "Exit",
+  "companionVolUp": "Vol +",
+  "companionVolDown": "Vol -",
+  "companionMute": "Mute",
+  "companionAudioTitle": "Private Audio Streaming (Headphones)",
+  "companionAudioSubtitle": "Stream TV sound directly to this device",
+  "companionDeviceDetected": "DEVICE DETECTED ON WI-FI",
+  "companionTapToControl": "Tap to Control",
+  "companionDevicesFoundOnWifi": "DEVICES FOUND ON LOCAL WI-FI",
+  "companionSearchDevices": "Searching for devices on local Wi-Fi...",
+  "companionSearchDevicesHint": "Make sure the app is open on your Tablet, TV, or PC connected to the same Wi-Fi.",
+  "companionRescanWifi": "Rescan Wi-Fi Network",
+  "companionConnectToDevice": "Connect to Device / Screen",
+  "companionConnectToDeviceSubtitle": "Touchpad Mouse, Keyboard & Remote Control",
+  "companionConnected": "CONNECTED",
+  "disconnect": "Disconnect",
+  "companionScannerTitle": "TV Companion",
+  "companionScannerSubtitle": "Wireless remote, mouse & audio sync",
+  "companionTabNearby": "Nearby",
+  "companionTabScanQr": "Scan QR",
+  "companionTabDirectIp": "Direct IP",
+  "companionAvailableScreens": "AVAILABLE SCREENS",
+  "companionScanningNearby": "Scanning for nearby screens...",
+  "companionScanningHint": "Open the app on your TV, PC, or Tablet",
+  "companionDirectIpAddress": "TV IP Address",
+  "companionDirectPort": "Port",
+  "companionDirectPin": "PIN (Optional)",
+  "companionConnectToScreen": "Connect to Screen",
+  "companionReadyToConnect": "Ready to Connect",
+  "companionNowPlaying": "Now Playing: {title}",
+  "@companionNowPlaying": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "companionEnterIp": "Enter TV IP address",
+  "companionInvalidQr": "Invalid QR code. Please try again.",
+  "companionCouldNotReach": "Could not reach TV at {address}",
+  "@companionCouldNotReach": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  }
 }
+
+

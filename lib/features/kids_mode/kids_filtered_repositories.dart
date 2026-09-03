@@ -4,6 +4,7 @@ import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/domain/entities/season.dart';
 import 'package:iptv/domain/entities/series.dart';
+import 'package:iptv/domain/entities/epg_program.dart';
 import 'package:iptv/domain/repositories/live_repository.dart';
 import 'package:iptv/domain/repositories/series_repository.dart';
 import 'package:iptv/domain/repositories/vod_repository.dart';
@@ -237,5 +238,13 @@ class KidsFilteredLiveRepository implements LiveRepository {
     return _allowsChannel(result.value, excludedResult.value)
         ? result
         : const Err(_blockedContentError);
+  }
+
+  @override
+  Future<Result<List<EpgProgram>>> getShortEpg(
+    int streamId, {
+    int limit = 4,
+  }) {
+    return _delegate.getShortEpg(streamId, limit: limit);
   }
 }

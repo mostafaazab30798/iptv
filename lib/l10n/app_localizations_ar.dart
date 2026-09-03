@@ -277,6 +277,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeSportsChannels => 'قنوات رياضية';
 
   @override
+  String get homeLiveMatch => 'مباراة مباشرة';
+
+  @override
+  String homeWatchOnChannel(String channel) {
+    return 'شاهد على $channel';
+  }
+
+  @override
   String get homeNewsChannels => 'أخبار وشؤون جارية';
 
   @override
@@ -1177,4 +1185,262 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get exitAppConfirm => 'مغادرة';
+
+  @override
+  String get handoffConnectTitle => 'الاتصال بصوت التلفاز';
+
+  @override
+  String get handoffConnectSubtitle =>
+      'استمع عبر سماعات الرأس أثناء تشغيل التلفاز على الشاشة الكبيرة';
+
+  @override
+  String get handoffFoundTv => 'تم العثور على تلفاز على شبكتك';
+
+  @override
+  String get handoffSearching => 'جاري البحث عن تلفاز على شبكتك...';
+
+  @override
+  String get handoffSearchingHint =>
+      'تأكد من تشغيل التلفاز وتواجد الجهازين على نفس شبكة الواي فاي أو نقطة الاتصال';
+
+  @override
+  String get handoffScanQr => 'مسح رمز التلفاز';
+
+  @override
+  String get handoffManualIp => 'عنوان IP يدوياً';
+
+  @override
+  String get handoffBackToAutoDetect => 'العودة للبحث التلقائي';
+
+  @override
+  String get handoffPointCamera => 'وجّه الكاميرا نحو رمز QR على الشاشة';
+
+  @override
+  String get handoffManualTitle => 'إدخال IP والرمز يدوياً';
+
+  @override
+  String get handoffIpAddress => 'عنوان IP للتلفاز';
+
+  @override
+  String get handoffPin => 'رمز PIN';
+
+  @override
+  String get handoffPasteQrLink => 'أو الصق رابط QR (http://...)';
+
+  @override
+  String get handoffConnectAction => 'الاتصال بالتلفاز';
+
+  @override
+  String get handoffConnect => 'اتصال';
+
+  @override
+  String get handoffListeningTitle => 'الاستماع المرافق';
+
+  @override
+  String get handoffListeningSubtitle => 'صوت متزامن عبر سماعات الرأس';
+
+  @override
+  String get handoffInSync => 'متزامن';
+
+  @override
+  String get handoffBuffering => 'جاري التخزين';
+
+  @override
+  String get handoffBtDelayTitle => 'مزامنة صوت البلوتوث';
+
+  @override
+  String get handoffBtDelaySubtitle =>
+      'اضبط إذا كان الصوت يسبق أو يتأخر عن الفيديو';
+
+  @override
+  String get handoffAudioAhead => 'الصوت متقدم';
+
+  @override
+  String get handoffAudioBehind => 'الصوت متأخر';
+
+  @override
+  String get handoffMuteTv => 'كتم صوت سماعات التلفاز';
+
+  @override
+  String get handoffUnmuteTv => 'تشغيل صوت سماعات التلفاز';
+
+  @override
+  String get handoffDisconnect => 'قطع الاتصال';
+
+  @override
+  String get handoffTvDialogTitle => 'الاستماع على الهاتف';
+
+  @override
+  String get handoffTvDialogSubtitle =>
+      'امسح رمز QR أو افتح تطبيق الهاتف للاستماع بخصوصية';
+
+  @override
+  String get handoffTvConnectedClients => 'الأجهزة المتصلة';
+
+  @override
+  String get handoffQuickActionLabel => 'تحويل الصوت';
+
+  @override
+  String get settingsHandoffTitle => 'الاستماع المرافق (تحويل الصوت)';
+
+  @override
+  String get settingsHandoffSubtitle =>
+      'اقترن بالتلفاز أو الحاسوب لبث الصوت بدون أي تأخير';
+
+  @override
+  String get settingsHandoffActiveHud => 'التحكم النشط';
+
+  @override
+  String get companionRemoteTitle => 'ريموت وماوس التلفاز';
+
+  @override
+  String get companionRemoteSubtitle => 'لوحة لمس، لوحة مفاتيح وتحكم عن بعد';
+
+  @override
+  String get companionTabTouchpad => 'لوحة اللمس (ماوس)';
+
+  @override
+  String get companionTabRemote => 'لوحة المفاتيح';
+
+  @override
+  String get companionSensitivity => 'الحساسية';
+
+  @override
+  String get companionLeftClick => 'زر أيسر';
+
+  @override
+  String get companionRightClick => 'زر أيمن';
+
+  @override
+  String get companionTouchpadHint =>
+      'اسحب لتحريك المؤشر • انقر للضغط\nاسحب بإصبعين للتمرير';
+
+  @override
+  String get companionKeyboardHint =>
+      'اكتب نصاً لإرساله لحقول البحث على الشاشة...';
+
+  @override
+  String get companionSearch => 'بحث';
+
+  @override
+  String get companionClear => 'مسح';
+
+  @override
+  String get companionSelect => 'تأكيد';
+
+  @override
+  String get companionBack => 'رجوع';
+
+  @override
+  String get companionHome => 'الرئيسية';
+
+  @override
+  String get companionMenu => 'القائمة';
+
+  @override
+  String get companionExit => 'خروج';
+
+  @override
+  String get companionVolUp => 'رفع الصوت';
+
+  @override
+  String get companionVolDown => 'خفض الصوت';
+
+  @override
+  String get companionMute => 'كتم';
+
+  @override
+  String get companionAudioTitle => 'الاستماع الخاص (سماعات الرأس)';
+
+  @override
+  String get companionAudioSubtitle => 'بث صوت الشاشة مباشرة لهذا الهاتف';
+
+  @override
+  String get companionDeviceDetected => 'تم اكتشاف جهاز على الشبكة';
+
+  @override
+  String get companionTapToControl => 'اضغط للتحكم';
+
+  @override
+  String get companionDevicesFoundOnWifi => 'الأجهزة المكتشفة على شبكة Wi-Fi';
+
+  @override
+  String get companionSearchDevices =>
+      'جاري البحث عن أجهزة على الشبكة المحلية...';
+
+  @override
+  String get companionSearchDevicesHint =>
+      'تأكد من فتح التطبيق على التابلت أو التلفاز أو الحاسوب المتصل بنفس الشبكة.';
+
+  @override
+  String get companionRescanWifi => 'إعادة فحص شبكة Wi-Fi';
+
+  @override
+  String get companionConnectToDevice => 'الاتصال بجهاز / شاشة';
+
+  @override
+  String get companionConnectToDeviceSubtitle =>
+      'لوحة لمس ماوس، لوحة مفاتيح وتحكم عن بعد';
+
+  @override
+  String get companionConnected => 'متصل';
+
+  @override
+  String get disconnect => 'قطع الاتصال';
+
+  @override
+  String get companionScannerTitle => 'مساعد الشاشة';
+
+  @override
+  String get companionScannerSubtitle => 'تحكم عن بعد، ماوس ومزامنة الصوت';
+
+  @override
+  String get companionTabNearby => 'الأجهزة القريبة';
+
+  @override
+  String get companionTabScanQr => 'مسح الرمز';
+
+  @override
+  String get companionTabDirectIp => 'IP مباشر';
+
+  @override
+  String get companionAvailableScreens => 'الشاشات المتاحة';
+
+  @override
+  String get companionScanningNearby => 'جاري البحث عن شاشات قريبة...';
+
+  @override
+  String get companionScanningHint =>
+      'افتح التطبيق على التلفاز أو الكمبيوتر أو التابلت';
+
+  @override
+  String get companionDirectIpAddress => 'عنوان IP للشاشة';
+
+  @override
+  String get companionDirectPort => 'المنفذ';
+
+  @override
+  String get companionDirectPin => 'رمز PIN (اختياري)';
+
+  @override
+  String get companionConnectToScreen => 'الاتصال بالشاشة';
+
+  @override
+  String get companionReadyToConnect => 'جاهز للاتصال';
+
+  @override
+  String companionNowPlaying(String title) {
+    return 'يعرض الآن: $title';
+  }
+
+  @override
+  String get companionEnterIp => 'يرجى إدخال عنوان IP للشاشة';
+
+  @override
+  String get companionInvalidQr => 'رمز QR غير صالح. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String companionCouldNotReach(String address) {
+    return 'تعذر الاتصال بالشاشة عند $address';
+  }
 }

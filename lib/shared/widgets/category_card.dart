@@ -114,10 +114,17 @@ class _CategoryCardState extends State<CategoryCard> {
                 top: -14,
                 child: Transform.rotate(
                   angle: 0.22, // Diagonal tilt angle
-                  child: Opacity(
-                    opacity: isSelected ? 0.22 : (_isHovered ? 0.17 : 0.09),
-                    child: hasLeadingChannelOrLogo
-                        ? SizedBox(
+                  child: Builder(
+                    builder: (context) {
+                      final watermarkAlpha =
+                          isSelected ? 0.22 : (_isHovered ? 0.17 : 0.09);
+                      if (hasLeadingChannelOrLogo) {
+                        return ColorFiltered(
+                          colorFilter: ColorFilter.mode(
+                            Colors.white.withValues(alpha: watermarkAlpha),
+                            BlendMode.modulate,
+                          ),
+                          child: SizedBox(
                             width: 95,
                             height: 95,
                             child: SmartChannelLogo(
@@ -128,18 +135,22 @@ class _CategoryCardState extends State<CategoryCard> {
                               showInitials: false,
                               backgroundColor: Colors.transparent,
                             ),
-                          )
-                        : (effectiveIcon is IconData
-                            ? Icon(
-                                effectiveIcon,
-                                size: 92,
-                                color: effectiveColor,
-                              )
-                            : HugeIcon(
-                                icon: effectiveIcon as List<List<dynamic>>,
-                                size: 92,
-                                color: effectiveColor,
-                              )),
+                          ),
+                        );
+                      }
+                      if (effectiveIcon is IconData) {
+                        return Icon(
+                          effectiveIcon,
+                          size: 92,
+                          color: effectiveColor.withValues(alpha: watermarkAlpha),
+                        );
+                      }
+                      return HugeIcon(
+                        icon: effectiveIcon as List<List<dynamic>>,
+                        size: 92,
+                        color: effectiveColor.withValues(alpha: watermarkAlpha),
+                      );
+                    },
                   ),
                 ),
               ),

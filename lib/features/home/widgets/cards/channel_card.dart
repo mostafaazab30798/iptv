@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
-/// Ultra-modern Channel Card inspired by Dribbble & Apple TV OTT standards.
+/// Compact channel poster used in Home rows and live grids.
+///
+/// Avoids per-card gradients/glow shadows that dominate scroll raster time.
 class ChannelCard extends StatelessWidget {
   const ChannelCard({
     super.key,
@@ -45,23 +46,12 @@ class ChannelCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Maximized Logo Showcase Stage
             Expanded(
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: isPlaying
-                        ? [
-                            AppColors.accent.withAlpha(35),
-                            const Color(0xFF090D17),
-                          ]
-                        : [
-                            const Color(0xFF141926),
-                            const Color(0xFF0A0C13),
-                          ],
-                  ),
+                  color: isPlaying
+                      ? AppColors.accent.withAlpha(20)
+                      : const Color(0xFF0A0C13),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isPlaying
@@ -72,100 +62,43 @@ class ChannelCard extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    // Centered full-scale logo
                     Positioned.fill(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
                         child: Center(
                           child: SmartChannelLogo(
                             channel: channel,
+                            width: width - 26,
+                            height: height * 0.55,
                             fit: BoxFit.contain,
-                            fallbackIcon: isPlaying ? AppIcons.play : AppIcons.live,
+                            fallbackIcon:
+                                isPlaying ? AppIcons.play : AppIcons.live,
                           ),
                         ),
                       ),
                     ),
-
-                    // Top-Right: Playing or Live micro-badge
                     if (isPlaying)
-                      Positioned(
+                      const Positioned(
                         top: 4,
                         right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.accent, Color(0xFF0088FF)],
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.accent.withAlpha(120),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              HugeIcon(icon: AppIcons.waveform, color: Colors.black, size: 9),
-                              SizedBox(width: 2),
-                              Text(
-                                'PLAYING',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 7.5,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
+                        child: _MicroBadge(
+                          label: 'PLAYING',
+                          foreground: Colors.black,
+                          background: AppColors.accent,
                         ),
                       )
                     else if (showBadge)
                       Positioned(
                         top: 4,
                         right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF00FF87).withAlpha(30),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: const Color(0xFF00FF87).withAlpha(120),
-                              width: 0.7,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 4,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Color(0xFF00FF87),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0xFF00FF87),
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 3),
-                              const Text(
-                                'LIVE',
-                                style: TextStyle(
-                                  color: Color(0xFF00FF87),
-                                  fontSize: 7.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.4,
-                                ),
-                              ),
-                            ],
-                          ),
+                        child: _MicroBadge(
+                          label: 'LIVE',
+                          foreground: const Color(0xFF00FF87),
+                          background: const Color(0xFF00FF87).withAlpha(30),
+                          borderColor: const Color(0xFF00FF87).withAlpha(120),
                         ),
                       ),
                   ],
@@ -173,8 +106,6 @@ class ChannelCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 5),
-
-            // 2. Compact Channel Title Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
               child: Text(
@@ -183,15 +114,6 @@ class ChannelCard extends StatelessWidget {
                   color: isPlaying ? AppColors.accent : Colors.white,
                   fontSize: 11.5,
                   fontWeight: isPlaying ? FontWeight.w800 : FontWeight.w600,
-                  letterSpacing: 0.1,
-                  shadows: isPlaying
-                      ? [
-                          Shadow(
-                            color: AppColors.accent.withAlpha(150),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : null,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -200,6 +122,42 @@ class ChannelCard extends StatelessWidget {
             ),
             const SizedBox(height: 2),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MicroBadge extends StatelessWidget {
+  const _MicroBadge({
+    required this.label,
+    required this.foreground,
+    required this.background,
+    this.borderColor,
+  });
+
+  final String label;
+  final Color foreground;
+  final Color background;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(4),
+        border: borderColor == null
+            ? null
+            : Border.all(color: borderColor!, width: 0.7),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 7.5,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

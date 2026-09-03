@@ -1,9 +1,23 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 bool isWindows() => Platform.isWindows;
 bool isAndroid() => Platform.isAndroid;
+
+const _platformChannel = MethodChannel('com.hopetv.iptvplayer/platform');
+
+/// True when the host is an Android TV / Fire TV / Leanback device.
+Future<bool> isTelevision() async {
+  if (!Platform.isAndroid) return false;
+  try {
+    final result = await _platformChannel.invokeMethod<bool>('isTelevision');
+    return result ?? false;
+  } catch (_) {
+    return false;
+  }
+}
 
 Future<void> initPlatformWindow() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {

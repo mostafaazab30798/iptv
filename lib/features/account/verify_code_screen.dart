@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -189,6 +190,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen>
   }
 
   Future<bool> _confirmCommercialAccess() async {
+    if (kDebugMode) return true;
     final l10n = AppLocalizations.of(context)!;
 
     while (mounted) {

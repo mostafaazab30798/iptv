@@ -5,6 +5,8 @@ import 'dart:html' as html;
 bool isWindows() => false;
 bool isAndroid() => false;
 
+Future<bool> isTelevision() async => false;
+
 Future<void> initPlatformWindow() async {
   // Web does not require desktop window manager initialization.
 }

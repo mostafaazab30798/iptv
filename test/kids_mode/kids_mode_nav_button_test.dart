@@ -13,9 +13,9 @@ import 'package:iptv/l10n/app_localizations.dart';
 import 'package:iptv/shared/navigation/app_shell.dart';
 
 class _MemoryKidsModeStorage implements KidsModeStorage {
-  _MemoryKidsModeStorage({this.enabled = false, this.salt, this.verifier});
+  _MemoryKidsModeStorage();
 
-  bool enabled;
+  bool enabled = false;
   String? salt;
   String? verifier;
 

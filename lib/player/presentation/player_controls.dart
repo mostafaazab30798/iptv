@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
@@ -8,6 +8,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
@@ -36,7 +37,10 @@ class PlayerControls extends StatelessWidget {
     required this.onToggleLock,
     required this.onOpenQuickSettings,
     required this.onToggleFullscreen,
+    this.onAudioHandoff,
     required this.onClose,
+    this.positionListenable,
+    this.bufferedPositionListenable,
   });
 
   final PlayerState playerState;
@@ -56,7 +60,14 @@ class PlayerControls extends StatelessWidget {
   final VoidCallback onToggleLock;
   final VoidCallback onOpenQuickSettings;
   final VoidCallback onToggleFullscreen;
+  final VoidCallback? onAudioHandoff;
   final VoidCallback onClose;
+
+  /// High-frequency playback clock for seek UI; falls back to [playerState.position].
+  final ValueListenable<Duration>? positionListenable;
+
+  /// High-frequency buffer range for the seek secondary track.
+  final ValueListenable<Duration>? bufferedPositionListenable;
 
   String _formatDuration(Duration duration) {
     final hours = duration.inHours;
@@ -82,6 +93,8 @@ class PlayerControls extends StatelessWidget {
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 600;
         final isWide = constraints.maxWidth >= 720;
+        // Phones: shortest side stays under 600 in both orientations.
+        final isPhone = MediaQuery.sizeOf(context).shortestSide < 600;
 
         return Stack(
           fit: StackFit.expand,
@@ -234,8 +247,10 @@ class PlayerControls extends StatelessWidget {
                     const SizedBox(width: 16),
 
                     // Main Play / Pause Button
-                    GestureDetector(
-                      onTap: onPlayPause,
+                    TvFocusable(
+                      autofocus: true,
+                      onSelect: onPlayPause,
+                      scale: 1.12,
                       child: Container(
                         width: 60,
                         height: 60,
@@ -293,72 +308,19 @@ class PlayerControls extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Timeline progress bar (if VOD)
+                      // Timeline progress bar (if VOD) — position/buffer via
+                      // dedicated listenables so Riverpod ticks do not rebuild chrome.
                       if (!isLive && playerState.duration > Duration.zero) ...[
-                        Builder(
-                          builder: (context) {
-                            return Directionality(
-                              textDirection: TextDirection.ltr,
-                              child: Row(
-                                children: [
-                                  // Elapsed Time Glass Chip
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.09),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.14), width: 0.6),
-                                    ),
-                                    child: Text(
-                                      _formatDuration(playerState.position),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        fontFeatures: [FontFeature.tabularFigures()],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-
-                                  // Interactive scrubbing bar. Decoder seeks are
-                                  // throttled while dragging and committed exactly
-                                  // once at the end of the gesture.
-                                  Expanded(
-                                    child: _InteractiveSeekBar(
-                                      position: playerState.position,
-                                      duration: playerState.duration,
-                                      bufferedPosition: playerState.bufferedPosition,
-                                      formatDuration: _formatDuration,
-                                      onRequestSeekPreview: onRequestSeekPreview,
-                                      onScrubStart: onScrubStart,
-                                      onScrubEnd: onScrubEnd,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-
-                                  // Total Duration Glass Chip
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.09),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.14), width: 0.6),
-                                    ),
-                                    child: Text(
-                                      _formatDuration(playerState.duration),
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.75),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        fontFeatures: const [FontFeature.tabularFigures()],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                        _SeekTimelineRow(
+                          duration: playerState.duration,
+                          fallbackPosition: playerState.position,
+                          fallbackBuffered: playerState.bufferedPosition,
+                          positionListenable: positionListenable,
+                          bufferedPositionListenable: bufferedPositionListenable,
+                          formatDuration: _formatDuration,
+                          onRequestSeekPreview: onRequestSeekPreview,
+                          onScrubStart: onScrubStart,
+                          onScrubEnd: onScrubEnd,
                         ),
                       ],
 
@@ -421,6 +383,16 @@ class PlayerControls extends StatelessWidget {
                               size: 32,
                               iconSize: 16,
                               onPressed: onOpenSubtitles,
+                            ),
+                          ],
+                          if (onAudioHandoff != null && !isPhone) ...[
+                            const SizedBox(width: 6),
+                            _CompactGlassButton(
+                              icon: AppIcons.headphones,
+                              tooltip: context.l10n.handoffTvDialogTitle,
+                              size: 32,
+                              iconSize: 16,
+                              onPressed: onAudioHandoff!,
                             ),
                           ],
 
@@ -552,10 +524,11 @@ class _CompactGlassButton extends StatelessWidget {
       iconWidget = Transform.flip(flipX: true, child: iconWidget);
     }
 
-    return ClipRRect(
+    final visual = ClipRRect(
       borderRadius: BorderRadius.circular(size / 2),
       child: AdaptiveGlass(
         sigma: 8,
+        enableBlur: false,
         child: Container(
           width: size,
           height: size,
@@ -564,15 +537,17 @@ class _CompactGlassButton extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 0.8),
           ),
-          child: IconButton(
-            icon: iconWidget,
-            tooltip: tooltip,
-            onPressed: onPressed,
-            padding: EdgeInsets.zero,
-            constraints: BoxConstraints(minWidth: size, minHeight: size),
-          ),
+          child: Center(child: iconWidget),
         ),
       ),
+    );
+
+    final tooltipLabel = tooltip;
+    return TvFocusable(
+      onSelect: onPressed,
+      child: tooltipLabel == null
+          ? visual
+          : Tooltip(message: tooltipLabel, child: visual),
     );
   }
 }
@@ -592,19 +567,19 @@ class _CompactGlassActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: AdaptiveGlass(
-        sigma: 8,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 0.8),
-          ),
-          child: InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(14),
+    return TvFocusable(
+      onSelect: onPressed,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: AdaptiveGlass(
+          sigma: 8,
+          enableBlur: false,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 0.8),
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               child: Row(
@@ -626,6 +601,117 @@ class _CompactGlassActionButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Elapsed label + seek bar + duration; rebuilds only on position/buffer ticks.
+class _SeekTimelineRow extends StatelessWidget {
+  const _SeekTimelineRow({
+    required this.duration,
+    required this.fallbackPosition,
+    required this.fallbackBuffered,
+    required this.positionListenable,
+    required this.bufferedPositionListenable,
+    required this.formatDuration,
+    required this.onRequestSeekPreview,
+    required this.onScrubStart,
+    required this.onScrubEnd,
+  });
+
+  final Duration duration;
+  final Duration fallbackPosition;
+  final Duration fallbackBuffered;
+  final ValueListenable<Duration>? positionListenable;
+  final ValueListenable<Duration>? bufferedPositionListenable;
+  final String Function(Duration) formatDuration;
+  final SeekPreviewCallback onRequestSeekPreview;
+  final VoidCallback onScrubStart;
+  final ValueChanged<Duration> onScrubEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final position = positionListenable;
+    final buffered = bufferedPositionListenable;
+
+    Widget buildRow(Duration pos, Duration buf) {
+      return Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  width: 0.6,
+                ),
+              ),
+              child: Text(
+                formatDuration(pos),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _InteractiveSeekBar(
+                position: pos,
+                duration: duration,
+                bufferedPosition: buf,
+                formatDuration: formatDuration,
+                onRequestSeekPreview: onRequestSeekPreview,
+                onScrubStart: onScrubStart,
+                onScrubEnd: onScrubEnd,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  width: 0.6,
+                ),
+              ),
+              child: Text(
+                formatDuration(duration),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.75),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (position == null) {
+      return buildRow(fallbackPosition, fallbackBuffered);
+    }
+
+    return ValueListenableBuilder<Duration>(
+      valueListenable: position,
+      builder: (context, pos, _) {
+        if (buffered == null) {
+          return buildRow(pos, fallbackBuffered);
+        }
+        return ValueListenableBuilder<Duration>(
+          valueListenable: buffered,
+          builder: (context, buf, _) => buildRow(pos, buf),
+        );
+      },
     );
   }
 }

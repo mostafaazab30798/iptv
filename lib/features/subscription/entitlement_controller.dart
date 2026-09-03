@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/core/analytics/analytics_event.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
@@ -27,7 +28,7 @@ class EntitlementState {
   final String? errorMessage;
   final bool offline;
 
-  bool get allowsPremium => entitlement?.allowsPremium ?? false;
+  bool get allowsPremium => kDebugMode || (entitlement?.allowsPremium ?? false);
 
   EntitlementState copyWith({
     bool? loading,

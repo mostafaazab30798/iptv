@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -6,6 +6,7 @@ import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 /// The operation mode for the PIN dialog.
 enum KidsPinDialogMode {
@@ -314,9 +315,8 @@ class _KidsPinDialogState extends State<KidsPinDialog>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(26),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
+              // Solid scrim — avoid BackdropFilter over large dialog areas.
+              child: Container(
                   width: 360,
                   decoration: BoxDecoration(
                     color: const Color(0xF210131B),
@@ -341,16 +341,13 @@ class _KidsPinDialogState extends State<KidsPinDialog>
                       Row(
                         children: [
                           if (_currentStep > 0)
-                            IconButton(
-                              icon: const Icon(
+                            TvFocusable(
+                              onSelect: _onStepBack,
+                              child: const Icon(
                                 Icons.arrow_back_ios_new_rounded,
                                 size: 18,
                                 color: AppColors.textSecondary,
                               ),
-                              onPressed: _onStepBack,
-                              tooltip: context.l10n.actionBack,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
                             )
                           else
                             const SizedBox(width: 18),
@@ -383,16 +380,13 @@ class _KidsPinDialogState extends State<KidsPinDialog>
                               ),
                             ),
                           const Spacer(),
-                          IconButton(
-                            icon: const Icon(
+                          TvFocusable(
+                            onSelect: () => Navigator.of(context).pop(),
+                            child: const Icon(
                               Icons.close_rounded,
                               size: 20,
                               color: AppColors.textSecondary,
                             ),
-                            onPressed: () => Navigator.of(context).pop(),
-                            tooltip: context.l10n.actionClose,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
@@ -518,15 +512,18 @@ class _KidsPinDialogState extends State<KidsPinDialog>
                       const SizedBox(height: 22),
 
                       // --- Built-in Numeric Keypad ---
-                      _PinNumericKeypad(
-                        onDigitPressed: _onDigitPressed,
-                        onBackspacePressed: _onBackspacePressed,
-                        onClearPressed: _onClearPressed,
+                      DpadRegion(
+                        memoryKey: 'kids-pin/keypad',
+                        debugLabel: 'kids-pin-keypad',
+                        child: _PinNumericKeypad(
+                          onDigitPressed: _onDigitPressed,
+                          onBackspacePressed: _onBackspacePressed,
+                          onClearPressed: _onClearPressed,
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
             ),
           ),
         ),
@@ -729,6 +726,8 @@ class _PinNumericKeypad extends StatelessWidget {
                   return _KeypadButton(
                     label: k,
                     onTap: () => onDigitPressed(k),
+                    entry: k == '1',
+                    autofocus: k == '1',
                   );
                 }
               }).toList(),
@@ -746,54 +745,54 @@ class _KeypadButton extends StatelessWidget {
     this.icon,
     this.isSpecial = false,
     required this.onTap,
+    this.entry = false,
+    this.autofocus = false,
   });
 
   final String? label;
   final IconData? icon;
   final bool isSpecial;
   final VoidCallback onTap;
+  final bool entry;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        splashColor: AppColors.accent.withAlpha(40),
-        highlightColor: AppColors.accent.withAlpha(20),
-        child: Ink(
-          width: 72,
-          height: 48,
-          decoration: BoxDecoration(
-            color: isSpecial
-                ? const Color(0x1AFFFFFF)
-                : const Color(0x2BFFFFFF),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withAlpha(20),
-              width: 0.8,
-            ),
+    return TvFocusable(
+      entry: entry,
+      autofocus: autofocus,
+      onSelect: onTap,
+      child: Ink(
+        width: 72,
+        height: 48,
+        decoration: BoxDecoration(
+          color: isSpecial
+              ? const Color(0x1AFFFFFF)
+              : const Color(0x2BFFFFFF),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withAlpha(20),
+            width: 0.8,
           ),
-          child: Center(
-            child: icon != null
-                ? Icon(
-                    icon,
-                    size: 20,
-                    color: AppColors.textPrimary.withAlpha(220),
-                  )
-                : Text(
-                    label!,
-                    style: TextStyle(
-                      color: isSpecial
-                          ? AppColors.textSecondary
-                          : AppColors.textPrimary,
-                      fontSize: isSpecial ? 16 : 21,
-                      fontWeight:
-                          isSpecial ? FontWeight.w600 : FontWeight.bold,
-                    ),
+        ),
+        child: Center(
+          child: icon != null
+              ? Icon(
+                  icon,
+                  size: 20,
+                  color: AppColors.textPrimary.withAlpha(220),
+                )
+              : Text(
+                  label!,
+                  style: TextStyle(
+                    color: isSpecial
+                        ? AppColors.textSecondary
+                        : AppColors.textPrimary,
+                    fontSize: isSpecial ? 16 : 21,
+                    fontWeight:
+                        isSpecial ? FontWeight.w600 : FontWeight.bold,
                   ),
-          ),
+                ),
         ),
       ),
     );

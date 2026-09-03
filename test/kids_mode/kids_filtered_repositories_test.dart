@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/domain/entities/epg_program.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/domain/entities/season.dart';
 import 'package:iptv/domain/entities/series.dart';
@@ -178,6 +179,13 @@ class _FakeLiveRepository implements LiveRepository {
   @override
   Future<Result<Channel>> getChannelById(int streamId) async =>
       Ok(channels.firstWhere((channel) => channel.streamId == streamId));
+
+  @override
+  Future<Result<List<EpgProgram>>> getShortEpg(
+    int streamId, {
+    int limit = 4,
+  }) async =>
+      const Ok([]);
 }
 
 class _FakeLiveRepositoryWithCountryPacks implements LiveRepository {
@@ -230,4 +238,11 @@ class _FakeLiveRepositoryWithCountryPacks implements LiveRepository {
   @override
   Future<Result<Channel>> getChannelById(int streamId) async =>
       Ok(channels.firstWhere((channel) => channel.streamId == streamId));
+
+  @override
+  Future<Result<List<EpgProgram>>> getShortEpg(
+    int streamId, {
+    int limit = 4,
+  }) async =>
+      const Ok([]);
 }

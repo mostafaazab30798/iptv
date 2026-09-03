@@ -838,25 +838,7 @@ Future<void> _launchDownload(BuildContext context, WidgetRef ref) async {
       .read(updateProvider.notifier)
       .requestDownloadUrl(isSignedIn: session.isSignedIn);
 
-  if (!session.isSignedIn) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.updateSignInRequired),
-          backgroundColor: AppColors.bg3,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-    return;
-  }
-
   if (url == null || url.isEmpty) {
-    return;
-  }
-
-  final uri = Uri.parse(url);
-  if (!await canLaunchUrl(uri)) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -869,15 +851,36 @@ Future<void> _launchDownload(BuildContext context, WidgetRef ref) async {
     return;
   }
 
-  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!launched && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.updateLaunchFailed),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  final uri = Uri.parse(url);
+  try {
+    var launched = false;
+    try {
+      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+
+    if (!launched) {
+      launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+    }
+
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.updateLaunchFailed),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.updateLaunchFailed),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
 

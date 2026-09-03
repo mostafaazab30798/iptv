@@ -56,14 +56,14 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           installedAppInfoProvider.overrideWithValue(
-            FakeInstalledAppInfo(version: '1.0.0', buildNumber: 1),
+            FakeInstalledAppInfo(version: '1.0.0', buildNumber: 13),
           ),
         ],
       );
       addTearDown(container.dispose);
 
       final version = await container.read(appVersionStringProvider.future);
-      expect(version, 'v1.0.0 (1)');
+      expect(version, 'v1.0.0 (13)');
     });
   });
 }

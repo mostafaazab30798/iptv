@@ -36,6 +36,9 @@ class PlayerSource extends Equatable {
   final Duration? startAt;
   final Map<String, dynamic> metadata;
 
+  bool get isLive => profile == PlaybackProfile.live;
+  bool get isVod => profile == PlaybackProfile.vod;
+
   /// Helper factory for live channels.
   factory PlayerSource.live({
     required String url,

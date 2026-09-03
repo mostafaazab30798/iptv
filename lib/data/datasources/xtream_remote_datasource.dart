@@ -104,6 +104,33 @@ class XtreamRemoteDataSource {
     }
   }
 
+  /// Current / upcoming EPG rows for a live stream.
+  ///
+  /// Returns an empty list when the panel has no guide data.
+  Future<List<Map<String, dynamic>>> getShortEpg(
+    int streamId, {
+    int limit = 4,
+  }) async {
+    try {
+      final res = await _client.get<Map<String, dynamic>>(
+        'player_api.php',
+        params: {
+          'action': ApiConstants.actionGetShortEpg,
+          'stream_id': streamId.toString(),
+          'limit': limit.toString(),
+        },
+      );
+      final listings = res['epg_listings'];
+      if (listings is! List) return const [];
+      return listings
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// Detailed series metadata including seasons & episodes.
   Future<Map<String, dynamic>> getSeriesInfo(int seriesId) async {
     try {

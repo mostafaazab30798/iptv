@@ -10,6 +10,7 @@ abstract final class ApiConstants {
   static const String actionGetSeriesInfo = 'get_series_info';
   static const String actionGetVodInfo = 'get_vod_info';
   static const String actionGetSimpleDataTable = 'get_simple_data_table';
+  static const String actionGetShortEpg = 'get_short_epg';
 
   // Stream URL templates
   static const String liveStreamPath = '/live/{username}/{password}/{streamId}.{format}';

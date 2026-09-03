@@ -1,3 +1,4 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
@@ -41,19 +43,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<List<WatchHistoryEntry>>>(historyListProvider, (
-      _,
-      next,
-    ) {
-      next.whenData((items) {
-        if (mounted) {
-          setState(() {
-            _localItems = List.of(items);
-          });
-        }
-      });
-    });
-
     final historyAsync = ref.watch(historyListProvider);
     final items = _localItems ?? historyAsync.valueOrNull;
 
@@ -80,7 +69,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             );
           }
 
-          return CustomScrollView(
+          return DpadRegion(
+            memoryKey: 'history/list',
+            debugLabel: 'history-list',
+            child: CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
@@ -112,19 +104,25 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           ),
                         ],
                       ),
-                      TextButton.icon(
-                        onPressed: () => _confirmClearHistory(context),
-                        icon: const HugeIcon(
-                          icon: AppIcons.deleteSweep,
-                          color: AppColors.textSecondary,
-                          size: 18,
-                        ),
-                        label: Text(
-                          context.l10n.historyClearTooltip,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                          ),
+                      TvFocusable(
+                        onSelect: () => _confirmClearHistory(context),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const HugeIcon(
+                              icon: AppIcons.deleteSweep,
+                              color: AppColors.textSecondary,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.l10n.historyClearTooltip,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -169,6 +167,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         ref.read(historyRepositoryProvider).deleteEntry(id);
                       },
                       child: FocusableCard(
+                        autofocus: i == 0,
+                        entry: i == 0,
                         onTap: () => _playHistoryItem(context, item),
                         padding: const EdgeInsets.all(12),
                         child: Row(
@@ -312,6 +312,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ),
               ),
             ],
+          ),
           );
         },
       ),
@@ -434,7 +435,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       await ref.read(historyRepositoryProvider).clearHistory();
       if (mounted) {
         setState(() {
-          _localItems = [];
+          _localItems = null;
         });
       }
       ref.invalidate(historyListProvider);

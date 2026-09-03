@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 /// Non-secret commercial control-plane configuration for HOPE TV.
 ///
@@ -11,13 +12,15 @@ class CommercialApiConfig {
 
   static const productName = 'HOPE TV';
 
-  /// Commercial entitlement navigation is enabled by default. Development
-  /// builds can opt out explicitly, but production builds must provide the
-  /// Supabase and entitlement public-key defines.
-  static const accessGateEnabled = bool.fromEnvironment(
-    'ACCESS_GATE_ENABLED',
-    defaultValue: true,
-  );
+  /// Commercial entitlement navigation is enabled by default in release builds.
+  /// Bypassed in debug mode for rapid development.
+  static bool get accessGateEnabled {
+    if (kDebugMode) return false;
+    return const bool.fromEnvironment(
+      'ACCESS_GATE_ENABLED',
+      defaultValue: true,
+    );
+  }
 
   static const supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
@@ -66,37 +69,48 @@ class CommercialApiConfig {
   static Map<String, String> get entitlementPublicKeys {
     const raw = String.fromEnvironment(
       'ENTITLEMENT_PUBLIC_KEYS_JSON',
-      defaultValue: '{}',
+      defaultValue: '',
     );
+    if (raw.isEmpty) return const {};
     try {
-      if (raw.isEmpty || raw == '{}') return const {};
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) return const {};
-      return decoded.map((k, v) => MapEntry('$k', '$v'));
+      final dynamic parsed = jsonDecode(raw);
+      if (parsed is! Map) return const {};
+      return parsed.map((k, v) => MapEntry(k.toString(), v.toString()));
     } catch (_) {
       return const {};
     }
   }
 
-  /// JSON map of keyId -> Ed25519 public key hex for release manifests.
-  static Map<String, String> get releasePublicKeys {
-    const raw = String.fromEnvironment(
-      'RELEASE_PUBLIC_KEYS_JSON',
-      defaultValue: '{}',
-    );
-    try {
-      if (raw.isEmpty || raw == '{}') return const {};
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) return const {};
-      return decoded.map((k, v) => MapEntry('$k', '$v'));
-    } catch (_) {
-      return const {};
-    }
+  /// Optional single fallback key id / hex pair for simpler dart-define passing.
+  static const fallbackKeyId = String.fromEnvironment('ENTITLEMENT_KEY_ID');
+  static const fallbackPublicKeyHex = String.fromEnvironment(
+    'ENTITLEMENT_PUBLIC_KEY_HEX',
+  );
+
+  /// True if at least one public key source is defined.
+  static bool get hasAnyPublicKey {
+    if (entitlementPublicKeys.isNotEmpty) return true;
+    return fallbackKeyId.isNotEmpty && fallbackPublicKeyHex.isNotEmpty;
   }
 
-  /// Optional local-only HMAC verify secret for release manifests.
+  /// Release verification configuration
   static const releaseHmacVerifySecret = String.fromEnvironment(
     'RELEASE_HMAC_VERIFY_SECRET',
     defaultValue: '',
   );
+
+  static Map<String, String> get releasePublicKeys {
+    const raw = String.fromEnvironment(
+      'RELEASE_PUBLIC_KEYS_JSON',
+      defaultValue: '',
+    );
+    if (raw.isEmpty) return const {};
+    try {
+      final dynamic parsed = jsonDecode(raw);
+      if (parsed is! Map) return const {};
+      return parsed.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return const {};
+    }
+  }
 }

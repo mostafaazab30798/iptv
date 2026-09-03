@@ -46,8 +46,8 @@ class HistoryCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(16),
                     fallbackIcon: AppIcons.play,
-                    memCacheWidth: 240,
-                    memCacheHeight: 350,
+                    memCacheWidth: 160,
+                    memCacheHeight: 240,
                   ),
                   if (progress > 0) ...[
                     // Bottom gradient vignette for high contrast

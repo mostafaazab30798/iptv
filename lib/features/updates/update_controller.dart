@@ -226,37 +226,62 @@ class UpdateController extends StateNotifier<UpdateState> {
     );
   }
 
-  Future<String?> requestDownloadUrl({required bool isSignedIn}) async {
-    if (!isSignedIn) {
-      state = state.copyWith(pendingDownloadAfterSignIn: true);
-      return null;
+  Future<String?> requestDownloadUrl({bool isSignedIn = true}) async {
+    final manifest = state.manifest;
+
+    // 1. Direct download URL from manifest if present
+    if (manifest != null &&
+        manifest.downloadUrl != null &&
+        manifest.downloadUrl!.isNotEmpty) {
+      if (UpdateUrlValidator.isAllowedDownloadUrl(manifest.downloadUrl!)) {
+        state = state.copyWith(
+          downloadUrl: manifest.downloadUrl,
+          pendingDownloadAfterSignIn: false,
+        );
+        return manifest.downloadUrl;
+      }
     }
 
+    // 2. If releaseId is present and signed in, try download authorization endpoint
     final releaseId = state.releaseId;
-    if (releaseId == null || releaseId.isEmpty) return null;
+    if (releaseId != null && releaseId.isNotEmpty && isSignedIn) {
+      state = state.copyWith(
+        status: UpdateFlowStatus.launching,
+        clearError: true,
+      );
+      try {
+        final auth = await _releases.authorizeDownload(releaseId);
+        if (UpdateUrlValidator.isAllowedDownloadUrl(auth.downloadUrl)) {
+          state = state.copyWith(
+            status: UpdateFlowStatus.available,
+            downloadUrl: auth.downloadUrl,
+            pendingDownloadAfterSignIn: false,
+          );
+          return auth.downloadUrl;
+        }
+      } catch (_) {
+        // Fallback to direct release link below
+      }
+    }
+
+    // 3. Direct GitHub Releases download link fallback
+    if (manifest != null) {
+      final direct = manifest.directDownloadUrl;
+      if (UpdateUrlValidator.isAllowedDownloadUrl(direct)) {
+        state = state.copyWith(
+          status: UpdateFlowStatus.available,
+          downloadUrl: direct,
+          pendingDownloadAfterSignIn: false,
+        );
+        return direct;
+      }
+    }
 
     state = state.copyWith(
-      status: UpdateFlowStatus.launching,
-      clearError: true,
+      status: UpdateFlowStatus.error,
+      errorMessage: 'Could not resolve a valid download URL.',
     );
-    try {
-      final auth = await _releases.authorizeDownload(releaseId);
-      if (!UpdateUrlValidator.isAllowedDownloadUrl(auth.downloadUrl)) {
-        throw StateError('Download URL is not from an approved host.');
-      }
-      state = state.copyWith(
-        status: UpdateFlowStatus.available,
-        downloadUrl: auth.downloadUrl,
-        pendingDownloadAfterSignIn: false,
-      );
-      return auth.downloadUrl;
-    } catch (e) {
-      state = state.copyWith(
-        status: UpdateFlowStatus.error,
-        errorMessage: e.toString(),
-      );
-      return null;
-    }
+    return null;
   }
 
   void clearPendingDownloadAfterSignIn() {

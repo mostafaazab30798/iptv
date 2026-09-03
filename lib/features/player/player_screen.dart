@@ -268,6 +268,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
             // 3. Interactive Controls Overlay & Diagnostics HUD
             PlayerOverlay(
               playerState: fullPlayerState,
+              positionListenable: controller.positionListenable,
+              bufferedPositionListenable:
+                  controller.bufferedPositionListenable,
               onPlayPause: () {
                 if (playerState.isPlaying) {
                   controller.pause();

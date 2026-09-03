@@ -6,6 +6,7 @@ import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/data/mappers/data_mapper.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/domain/entities/epg_program.dart';
 import 'package:iptv/domain/repositories/live_repository.dart';
 
 List<Channel> _parseChannelsIsolate(List<Map<String, dynamic>> raw) {
@@ -33,9 +34,14 @@ class LiveRepositoryImpl implements LiveRepository {
   /// Lets Home pull category rows without O(n) scans of all channels.
   static final Map<int, List<Channel>> _channelsByCategoryIndex = {};
 
-  static bool _isFresh(DateTime? fetchedAt) {
+  static final Map<int, List<EpgProgram>> _cachedEpg = {};
+  static final Map<int, DateTime> _epgFetchedAt = {};
+
+  static const _epgTtl = Duration(minutes: 8);
+
+  static bool _isFresh(DateTime? fetchedAt, [Duration ttl = _ttl]) {
     if (fetchedAt == null) return false;
-    return DateTime.now().difference(fetchedAt) < _ttl;
+    return DateTime.now().difference(fetchedAt) < ttl;
   }
 
   static void _rebuildCategoryIndex(List<Channel> channels) {
@@ -64,6 +70,8 @@ class LiveRepositoryImpl implements LiveRepository {
     _cachedCategoryChannels.clear();
     _channelMap.clear();
     _channelsByCategoryIndex.clear();
+    _cachedEpg.clear();
+    _epgFetchedAt.clear();
   }
 
   @override
@@ -238,6 +246,40 @@ class LiveRepositoryImpl implements LiveRepository {
       return const Err(AppResultError('Channel not found'));
     } catch (e) {
       return Err(AppResultError('Channel not found', cause: e));
+    }
+  }
+
+  @override
+  Future<Result<List<EpgProgram>>> getShortEpg(
+    int streamId, {
+    int limit = 4,
+  }) async {
+    final fetchedAt = _epgFetchedAt[streamId];
+    final cached = _cachedEpg[streamId];
+    if (cached != null && _isFresh(fetchedAt, _epgTtl)) {
+      return Ok(cached);
+    }
+
+    try {
+      final raw = await remoteDataSource.getShortEpg(streamId, limit: limit);
+      final nowPlaying = <EpgProgram>[];
+      final rest = <EpgProgram>[];
+      for (final row in raw) {
+        final program = DataMapper.epgFromListing(row, channelId: streamId);
+        if (program == null) continue;
+        if (DataMapper.listingIsNowPlaying(row) || program.isLive) {
+          nowPlaying.add(program);
+        } else {
+          rest.add(program);
+        }
+      }
+      final programs = [...nowPlaying, ...rest];
+      _cachedEpg[streamId] = programs;
+      _epgFetchedAt[streamId] = DateTime.now();
+      return Ok(programs);
+    } catch (e) {
+      if (cached != null) return Ok(cached);
+      return Err(AppResultError('Failed to load EPG', cause: e));
     }
   }
 }

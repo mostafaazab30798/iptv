@@ -160,6 +160,7 @@ jobs:
 
           BUILD_ARGS=(
             --release
+            --split-per-abi
             --target-platform android-arm64
             "--dart-define=SUPABASE_URL=${SUPABASE_URL}"
             "--dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
@@ -181,7 +182,14 @@ jobs:
           set -euo pipefail
           mkdir -p dist/android
           TARGET_FILE="dist/android/HOPE_IPTV.apk"
-          cp build/app/outputs/flutter-apk/app-release.apk "$TARGET_FILE"
+          if [ -f build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$TARGET_FILE"
+          elif [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-release.apk "$TARGET_FILE"
+          else
+            echo "::error::No generated release APK found."
+            exit 1
+          fi
 
           FILE_SIZE=$(stat -c%s "$TARGET_FILE")
           SHA256_HASH=$(sha256sum "$TARGET_FILE" | awk '{print $1}')

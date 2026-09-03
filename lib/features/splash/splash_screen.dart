@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -66,7 +67,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         if (!mounted) return;
         final entitlement = ref.read(entitlementProvider);
         context.go(
-          entitlement.allowsPremium ? Routes.home : Routes.accessRequired,
+          (kDebugMode || entitlement.allowsPremium)
+              ? Routes.home
+              : Routes.accessRequired,
         );
       } else {
         context.go(Routes.home);

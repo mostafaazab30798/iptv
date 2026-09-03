@@ -19,6 +19,7 @@ class ReleaseManifest {
     required this.releaseNotesAr,
     required this.keyId,
     required this.signature,
+    this.downloadUrl,
   });
 
   final int schemaVersion;
@@ -37,6 +38,17 @@ class ReleaseManifest {
   final String? releaseNotesAr;
   final String keyId;
   final String signature;
+  final String? downloadUrl;
+
+  String get directDownloadUrl {
+    final direct = downloadUrl;
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+    final fileName =
+        platform == 'windows' ? 'HOPE_IPTV_Setup.exe' : 'HOPE_IPTV.apk';
+    return 'https://github.com/mostafaazab30798/iptv/releases/download/v$version-build.$buildNumber/$fileName';
+  }
 
   factory ReleaseManifest.fromJson(Map<String, dynamic> json) {
     return ReleaseManifest(
@@ -58,6 +70,9 @@ class ReleaseManifest {
       releaseNotesAr: json['releaseNotesAr'] as String?,
       keyId: json['keyId'] as String? ?? '',
       signature: json['signature'] as String? ?? '',
+      downloadUrl: json['downloadUrl'] as String? ??
+          json['object_key'] as String? ??
+          json['objectKey'] as String?,
     );
   }
 

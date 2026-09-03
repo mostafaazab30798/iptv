@@ -4,6 +4,7 @@ import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
+import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 
 typedef SleepTimerCallback = void Function(Duration? duration, [String? label]);
@@ -19,6 +20,7 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
     required this.onOpenSubtitles,
     required this.onSelectBufferMode,
     required this.onSetSleepTimer,
+    this.onAudioHandoff,
     this.activeSleepLabel,
     this.activeSleepDuration,
   });
@@ -30,6 +32,7 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
   final VoidCallback onOpenSubtitles;
   final ValueChanged<PlaybackBufferMode> onSelectBufferMode;
   final SleepTimerCallback onSetSleepTimer;
+  final VoidCallback? onAudioHandoff;
   final String? activeSleepLabel;
   final Duration? activeSleepDuration;
 
@@ -42,6 +45,7 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
     required VoidCallback onOpenSubtitles,
     required ValueChanged<PlaybackBufferMode> onSelectBufferMode,
     required SleepTimerCallback onSetSleepTimer,
+    VoidCallback? onAudioHandoff,
     String? activeSleepLabel,
     Duration? activeSleepDuration,
   }) {
@@ -57,6 +61,7 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
         onOpenSubtitles: onOpenSubtitles,
         onSelectBufferMode: onSelectBufferMode,
         onSetSleepTimer: onSetSleepTimer,
+        onAudioHandoff: onAudioHandoff,
         activeSleepLabel: activeSleepLabel,
         activeSleepDuration: activeSleepDuration,
       ),
@@ -115,9 +120,10 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: AdaptiveGlass(
         sigma: 24,
+        enableBlur: false,
         child: Container(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.88,
+            maxHeight: MediaQuery.sizeOf(context).height * 0.88,
           ),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           decoration: BoxDecoration(
@@ -224,40 +230,54 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                   ],
 
                   // 5. Audio & Subtitles
-                  if (caps.audioTracks || caps.subtitles) ...[
-                    Row(
-                      children: [
-                        if (caps.audioTracks)
-                          Expanded(
-                            child: _QuickActionCard(
-                              icon: AppIcons.audioTrack,
-                              label: 'Audio',
-                              value: widget.playerState.currentAudioTrack?.title ?? 'Default',
-                              isRtl: isRtl,
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                widget.onOpenAudioTracks();
-                              },
+                    if (caps.audioTracks || caps.subtitles || widget.onAudioHandoff != null) ...[
+                      Row(
+                        children: [
+                          if (caps.audioTracks)
+                            Expanded(
+                              child: _QuickActionCard(
+                                icon: AppIcons.audioTrack,
+                                label: 'Audio',
+                                value: widget.playerState.currentAudioTrack?.title ?? 'Default',
+                                isRtl: isRtl,
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  widget.onOpenAudioTracks();
+                                },
+                              ),
                             ),
-                          ),
-                        if (caps.audioTracks && caps.subtitles) const SizedBox(width: 8),
-                        if (caps.subtitles)
-                          Expanded(
-                            child: _QuickActionCard(
-                              icon: AppIcons.subtitles,
-                              label: 'Subtitles',
-                              value: widget.playerState.currentSubtitleTrack?.title ?? 'Off',
-                              isRtl: isRtl,
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                widget.onOpenSubtitles();
-                              },
+                          if (caps.audioTracks && (caps.subtitles || widget.onAudioHandoff != null)) const SizedBox(width: 8),
+                          if (caps.subtitles)
+                            Expanded(
+                              child: _QuickActionCard(
+                                icon: AppIcons.subtitles,
+                                label: 'Subtitles',
+                                value: widget.playerState.currentSubtitleTrack?.title ?? 'Off',
+                                isRtl: isRtl,
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  widget.onOpenSubtitles();
+                                },
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                  ],
+                          if (caps.subtitles && widget.onAudioHandoff != null) const SizedBox(width: 8),
+                          if (widget.onAudioHandoff != null)
+                            Expanded(
+                              child: _QuickActionCard(
+                                icon: AppIcons.headphones,
+                                label: context.l10n.handoffQuickActionLabel,
+                                value: context.l10n.handoffTvDialogTitle,
+                                isRtl: isRtl,
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  widget.onAudioHandoff!();
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                    ],
 
                   // 6. Buffer Mode
                   const _SectionLabel(title: 'BUFFER PROFILE'),

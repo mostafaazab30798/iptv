@@ -74,6 +74,8 @@ abstract final class AppIcons {
   static const List<List<dynamic>> subtitles = HugeIcons.strokeRoundedSubtitle;
   static const List<List<dynamic>> audioTrack =
       HugeIcons.strokeRoundedMusicNote01;
+  static const List<List<dynamic>> headphones =
+      HugeIcons.strokeRoundedHeadphones;
   static const List<List<dynamic>> aspectRatio =
       HugeIcons.strokeRoundedAspectRatio;
   static const List<List<dynamic>> fullscreen =
@@ -119,6 +121,7 @@ abstract final class AppIcons {
       HugeIcons.strokeRoundedAnalytics01;
 
   // --- Settings & Actions ---
+  static const List<List<dynamic>> camera = HugeIcons.strokeRoundedCamera01;
   static const List<List<dynamic>> server = HugeIcons.strokeRoundedCloudServer;
   static const List<List<dynamic>> dns = HugeIcons.strokeRoundedServerStack01;
   static const List<List<dynamic>> bolt = HugeIcons.strokeRoundedFlash;

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:dpad/dpad.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
@@ -8,6 +10,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
+import 'package:iptv/player/handoff/presentation/audio_handoff_tv_dialog.dart';
 import 'package:iptv/player/presentation/audio_track_selector.dart';
 import 'package:iptv/player/presentation/diagnostics_overlay.dart';
 import 'package:iptv/player/presentation/double_tap_seek_overlay.dart';
@@ -45,6 +48,8 @@ class PlayerOverlay extends StatefulWidget {
     required this.onToggleLock,
     required this.onToggleFullscreen,
     required this.onClose,
+    this.positionListenable,
+    this.bufferedPositionListenable,
   });
 
   final PlayerState playerState;
@@ -68,8 +73,32 @@ class PlayerOverlay extends StatefulWidget {
   final VoidCallback onToggleFullscreen;
   final VoidCallback onClose;
 
+  /// High-frequency position channel for seek UI (avoids Riverpod churn).
+  final ValueListenable<Duration>? positionListenable;
+
+  /// High-frequency buffered position for the seek secondary track.
+  final ValueListenable<Duration>? bufferedPositionListenable;
+
   @override
   State<PlayerOverlay> createState() => _PlayerOverlayState();
+}
+
+enum _GestureHudKind { none, volume, brightness, scrub }
+
+class _GestureHudData {
+  const _GestureHudData({
+    this.kind = _GestureHudKind.none,
+    this.level = 0.0,
+    this.scrubOffsetSeconds = 0,
+    this.scrubStartPosition = Duration.zero,
+  });
+
+  final _GestureHudKind kind;
+  final double level;
+  final int scrubOffsetSeconds;
+  final Duration scrubStartPosition;
+
+  static const hidden = _GestureHudData();
 }
 
 class _PlayerOverlayState extends State<PlayerOverlay> {
@@ -84,7 +113,9 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   int _seekCumulativeSeconds = 0;
   Timer? _seekResetTimer;
 
-  // Gesture HUD states
+  // Gesture HUD — ValueNotifier so drag ticks do not rebuild PlayerControls.
+  final ValueNotifier<_GestureHudData> _gestureHud =
+      ValueNotifier(_GestureHudData.hidden);
   bool _isDragging = false;
   bool _isVolumeDrag = false;
   bool _isBrightnessDrag = false;
@@ -100,6 +131,9 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   Duration? _activeSleepDuration;
   String? _activeSleepLabel;
 
+  Duration get _livePosition =>
+      widget.positionListenable?.value ?? widget.playerState.position;
+
   @override
   void initState() {
     super.initState();
@@ -114,7 +148,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       try {
         final brightness = await ScreenBrightness.instance.application;
         if (mounted) {
-          setState(() => _brightnessLevel = brightness.clamp(0.01, 1.0));
+          _brightnessLevel = brightness.clamp(0.01, 1.0);
         }
       } catch (_) {}
     }
@@ -122,7 +156,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     try {
       final vol = await FlutterVolumeController.getVolume();
       if (vol != null && mounted) {
-        setState(() => _currentVolume = vol.clamp(0.0, 1.0));
+        _currentVolume = vol.clamp(0.0, 1.0);
       }
     } catch (_) {}
   }
@@ -145,10 +179,12 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   }
 
   void _showOverlay() {
-    if (mounted && !widget.playerState.isLocked) {
+    if (!mounted || widget.playerState.isLocked) return;
+    // Only rebuild when visibility actually flips; always refresh auto-hide.
+    if (!_controlsVisible) {
       setState(() => _controlsVisible = true);
-      _scheduleHide();
     }
+    _scheduleHide();
   }
 
   void _toggleOverlay() {
@@ -253,6 +289,28 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
 
   // ── Drag Gestures (Vertical = Volume/Brightness, Horizontal = Seek Scrub) ──
 
+  void _publishGestureHud() {
+    if (_isVolumeDrag) {
+      _gestureHud.value = _GestureHudData(
+        kind: _GestureHudKind.volume,
+        level: _currentVolume,
+      );
+    } else if (_isBrightnessDrag) {
+      _gestureHud.value = _GestureHudData(
+        kind: _GestureHudKind.brightness,
+        level: _brightnessLevel,
+      );
+    } else if (_isScrubDrag) {
+      _gestureHud.value = _GestureHudData(
+        kind: _GestureHudKind.scrub,
+        scrubOffsetSeconds: _scrubOffsetSeconds,
+        scrubStartPosition: _scrubStartPosition,
+      );
+    } else {
+      _gestureHud.value = _GestureHudData.hidden;
+    }
+  }
+
   void _handleVerticalDragStart(DragStartDetails details, BoxConstraints constraints) {
     if (widget.playerState.isLocked) return;
     _hudDismissTimer?.cancel();
@@ -266,6 +324,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       ScreenBrightness.instance.application.then((b) {
         if (mounted) {
           _brightnessLevel = b.clamp(0.01, 1.0);
+          if (_isBrightnessDrag) _publishGestureHud();
         }
       }).catchError((_) {});
     } else {
@@ -274,9 +333,11 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       FlutterVolumeController.getVolume().then((v) {
         if (v != null && mounted) {
           _currentVolume = v.clamp(0.0, 1.0);
+          if (_isVolumeDrag) _publishGestureHud();
         }
       }).catchError((_) {});
     }
+    _publishGestureHud();
   }
 
   void _handleVerticalDragUpdate(DragUpdateDetails details, BoxConstraints constraints) {
@@ -286,12 +347,13 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     if (_isBrightnessDrag) {
       final delta = -dy / (constraints.maxHeight * 0.65);
       final newLevel = (_brightnessLevel + delta).clamp(0.01, 1.0);
-      setState(() => _brightnessLevel = newLevel);
+      _brightnessLevel = newLevel;
+      _publishGestureHud();
       ScreenBrightness.instance.setApplicationScreenBrightness(newLevel).catchError((_) {});
     } else if (_isVolumeDrag) {
       final delta = -dy / (constraints.maxHeight * 0.65);
       _currentVolume = (_currentVolume + delta).clamp(0.0, 1.0);
-      setState(() {});
+      _publishGestureHud();
       FlutterVolumeController.setVolume(_currentVolume).catchError((_) {});
       widget.onVolumeChanged(_currentVolume);
     }
@@ -301,12 +363,10 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     if (!_isDragging || widget.playerState.isLocked) return;
     _isDragging = false;
     _hudDismissTimer = Timer(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        setState(() {
-          _isVolumeDrag = false;
-          _isBrightnessDrag = false;
-        });
-      }
+      if (!mounted) return;
+      _isVolumeDrag = false;
+      _isBrightnessDrag = false;
+      _publishGestureHud();
     });
   }
 
@@ -315,17 +375,17 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     _hudDismissTimer?.cancel();
     _isDragging = true;
     _isScrubDrag = true;
-    _scrubStartPosition = widget.playerState.position;
+    _scrubStartPosition = _livePosition;
     _scrubOffsetSeconds = 0;
+    _publishGestureHud();
   }
 
   void _handleHorizontalDragUpdate(DragUpdateDetails details, BoxConstraints constraints) {
     if (!_isDragging || widget.playerState.isLocked || !_isScrubDrag) return;
     final dx = details.delta.dx;
     final deltaSecs = (dx / (constraints.maxWidth * 0.3) * 60).toInt();
-    setState(() {
-      _scrubOffsetSeconds += deltaSecs;
-    });
+    _scrubOffsetSeconds += deltaSecs;
+    _publishGestureHud();
   }
 
   void _handleHorizontalDragEnd(DragEndDetails details) {
@@ -340,11 +400,9 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
 
     _isDragging = false;
     _hudDismissTimer = Timer(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        setState(() {
-          _isScrubDrag = false;
-        });
-      }
+      if (!mounted) return;
+      _isScrubDrag = false;
+      _publishGestureHud();
     });
   }
 
@@ -381,11 +439,50 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
 
     final key = event.logicalKey;
+    final chromeOpen = _controlsVisible && !widget.playerState.isLocked;
 
-    if (key == LogicalKeyboardKey.space || key == LogicalKeyboardKey.select) {
+    if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack) {
+      if (widget.playerState.isLocked) {
+        widget.onToggleLock();
+        return KeyEventResult.handled;
+      }
+      if (_showDiagnostics) {
+        setState(() => _showDiagnostics = false);
+        return KeyEventResult.handled;
+      }
+      if (_controlsVisible) {
+        setState(() => _controlsVisible = false);
+        _focusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      widget.onClose();
+      return KeyEventResult.handled;
+    }
+
+    // While player chrome is visible, D-pad arrows/select move between
+    // focusable controls instead of seeking or changing channels.
+    if (chromeOpen) {
+      if (key == LogicalKeyboardKey.mediaPlayPause ||
+          key == LogicalKeyboardKey.mediaPlay ||
+          key == LogicalKeyboardKey.mediaPause) {
+        widget.onPlayPause();
+        _showOverlay();
+        return KeyEventResult.handled;
+      }
+      _scheduleHide();
+      return KeyEventResult.ignored;
+    }
+
+    if (key == LogicalKeyboardKey.space ||
+        key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.gameButtonSelect ||
+        key == LogicalKeyboardKey.gameButtonA) {
       widget.onPlayPause();
       _showOverlay();
       return KeyEventResult.handled;
@@ -428,23 +525,6 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack) {
-      if (widget.playerState.isLocked) {
-        widget.onToggleLock();
-        return KeyEventResult.handled;
-      }
-      if (_showDiagnostics) {
-        setState(() => _showDiagnostics = false);
-        return KeyEventResult.handled;
-      }
-      if (_controlsVisible) {
-        setState(() => _controlsVisible = false);
-        return KeyEventResult.handled;
-      }
-      widget.onClose();
-      return KeyEventResult.handled;
-    }
-
     _showOverlay();
     return KeyEventResult.ignored;
   }
@@ -462,6 +542,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     _seekResetTimer?.cancel();
     _hudDismissTimer?.cancel();
     _activeSleepTimer?.cancel();
+    _gestureHud.dispose();
     _focusNode.dispose();
     if (!PlatformService.instance.isWindows && !PlatformService.instance.isWeb) {
       ScreenBrightness.instance.resetApplicationScreenBrightness().catchError((_) {});
@@ -472,10 +553,12 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   @override
   Widget build(BuildContext context) {
     final isLocked = widget.playerState.isLocked;
+    final isPhone = MediaQuery.sizeOf(context).shortestSide < 600;
 
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
+      skipTraversal: _controlsVisible && !widget.playerState.isLocked,
       onKeyEvent: _handleKeyEvent,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -507,8 +590,14 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                     duration: const Duration(milliseconds: 250),
                     child: IgnorePointer(
                       ignoring: !_controlsVisible,
-                      child: PlayerControls(
+                      child: DpadRegion(
+                        memoryKey: 'player/chrome',
+                        debugLabel: 'player-chrome',
+                        child: PlayerControls(
                         playerState: widget.playerState,
+                        positionListenable: widget.positionListenable,
+                        bufferedPositionListenable:
+                            widget.bufferedPositionListenable,
                         onPlayPause: widget.onPlayPause,
                         onRequestSeekPreview: widget.onRequestSeekPreview,
                         onScrubStart: () {
@@ -577,13 +666,27 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                               );
                             },
                             onSelectBufferMode: widget.onSelectBufferMode,
+                            onSetSleepTimer: _setSleepTimer,
+                            onAudioHandoff: isPhone
+                                ? null
+                                : () {
+                                    AudioHandoffTvDialog.show(context)
+                                        .then((_) => _scheduleHide());
+                                  },
                             activeSleepLabel: _activeSleepLabel,
                             activeSleepDuration: _activeSleepDuration,
-                            onSetSleepTimer: _setSleepTimer,
                           ).then((_) => _scheduleHide());
                         },
                         onToggleFullscreen: widget.onToggleFullscreen,
+                        onAudioHandoff: isPhone
+                            ? null
+                            : () {
+                                _hideControlsTimer?.cancel();
+                                AudioHandoffTvDialog.show(context)
+                                    .then((_) => _scheduleHide());
+                              },
                         onClose: widget.onClose,
+                      ),
                       ),
                     ),
                   ),
@@ -604,41 +707,24 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                   ),
 
                 // 4. Gesture HUD Overlays (Volume / Brightness / Seek Scrub)
-                if (_isVolumeDrag)
-                  GestureLevelHud(
-                    icon: (widget.playerState.isMuted && _currentVolume == 0) || _currentVolume == 0
-                        ? AppIcons.volumeMute
-                        : _currentVolume < 0.5
-                            ? AppIcons.volumeLow
-                            : AppIcons.volumeHigh,
-                    value: _currentVolume,
-                    label: 'Volume',
-                  ),
-                if (_isBrightnessDrag)
-                  GestureLevelHud(
-                    icon: AppIcons.brightness,
-                    value: _brightnessLevel,
-                    label: 'Brightness',
-                  ),
-                if (_isScrubDrag && !widget.playerState.isLive)
-                  SeekScrubHud(
-                    targetPosition: _clampDuration(
-                      _scrubStartPosition + Duration(seconds: _scrubOffsetSeconds),
-                      Duration.zero,
-                      widget.playerState.duration,
-                    ),
+                // Isolated leaf — drag ticks never rebuild PlayerControls.
+                if (!isLocked)
+                  _GestureHud(
+                    listenable: _gestureHud,
+                    isMuted: widget.playerState.isMuted,
                     totalDuration: widget.playerState.duration,
-                    offsetSeconds: _scrubOffsetSeconds,
+                    clampDuration: _clampDuration,
                   ),
 
                 // 5. Floating Screen Unlock Button (When Locked)
                 if (isLocked)
                   Positioned(
                     left: 28,
-                    top: MediaQuery.of(context).size.height * 0.45,
+                    top: MediaQuery.sizeOf(context).height * 0.45,
                     child: ClipOval(
                       child: AdaptiveGlass(
                         sigma: 10,
+                        enableBlur: false,
                         child: Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
@@ -688,6 +774,62 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
           );
         },
       ),
+    );
+  }
+}
+
+/// Rebuilds only the volume / brightness / scrub HUD leaf on drag ticks.
+class _GestureHud extends StatelessWidget {
+  const _GestureHud({
+    required this.listenable,
+    required this.isMuted,
+    required this.totalDuration,
+    required this.clampDuration,
+  });
+
+  final ValueListenable<_GestureHudData> listenable;
+  final bool isMuted;
+  final Duration totalDuration;
+  final Duration Function(Duration val, Duration min, Duration max) clampDuration;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<_GestureHudData>(
+      valueListenable: listenable,
+      builder: (context, hud, _) {
+        switch (hud.kind) {
+          case _GestureHudKind.none:
+            return const SizedBox.shrink();
+          case _GestureHudKind.volume:
+            final volume = hud.level;
+            return GestureLevelHud(
+              icon: (isMuted && volume == 0) || volume == 0
+                  ? AppIcons.volumeMute
+                  : volume < 0.5
+                      ? AppIcons.volumeLow
+                      : AppIcons.volumeHigh,
+              value: volume,
+              label: 'Volume',
+            );
+          case _GestureHudKind.brightness:
+            return GestureLevelHud(
+              icon: AppIcons.brightness,
+              value: hud.level,
+              label: 'Brightness',
+            );
+          case _GestureHudKind.scrub:
+            return SeekScrubHud(
+              targetPosition: clampDuration(
+                hud.scrubStartPosition +
+                    Duration(seconds: hud.scrubOffsetSeconds),
+                Duration.zero,
+                totalDuration,
+              ),
+              totalDuration: totalDuration,
+              offsetSeconds: hud.scrubOffsetSeconds,
+            );
+        }
+      },
     );
   }
 }

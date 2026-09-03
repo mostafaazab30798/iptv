@@ -1,9 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/providers.dart';
+import 'package:iptv/core/logging/app_logger.dart';
+import 'package:iptv/core/sports/live_match_finder.dart';
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/domain/entities/epg_program.dart';
 import 'package:iptv/domain/entities/favorite.dart';
+import 'package:iptv/domain/entities/live_fixture.dart';
+import 'package:iptv/domain/entities/live_match.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/domain/entities/series.dart';
 import 'package:iptv/domain/entities/watch_history.dart';
@@ -110,14 +117,18 @@ class HomeController extends StateNotifier<HomeState> {
     required SeriesRepository? seriesRepo,
     required FavoritesRepository favoritesRepo,
     required HistoryRepository historyRepo,
+    LiveScoreSource? liveScores,
     KidsAllowedContent allowedContent = const KidsAllowedContent.unrestricted(),
   })  : _liveRepo = liveRepo,
         _vodRepo = vodRepo,
         _seriesRepo = seriesRepo,
         _favoritesRepo = favoritesRepo,
         _historyRepo = historyRepo,
+        _liveScores = liveScores,
         _allowedContent = allowedContent,
-        super(const HomeState()) {
+        // Start loading so Home shows skeleton instead of an empty flash
+        // before the first loadData() frame runs.
+        super(const HomeState(isLoading: true)) {
     loadData();
   }
 
@@ -126,13 +137,21 @@ class HomeController extends StateNotifier<HomeState> {
   final SeriesRepository? _seriesRepo;
   final FavoritesRepository _favoritesRepo;
   final HistoryRepository _historyRepo;
+  final LiveScoreSource? _liveScores;
   final KidsAllowedContent _allowedContent;
 
   bool _isFetching = false;
 
   Future<void> loadData({bool forceRefresh = false}) async {
     final liveRepo = _liveRepo;
-    if (liveRepo == null) return;
+    if (liveRepo == null) {
+      // Session / kids-mode gate is not ready yet. Stay in loading so Home
+      // keeps the skeleton instead of flashing "No media content found".
+      if (mounted && !state.isLoading) {
+        state = state.copyWith(isLoading: true, clearError: true);
+      }
+      return;
+    }
     if (_isFetching && !forceRefresh) return;
     _isFetching = true;
 
@@ -164,9 +183,7 @@ class HomeController extends StateNotifier<HomeState> {
         favorites: visibleFavorites,
       );
 
-      // 2. Launch catalog fetches in parallel, updating state progressively as each finishes
-      var currentHero = state.heroItem;
-
+      // 2. Launch catalog fetches in parallel, updating state progressively as each finishes.
       // Featured live uses take(20); sports/news use category-indexed slices
       // (no full-catalog name keyword scan on Home).
       final liveTask = () async {
@@ -180,11 +197,14 @@ class HomeController extends StateNotifier<HomeState> {
           final rowSlices =
               await _loadSportsAndNewsRows(forceRefresh: forceRefresh);
           if (!mounted) return;
+
           state = state.copyWith(
             liveChannels: channels.take(20).toList(),
             sportsChannels: rowSlices.sports,
             newsChannels: rowSlices.news,
           );
+
+          unawaited(_loadLiveMatchHero(channels));
         } catch (_) {}
       }();
 
@@ -193,14 +213,16 @@ class HomeController extends StateNotifier<HomeState> {
               final movies = res.when(ok: (m) => m, err: (_) => <Movie>[]);
               if (movies.isNotEmpty && mounted) {
                 final featured = movies.take(20).toList();
-                final items = _computeHeroItems(movies);
-                currentHero = items.isNotEmpty ? items.first : null;
-                if (!mounted) return;
-                state = state.copyWith(
-                  featuredMovies: featured,
-                  heroItem: currentHero,
-                  heroItems: items,
-                );
+                state = state.copyWith(featuredMovies: featured);
+                if (!_hasLiveMatchHero) {
+                  final items = _computeHeroItems(movies);
+                  if (items.isNotEmpty && mounted && !_hasLiveMatchHero) {
+                    state = state.copyWith(
+                      heroItem: items.first,
+                      heroItems: items,
+                    );
+                  }
+                }
               }
             }).catchError((_) {})
           : Future<void>.value();
@@ -275,6 +297,96 @@ class HomeController extends StateNotifier<HomeState> {
         movie: m,
       );
     }).toList();
+  }
+
+  bool get _hasLiveMatchHero =>
+      state.heroItems.any((item) => item.type == HeroItemType.live);
+
+  void _applyMatchHero(List<LiveMatch> matches) {
+    if (matches.isEmpty || !mounted) return;
+    final items = _heroFromMatches(matches);
+    if (items.isEmpty) return;
+    state = state.copyWith(
+      heroItem: items.first,
+      heroItems: items,
+    );
+  }
+
+  List<HomeHeroItem> _heroFromMatches(List<LiveMatch> matches) {
+    return matches.take(LiveMatchFinder.heroLimit).map((match) {
+      final channelName = match.channel.name;
+      return HomeHeroItem(
+        title: match.displayTitle,
+        subtitle: [
+          if (match.fixture?.clock != null) match.fixture!.clock!,
+          match.teamsLabel,
+        ].join(' • '),
+        type: HeroItemType.live,
+        badge: match.resolutionLabel,
+        genre: 'LIVE MATCH',
+        description: 'Watch on $channelName',
+        backdropUrl: match.fixture?.heroBackdropUrl ?? match.channel.streamIcon,
+        posterUrl: match.fixture?.heroPosterUrl ??
+            match.fixture?.heroBackdropUrl ??
+            match.channel.streamIcon,
+        channel: match.channel,
+      );
+    }).toList();
+  }
+
+  Future<void> _loadLiveMatchHero(List<Channel> channels) async {
+    final liveRepo = _liveRepo;
+    final scores = _liveScores;
+    if (liveRepo == null || scores == null) return;
+
+    try {
+      final fixtures = await scores.fetchLiveBigMatches();
+      if (!mounted) return;
+      if (fixtures.isEmpty) {
+        AppLogger.info(
+          'No live big matches on the scoreboard',
+          feature: 'sports',
+        );
+        return;
+      }
+
+      final probe = LiveMatchFinder.epgProbeChannels(channels);
+      final epgTitles = <int, String>{};
+      for (var i = 0; i < probe.length; i += 4) {
+        final chunk = probe.skip(i).take(4);
+        final rows = await Future.wait(
+          chunk.map((channel) async {
+            final result =
+                await liveRepo.getShortEpg(channel.streamId, limit: 2);
+            final programs =
+                result.when(ok: (p) => p, err: (_) => const <EpgProgram>[]);
+            if (programs.isEmpty) return null;
+            return MapEntry(channel.streamId, programs.first.title);
+          }),
+        );
+        for (final row in rows) {
+          if (row != null) epgTitles[row.key] = row.value;
+        }
+      }
+      if (!mounted) return;
+
+      final matches = LiveMatchFinder.bindFixtures(
+        fixtures: fixtures,
+        channels: channels,
+        epgTitles: epgTitles,
+      );
+      AppLogger.info(
+        'Live match hero bind',
+        feature: 'sports',
+        data: {
+          'fixtures': fixtures.map((f) => f.headline).toList(),
+          'bound': matches.map((m) => m.channel.name).toList(),
+        },
+      );
+      _applyMatchHero(matches);
+    } catch (e) {
+      AppLogger.error('Live match hero failed', feature: 'sports', error: e);
+    }
   }
 
   /// Builds Home sports/news rows from category-scoped live cache slices.
@@ -404,6 +516,7 @@ final homeControllerProvider =
     seriesRepo: seriesRepo,
     favoritesRepo: favoritesRepo,
     historyRepo: historyRepo,
+    liveScores: ref.watch(liveScoreSourceProvider),
     allowedContent: allowedContent,
   );
 });

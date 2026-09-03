@@ -1,6 +1,7 @@
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/domain/entities/epg_program.dart';
 import 'package:iptv/domain/repositories/live_repository.dart';
 import 'package:iptv/features/catalog_filter/excluded_live_categories_policy.dart';
 
@@ -80,5 +81,13 @@ class ExcludedCategoriesLiveRepository implements LiveRepository {
     return excludedResult.value.contains(categoryId)
         ? const Err(_blockedContentError)
         : result;
+  }
+
+  @override
+  Future<Result<List<EpgProgram>>> getShortEpg(
+    int streamId, {
+    int limit = 4,
+  }) {
+    return _delegate.getShortEpg(streamId, limit: limit);
   }
 }

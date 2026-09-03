@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -7,6 +6,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/features/kids_mode/kids_mode_state.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 /// Ultra-stylish Kids Mode card & controls with frosted glass aesthetics,
 /// glowing state badges, fluid micro-interactions, and Change PIN action.
@@ -60,9 +60,8 @@ class KidsModeCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Padding(
+        // Solid fill — card sits on opaque settings surface; no BackdropFilter.
+        child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,17 +179,13 @@ class KidsModeCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.sm),
                   Material(
                     color: Colors.transparent,
-                    child: InkWell(
+                    child: TvFocusable(
                       key: const ValueKey('kids_mode_change_pin'),
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: isLockedOut || onChangePin == null
-                          ? null
-                          : () {
-                              HapticFeedback.lightImpact();
-                              onChangePin!();
-                            },
-                      splashColor: AppColors.accent.withAlpha(30),
-                      highlightColor: AppColors.accent.withAlpha(15),
+                      enabled: !isLockedOut && onChangePin != null,
+                      onSelect: () {
+                        HapticFeedback.lightImpact();
+                        onChangePin!();
+                      },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -251,7 +246,6 @@ class KidsModeCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
       ),
     );
   }
@@ -272,8 +266,9 @@ class _StylishSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled && onChanged != null ? () => onChanged!(!value) : null,
+    return TvFocusable(
+      enabled: enabled && onChanged != null,
+      onSelect: enabled && onChanged != null ? () => onChanged!(!value) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,

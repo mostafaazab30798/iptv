@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -142,7 +143,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         iptvAuthenticated: iptvAsync.valueOrNull?.isValid ?? false,
         appAccountSignedIn: appAccount.isSignedIn,
         accessGateEnabled: CommercialApiConfig.accessGateEnabled,
-        entitlementAllowsPremium: entitlement.allowsPremium,
+        entitlementAllowsPremium: kDebugMode || entitlement.allowsPremium,
         entitlementLoading: entitlement.loading,
         entitlementInitialized: entitlement.initialized,
       );

@@ -12,6 +12,8 @@ import 'package:iptv/core/storage/preferences_storage.dart';
 import 'package:iptv/core/storage/secure_storage.dart';
 import 'package:iptv/core/utils/result.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
+import 'package:iptv/data/datasources/yallakora_matches_datasource.dart';
+import 'package:iptv/repositories/matches_repository.dart';
 import 'package:iptv/data/repositories/analytics_repository_impl.dart';
 import 'package:iptv/data/repositories/app_account_repository_impl.dart';
 import 'package:iptv/data/repositories/auth_repository_impl.dart';
@@ -35,6 +37,7 @@ import 'package:iptv/domain/repositories/live_repository.dart';
 import 'package:iptv/domain/repositories/series_repository.dart';
 import 'package:iptv/domain/repositories/vod_repository.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/domain/entities/live_fixture.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/domain/entities/series.dart';
 import 'package:iptv/features/account/account_controller.dart';
@@ -160,6 +163,18 @@ final xtreamDataSourceProvider = Provider<XtreamRemoteDataSource?>((ref) {
   return XtreamRemoteDataSource(client);
 });
 
+final yallakoraMatchesDataSourceProvider =
+    Provider<YallakoraMatchesDataSource>((_) => YallakoraMatchesDataSource());
+
+final matchesRepositoryProvider = Provider<MatchesRepository>((ref) {
+  final ds = ref.watch(yallakoraMatchesDataSourceProvider);
+  return MatchesRepository(dataSource: ds);
+});
+
+final liveScoreSourceProvider = Provider<LiveScoreSource>((ref) {
+  return ref.watch(yallakoraMatchesDataSourceProvider);
+});
+
 // -----------------------------------------------------------------------------
 // Domain Repositories Providers
 // -----------------------------------------------------------------------------
@@ -184,8 +199,12 @@ final _rawSeriesRepositoryProvider = Provider<SeriesRepository?>((ref) {
 
 final liveRepositoryProvider = Provider<LiveRepository?>((ref) {
   final repository = ref.watch(_rawLiveRepositoryProvider);
-  final kidsMode = ref.watch(kidsModeProvider);
-  if (repository == null || !kidsMode.isInitialized) return null;
+  final kidsFilter = ref.watch(
+    kidsModeProvider.select(
+      (s) => (isInitialized: s.isInitialized, isEnabled: s.isEnabled),
+    ),
+  );
+  if (repository == null || !kidsFilter.isInitialized) return null;
 
   final excludedPolicy = ref.watch(excludedLiveCategoriesPolicyProvider);
   // Always hide non–Middle-East country packages; Kids Mode also applies them.
@@ -193,7 +212,7 @@ final liveRepositoryProvider = Provider<LiveRepository?>((ref) {
     repository,
     excludedPolicy,
   );
-  return kidsMode.isEnabled
+  return kidsFilter.isEnabled
       ? KidsFilteredLiveRepository(
           catalogFiltered,
           ref.watch(kidsContentPolicyProvider),
@@ -204,9 +223,13 @@ final liveRepositoryProvider = Provider<LiveRepository?>((ref) {
 
 final vodRepositoryProvider = Provider<VodRepository?>((ref) {
   final repository = ref.watch(_rawVodRepositoryProvider);
-  final kidsMode = ref.watch(kidsModeProvider);
-  if (repository == null || !kidsMode.isInitialized) return null;
-  return kidsMode.isEnabled
+  final kidsFilter = ref.watch(
+    kidsModeProvider.select(
+      (s) => (isInitialized: s.isInitialized, isEnabled: s.isEnabled),
+    ),
+  );
+  if (repository == null || !kidsFilter.isInitialized) return null;
+  return kidsFilter.isEnabled
       ? KidsFilteredVodRepository(
           repository,
           ref.watch(kidsContentPolicyProvider),
@@ -216,9 +239,13 @@ final vodRepositoryProvider = Provider<VodRepository?>((ref) {
 
 final seriesRepositoryProvider = Provider<SeriesRepository?>((ref) {
   final repository = ref.watch(_rawSeriesRepositoryProvider);
-  final kidsMode = ref.watch(kidsModeProvider);
-  if (repository == null || !kidsMode.isInitialized) return null;
-  return kidsMode.isEnabled
+  final kidsFilter = ref.watch(
+    kidsModeProvider.select(
+      (s) => (isInitialized: s.isInitialized, isEnabled: s.isEnabled),
+    ),
+  );
+  if (repository == null || !kidsFilter.isInitialized) return null;
+  return kidsFilter.isEnabled
       ? KidsFilteredSeriesRepository(
           repository,
           ref.watch(kidsContentPolicyProvider),
@@ -229,9 +256,13 @@ final seriesRepositoryProvider = Provider<SeriesRepository?>((ref) {
 final kidsAllowedContentProvider = FutureProvider<KidsAllowedContent>((
   ref,
 ) async {
-  final mode = ref.watch(kidsModeProvider);
-  if (!mode.isInitialized) return const KidsAllowedContent.denyAll();
-  if (!mode.isEnabled) return const KidsAllowedContent.unrestricted();
+  final kidsFilter = ref.watch(
+    kidsModeProvider.select(
+      (s) => (isInitialized: s.isInitialized, isEnabled: s.isEnabled),
+    ),
+  );
+  if (!kidsFilter.isInitialized) return const KidsAllowedContent.denyAll();
+  if (!kidsFilter.isEnabled) return const KidsAllowedContent.unrestricted();
 
   final liveRepository = ref.watch(liveRepositoryProvider);
   final vodRepository = ref.watch(vodRepositoryProvider);

@@ -27,6 +27,7 @@ class GestureLevelHud extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: AdaptiveGlass(
           sigma: 12,
+          enableBlur: false,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
@@ -112,6 +113,7 @@ class SeekScrubHud extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: AdaptiveGlass(
           sigma: 12,
+          enableBlur: false,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(

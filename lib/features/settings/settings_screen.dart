@@ -1,3 +1,4 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +19,12 @@ import 'package:iptv/features/kids_mode/widgets/kids_mode_card.dart';
 import 'package:iptv/features/kids_mode/widgets/kids_pin_dialog.dart';
 import 'package:iptv/features/updates/update_controller.dart';
 import 'package:iptv/features/updates/update_dialog.dart';
+import 'package:iptv/player/handoff/application/companion_audio_controller.dart';
+import 'package:iptv/player/handoff/presentation/companion_listening_sheet.dart';
+import 'package:iptv/player/handoff/presentation/companion_scanner_modal.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/shell_focus_navigation.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 String _updateStatusLabel(BuildContext context, UpdateState state) {
   final l10n = context.l10n;
@@ -131,98 +137,257 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(sessionProvider).valueOrNull;
-    final entitlementState = ref.watch(entitlementProvider);
-    final currentLocale = ref.watch(localeProvider).languageCode;
-    final kidsMode = ref.watch(kidsModeProvider);
-    final updateState = ref.watch(updateProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFF090B0F),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.lg,
-        ),
-        children: [
-          // --- 1. Hero Server & Profile Header ---
-          if (session != null) ...[
-            _HeroServerBanner(session: session),
-            const SizedBox(height: AppSpacing.xl),
-          ],
-
-          // --- 2. Language Segmented Bento Card ---
-          _BentoCard(
-            title: context.l10n.settingsLanguage,
-            icon: AppIcons.language,
-            child: _LanguageSegmentedControl(
-              currentLocale: currentLocale,
-              onLocaleSelected: (code) => _setLocale(ref, code),
-            ),
+      body: DpadRegion(
+        memoryKey: 'settings/list',
+        debugLabel: 'settings-list',
+        child: ListView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.lg,
           ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // --- 2. Access expiry dates ---
-          _BentoCard(
-            title: context.l10n.settingsAccessExpiry,
-            icon: AppIcons.time,
-            child: _ExpiryCard(
-              entitlement: entitlementState.entitlement,
-              entitlementLoading: entitlementState.loading,
-              serverExpiresAt: session?.expiresAt,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // --- 3. Parental Controls (Kids Mode) ---
-          _BentoCard(
-            title: context.l10n.settingsParentalControls,
-            icon: AppIcons.securityCheck,
-            child: KidsModeCard(
-              state: kidsMode,
-              onToggle: (value) => _toggleKidsMode(context, ref, value),
-              onChangePin: () => _changeKidsPin(context, ref),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // --- 4. System & Software Bento Card ---
-          _BentoCard(
-            title: context.l10n.settingsAbout,
-            icon: AppIcons.info,
-            child: _SystemInfoCard(
-              statusLabel: _updateStatusLabel(context, updateState),
-              isChecking: updateState.status == UpdateFlowStatus.checking,
-              onCheckUpdates: () async {
-                await ref
-                    .read(updateProvider.notifier)
-                    .checkForUpdates(force: true);
-                if (context.mounted) {
-                  final latestState = ref.read(updateProvider);
-                  if (latestState.status == UpdateFlowStatus.error &&
-                      latestState.errorMessage != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(latestState.errorMessage!)),
-                    );
-                  } else {
-                    await showUpdateDialogIfNeeded(context, ref);
-                  }
-                }
+          children: [
+            // --- 1. Hero Server & Profile Header ---
+            Consumer(
+              builder: (context, ref, _) {
+                final session = ref.watch(
+                  sessionProvider.select((s) => s.valueOrNull),
+                );
+                if (session == null) return const SizedBox.shrink();
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _HeroServerBanner(session: session),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
+                );
               },
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
 
-          // --- 5. Session & Sign Out Bento Card ---
-          _BentoCard(
-            title: context.l10n.settingsAccount,
-            icon: AppIcons.logout,
-            child: _SignOutActionTile(
-              onSignOutTap: () => _signOut(context, ref),
+            // --- 2. Language Segmented Bento Card ---
+            Consumer(
+              builder: (context, ref, _) {
+                final currentLocale = ref.watch(
+                  localeProvider.select((l) => l.languageCode),
+                );
+                return _BentoCard(
+                  title: context.l10n.settingsLanguage,
+                  icon: AppIcons.language,
+                  child: _LanguageSegmentedControl(
+                    currentLocale: currentLocale,
+                    onLocaleSelected: (code) => _setLocale(ref, code),
+                  ),
+                );
+              },
             ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-        ],
+            const SizedBox(height: AppSpacing.lg),
+
+            // --- Companion Listening (Audio Handoff) Bento Card ---
+            Consumer(
+              builder: (context, ref, _) {
+                final isConnected = ref.watch(
+                  companionAudioProvider.select((s) => s.isConnected),
+                );
+                return _BentoCard(
+                  title: context.l10n.settingsHandoffTitle,
+                  icon: AppIcons.headphones,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF11141D),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withAlpha(14),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withAlpha(20),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.accent.withAlpha(45),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: const HugeIcon(
+                            icon: AppIcons.headphones,
+                            color: AppColors.accent,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                context.l10n.handoffTvDialogTitle,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                context.l10n.settingsHandoffSubtitle,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TvFocusable(
+                          onSelect: () {
+                            if (isConnected) {
+                              CompanionListeningSheet.show(context);
+                            } else {
+                              CompanionScannerModal.show(context);
+                            }
+                          },
+                          child: IgnorePointer(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              onPressed: () {},
+                              child: Text(
+                                isConnected
+                                    ? context.l10n.settingsHandoffActiveHud
+                                    : context.l10n.handoffConnect,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // --- 2. Access expiry dates ---
+            Consumer(
+              builder: (context, ref, _) {
+                final entitlementState = ref.watch(
+                  entitlementProvider.select(
+                    (s) => (entitlement: s.entitlement, loading: s.loading),
+                  ),
+                );
+                final serverExpiresAt = ref.watch(
+                  sessionProvider.select((s) => s.valueOrNull?.expiresAt),
+                );
+                return _BentoCard(
+                  title: context.l10n.settingsAccessExpiry,
+                  icon: AppIcons.time,
+                  child: _ExpiryCard(
+                    entitlement: entitlementState.entitlement,
+                    entitlementLoading: entitlementState.loading,
+                    serverExpiresAt: serverExpiresAt,
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // --- 3. Parental Controls (Kids Mode) ---
+            Consumer(
+              builder: (context, ref, _) {
+                final kidsMode = ref.watch(kidsModeProvider);
+                return _BentoCard(
+                  title: context.l10n.settingsParentalControls,
+                  icon: AppIcons.securityCheck,
+                  child: KidsModeCard(
+                    state: kidsMode,
+                    onToggle: (value) => _toggleKidsMode(context, ref, value),
+                    onChangePin: () => _changeKidsPin(context, ref),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // --- 4. System & Software Bento Card ---
+            Consumer(
+              builder: (context, ref, _) {
+                final updateSlice = ref.watch(
+                  updateProvider.select(
+                    (s) => (
+                      status: s.status,
+                      updateAvailable: s.updateAvailable,
+                    ),
+                  ),
+                );
+                final statusLabel = _updateStatusLabel(
+                  context,
+                  UpdateState(
+                    status: updateSlice.status,
+                    updateAvailable: updateSlice.updateAvailable,
+                  ),
+                );
+                return _BentoCard(
+                  title: context.l10n.settingsAbout,
+                  icon: AppIcons.info,
+                  child: _SystemInfoCard(
+                    statusLabel: statusLabel,
+                    isChecking:
+                        updateSlice.status == UpdateFlowStatus.checking,
+                    onCheckUpdates: () async {
+                      await ref
+                          .read(updateProvider.notifier)
+                          .checkForUpdates(force: true);
+                      if (context.mounted) {
+                        final latestState = ref.read(updateProvider);
+                        if (latestState.status == UpdateFlowStatus.error &&
+                            latestState.errorMessage != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(latestState.errorMessage!),
+                            ),
+                          );
+                        } else {
+                          await showUpdateDialogIfNeeded(context, ref);
+                        }
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // --- 5. Session & Sign Out Bento Card ---
+            _BentoCard(
+              title: context.l10n.settingsAccount,
+              icon: AppIcons.logout,
+              child: _SignOutActionTile(
+                onSignOutTap: () => _signOut(context, ref),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+          ],
+        ),
       ),
     );
   }
@@ -564,6 +729,8 @@ class _LanguageSegmentedControl extends StatelessWidget {
               sublabel: 'EN',
               isSelected: currentLocale == 'en',
               onTap: () => onLocaleSelected('en'),
+              entry: true,
+              autofocus: true,
             ),
           ),
           const SizedBox(width: 6),
@@ -587,84 +754,94 @@ class _SegmentItem extends StatelessWidget {
     required this.sublabel,
     required this.isSelected,
     required this.onTap,
+    this.entry = false,
+    this.autofocus = false,
   });
 
   final String label;
   final String sublabel;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool entry;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF1E2536) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.accent.withAlpha(70)
-                  : Colors.transparent,
-              width: 0.8,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(40),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : [],
+    return TvFocusable(
+      entry: entry,
+      autofocus: autofocus,
+      onSelect: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      onDirection: entry
+          ? (direction) {
+              if (direction == TraversalDirection.up) {
+                return focusUpToShell(context);
+              }
+              return false;
+            }
+          : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF1E2536) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accent.withAlpha(70)
+                : Colors.transparent,
+            width: 0.8,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(40),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 5,
+                vertical: 1.5,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.accent.withAlpha(25)
+                    : Colors.white.withAlpha(10),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                sublabel,
                 style: TextStyle(
                   color: isSelected
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      ? AppColors.accent
+                      : AppColors.textDisabled,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 5,
-                  vertical: 1.5,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.accent.withAlpha(25)
-                      : Colors.white.withAlpha(10),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  sublabel,
-                  style: TextStyle(
-                    color: isSelected
-                        ? AppColors.accent
-                        : AppColors.textDisabled,
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -767,65 +944,58 @@ class _SystemInfoCard extends ConsumerWidget {
           // App Updates Trigger
           ...[
             const Divider(color: AppColors.border, height: 1),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: isChecking || onCheckUpdates == null
-                    ? null
-                    : () {
-                        HapticFeedback.lightImpact();
-                        onCheckUpdates!();
-                      },
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(16),
+            TvFocusable(
+              enabled: !isChecking && onCheckUpdates != null,
+              onSelect: () {
+                HapticFeedback.lightImpact();
+                onCheckUpdates!();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 12,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      if (isChecking)
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.accent,
-                          ),
-                        )
-                      else
-                        const HugeIcon(
-                          icon: AppIcons.refresh,
+                child: Row(
+                  children: [
+                    if (isChecking)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
                           color: AppColors.accent,
-                          size: 16,
                         ),
-                      const SizedBox(width: 10),
-                      Text(
-                        context.l10n.updateCheckAction,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      )
+                    else
+                      const HugeIcon(
+                        icon: AppIcons.refresh,
+                        color: AppColors.accent,
+                        size: 16,
                       ),
-                      const Spacer(),
-                      Text(
-                        statusLabel,
-                        style: TextStyle(
-                          color: AppColors.textSecondary.withAlpha(190),
-                          fontSize: 11.5,
-                        ),
+                    const SizedBox(width: 10),
+                    Text(
+                      context.l10n.updateCheckAction,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        color: AppColors.textSecondary,
-                        size: 18,
+                    ),
+                    const Spacer(),
+                    Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: AppColors.textSecondary.withAlpha(190),
+                        fontSize: 11.5,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textSecondary,
+                      size: 18,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -853,70 +1023,64 @@ class _SignOutActionTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withAlpha(14), width: 0.8),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            onSignOutTap();
-          },
-          borderRadius: BorderRadius.circular(16),
-          splashColor: AppColors.error.withAlpha(20),
-          highlightColor: AppColors.error.withAlpha(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: 14,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withAlpha(18),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppColors.error.withAlpha(45),
-                      width: 0.8,
+      child: TvFocusable(
+        onSelect: () {
+          HapticFeedback.lightImpact();
+          onSignOutTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: 14,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withAlpha(18),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.error.withAlpha(45),
+                    width: 0.8,
+                  ),
+                ),
+                child: const HugeIcon(
+                  icon: AppIcons.logout,
+                  color: AppColors.error,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.actionSignOut,
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  child: const HugeIcon(
-                    icon: AppIcons.logout,
-                    color: AppColors.error,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.l10n.actionSignOut,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.l10n.settingsSignOutIptvHint,
+                      style: TextStyle(
+                        color: AppColors.textSecondary.withAlpha(190),
+                        fontSize: 11.5,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        context.l10n.settingsSignOutIptvHint,
-                        style: TextStyle(
-                          color: AppColors.textSecondary.withAlpha(190),
-                          fontSize: 11.5,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
-              ],
-            ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
+                size: 20,
+              ),
+            ],
           ),
         ),
       ),
@@ -1002,44 +1166,55 @@ class _SignOutConfirmDialog extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: Colors.white.withAlpha(20),
-                          width: 0.8,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: Text(
-                        context.l10n.actionCancel,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
+                    child: TvFocusable(
+                      autofocus: true,
+                      onSelect: () => Navigator.of(context).pop(false),
+                      child: IgnorePointer(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: Colors.white.withAlpha(20),
+                              width: 0.8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: () {},
+                          child: Text(
+                            context.l10n.actionCancel,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: Text(
-                        context.l10n.actionSignOut,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                    child: TvFocusable(
+                      onSelect: () => Navigator.of(context).pop(true),
+                      child: IgnorePointer(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.error,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: () {},
+                          child: Text(
+                            context.l10n.actionSignOut,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),

@@ -1,3 +1,4 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,7 @@ import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/channel_list_tile.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
@@ -51,68 +53,148 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       TextPosition(offset: suggestion.length),
     );
     ref.read(searchControllerProvider.notifier).search(suggestion);
-    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final searchState = ref.watch(searchControllerProvider);
-
     return Scaffold(
       backgroundColor: AppColors.bg0,
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            // 1. Premium Glassmorphic Search Header
-            _SearchHeader(
-              controller: _textController,
-              focusNode: _focusNode,
-              onChanged: (val) {
-                setState(() {});
-                ref.read(searchControllerProvider.notifier).search(val);
-              },
-              onClear: () {
-                _textController.clear();
-                ref.read(searchControllerProvider.notifier).clear();
-                setState(() {});
-              },
-            ),
+        child: DpadRegion(
+          memoryKey: 'search/content',
+          debugLabel: 'search-content',
+          child: Column(
+            children: [
+              // 1. Premium Glassmorphic Search Header
+              _SearchHeader(
+                controller: _textController,
+                focusNode: _focusNode,
+                onChanged: (val) {
+                  ref.read(searchControllerProvider.notifier).search(val);
+                },
+                onClear: () {
+                  _textController.clear();
+                  ref.read(searchControllerProvider.notifier).clear();
+                },
+              ),
 
-            // 2. Filter Category Pills (when results exist)
-            if (!searchState.isLoading &&
-                searchState.query.isNotEmpty &&
-                searchState.totalResults > 0)
-              _FilterTabs(
+              // 2. Filter Category Pills (when results exist)
+              _SearchFilterSection(
                 selected: _selectedFilter,
-                moviesCount: searchState.movies.length,
-                seriesCount: searchState.series.length,
-                channelsCount: searchState.channels.length,
                 onSelect: (filter) => setState(() => _selectedFilter = filter),
               ),
 
-            // 3. Results / Loading / Empty Content View
-            Expanded(
-              child: searchState.isLoading
-                  ? const SearchSkeleton()
-                  : searchState.query.isEmpty
-                  ? _SearchDiscoveryView(onSuggestionTap: _onSuggestionTap)
-                  : searchState.totalResults == 0
-                  ? EmptyState(
-                      title: context.l10n.labelNoResults,
-                      subtitle: context.l10n.searchNoResults(searchState.query),
-                      icon: AppIcons.searchOff,
-                    )
-                  : _SearchResultsView(
-                      filter: _selectedFilter,
-                      channels: searchState.channels,
-                      movies: searchState.movies,
-                      series: searchState.series,
-                    ),
-            ),
-          ],
+              // 3. Results / Loading / Empty Content View
+              Expanded(
+                child: _SearchBody(
+                  filter: _selectedFilter,
+                  onSuggestionTap: _onSuggestionTap,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Filter section — watches only visibility + counts
+// ---------------------------------------------------------------------------
+
+class _SearchFilterSection extends ConsumerWidget {
+  const _SearchFilterSection({
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final _SearchCategoryFilter selected;
+  final ValueChanged<_SearchCategoryFilter> onSelect;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final show = ref.watch(
+      searchControllerProvider.select(
+        (s) => !s.isLoading && s.query.isNotEmpty && s.totalResults > 0,
+      ),
+    );
+    if (!show) return const SizedBox.shrink();
+
+    final moviesCount = ref.watch(
+      searchControllerProvider.select((s) => s.movies.length),
+    );
+    final seriesCount = ref.watch(
+      searchControllerProvider.select((s) => s.series.length),
+    );
+    final channelsCount = ref.watch(
+      searchControllerProvider.select((s) => s.channels.length),
+    );
+
+    return _FilterTabs(
+      selected: selected,
+      moviesCount: moviesCount,
+      seriesCount: seriesCount,
+      channelsCount: channelsCount,
+      onSelect: onSelect,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Results body — watches loading / query / result lists
+// ---------------------------------------------------------------------------
+
+class _SearchBody extends ConsumerWidget {
+  const _SearchBody({
+    required this.filter,
+    required this.onSuggestionTap,
+  });
+
+  final _SearchCategoryFilter filter;
+  final ValueChanged<String> onSuggestionTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(
+      searchControllerProvider.select((s) => s.isLoading),
+    );
+    if (isLoading) return const SearchSkeleton();
+
+    final query = ref.watch(
+      searchControllerProvider.select((s) => s.query),
+    );
+    if (query.isEmpty) {
+      return _SearchDiscoveryView(onSuggestionTap: onSuggestionTap);
+    }
+
+    final totalResults = ref.watch(
+      searchControllerProvider.select((s) => s.totalResults),
+    );
+    if (totalResults == 0) {
+      return EmptyState(
+        title: context.l10n.labelNoResults,
+        subtitle: context.l10n.searchNoResults(query),
+        icon: AppIcons.searchOff,
+      );
+    }
+
+    final channels = ref.watch(
+      searchControllerProvider.select((s) => s.channels),
+    );
+    final movies = ref.watch(
+      searchControllerProvider.select((s) => s.movies),
+    );
+    final series = ref.watch(
+      searchControllerProvider.select((s) => s.series),
+    );
+
+    return _SearchResultsView(
+      filter: filter,
+      channels: channels,
+      movies: movies,
+      series: series,
     );
   }
 }
@@ -146,20 +228,22 @@ class _SearchHeader extends StatelessWidget {
       child: Row(
         children: [
           // Back Action
-          IconButton(
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withAlpha(12),
-              shape: RoundedRectangleBorder(
+          TvFocusable(
+            entry: true,
+            autofocus: true,
+            onSelect: () => popOrGoHome(context),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(12),
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.all(10),
+              child: const HugeIcon(
+                icon: AppIcons.arrowBack,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
-            icon: const HugeIcon(
-              icon: AppIcons.arrowBack,
-              color: Colors.white,
-              size: 20,
-            ),
-            onPressed: () => popOrGoHome(context),
           ),
           const SizedBox(width: AppSpacing.md),
 
@@ -219,28 +303,35 @@ class _SearchHeader extends StatelessWidget {
                       onChanged: onChanged,
                     ),
                   ),
-                  if (controller.text.isNotEmpty)
-                    GestureDetector(
-                      onTap: onClear,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(30),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: HugeIcon(
-                              icon: AppIcons.close,
-                              color: Colors.white,
-                              size: 14,
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller,
+                    builder: (context, value, _) {
+                      if (value.text.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return GestureDetector(
+                        onTap: onClear,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(30),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: HugeIcon(
+                                icon: AppIcons.close,
+                                color: Colors.white,
+                                size: 14,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -286,6 +377,7 @@ class _FilterTabs extends StatelessWidget {
             title: 'All ($total)',
             isActive: selected == _SearchCategoryFilter.all,
             onTap: () => onSelect(_SearchCategoryFilter.all),
+            entry: true,
           ),
           const SizedBox(width: 8),
           if (moviesCount > 0) ...[
@@ -321,16 +413,19 @@ class _TabPill extends StatelessWidget {
     required this.title,
     required this.isActive,
     required this.onTap,
+    this.entry = false,
   });
 
   final String title;
   final bool isActive;
   final VoidCallback onTap;
+  final bool entry;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return TvFocusable(
+      entry: entry,
+      onSelect: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -411,9 +506,11 @@ class _SearchDiscoveryView extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 10,
-            children: _popularQueries.map((query) {
-              return GestureDetector(
-                onTap: () => onSuggestionTap(query),
+            children: _popularQueries.asMap().entries.map((entry) {
+              final query = entry.value;
+              return TvFocusable(
+                entry: entry.key == 0,
+                onSelect: () => onSuggestionTap(query),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -472,6 +569,9 @@ class _SearchResultsView extends ConsumerWidget {
   final List<Channel> channels;
   final List<Movie> movies;
   final List<Series> series;
+
+  static const _rowItemWidth = 120.0;
+  static const _gridCacheExtent = 300.0;
 
   void _playChannel(BuildContext context, WidgetRef ref, Channel channel) {
     final session = ref.read(sessionProvider).valueOrNull;
@@ -537,67 +637,92 @@ class _SearchResultsView extends ConsumerWidget {
       return _buildChannelList(context, ref, channels);
     }
 
-    // "All" view: Sectioned rows
-    return ListView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.md,
-      ),
-      children: [
-        // Movies Section
-        if (movies.isNotEmpty) ...[
-          HomeSectionRow<Movie>(
-            title: context.l10n.homeFeaturedMovies,
-            items: movies,
-            height: 215,
-            itemBuilder: (context, movie, _) => MovieCard(
-              movie: movie,
-              onTap: () => _playMovie(context, ref, movie),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
+    // "All" view: lazy sectioned scroll (rows + channel sliver)
+    final activeChannelId = ref.watch(
+      playerControllerProvider.select((s) => s.source?.channelId),
+    );
 
-        // Series Section
-        if (series.isNotEmpty) ...[
-          HomeSectionRow<Series>(
-            title: context.l10n.homePopularSeries,
-            items: series,
-            height: 215,
-            itemBuilder: (context, s, _) => SeriesCard(
-              series: s,
-              onTap: () => showSeriesDetailsModal(context, s),
+    return CustomScrollView(
+      cacheExtent: _gridCacheExtent,
+      slivers: [
+        if (movies.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.md,
+              AppSpacing.xl,
+              0,
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
-
-        // Live Channels Section
-        if (channels.isNotEmpty) ...[
-          Text(
-            'LIVE CHANNELS (${channels.length})',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          ...channels.map((ch) {
-            final activeChannelId = ref.watch(
-              playerControllerProvider.select((s) => s.source?.channelId),
-            );
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: ChannelListTile(
-                channel: ch,
-                isPlaying: activeChannelId == ch.streamId,
-                categoryName: 'Live TV',
-                onTap: () => _playChannel(context, ref, ch),
+            sliver: SliverToBoxAdapter(
+              child: HomeSectionRow<Movie>(
+                title: context.l10n.homeFeaturedMovies,
+                items: movies,
+                height: 215,
+                itemWidth: _rowItemWidth,
+                itemBuilder: (context, movie, _) => MovieCard(
+                  movie: movie,
+                  onTap: () => _playMovie(context, ref, movie),
+                ),
               ),
-            );
-          }),
+            ),
+          ),
+        if (series.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            sliver: SliverToBoxAdapter(
+              child: HomeSectionRow<Series>(
+                title: context.l10n.homePopularSeries,
+                items: series,
+                height: 215,
+                itemWidth: _rowItemWidth,
+                itemBuilder: (context, s, _) => SeriesCard(
+                  series: s,
+                  onTap: () => showSeriesDetailsModal(context, s),
+                ),
+              ),
+            ),
+          ),
+        if (channels.isNotEmpty) ...[
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              0,
+              AppSpacing.xl,
+              AppSpacing.sm,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'LIVE CHANNELS (${channels.length})',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              0,
+              AppSpacing.xl,
+              AppSpacing.md,
+            ),
+            sliver: SliverList.separated(
+              itemCount: channels.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final ch = channels[i];
+                return ChannelListTile(
+                  channel: ch,
+                  isPlaying: activeChannelId == ch.streamId,
+                  categoryName: 'Live TV',
+                  onTap: () => _playChannel(context, ref, ch),
+                );
+              },
+            ),
+          ),
         ],
       ],
     );
@@ -609,6 +734,7 @@ class _SearchResultsView extends ConsumerWidget {
     List<Movie> list,
   ) {
     return GridView.builder(
+      cacheExtent: _gridCacheExtent,
       padding: const EdgeInsets.all(AppSpacing.xl),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 140,
@@ -635,6 +761,7 @@ class _SearchResultsView extends ConsumerWidget {
     List<Series> list,
   ) {
     return GridView.builder(
+      cacheExtent: _gridCacheExtent,
       padding: const EdgeInsets.all(AppSpacing.xl),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 140,
@@ -665,6 +792,7 @@ class _SearchResultsView extends ConsumerWidget {
     );
 
     return ListView.separated(
+      cacheExtent: _gridCacheExtent,
       padding: const EdgeInsets.all(AppSpacing.xl),
       itemCount: list.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),

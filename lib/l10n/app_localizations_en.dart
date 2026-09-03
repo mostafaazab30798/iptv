@@ -268,6 +268,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSportsChannels => 'Sports Channels';
 
   @override
+  String get homeLiveMatch => 'Live Match';
+
+  @override
+  String homeWatchOnChannel(String channel) {
+    return 'Watch on $channel';
+  }
+
+  @override
   String get homeNewsChannels => 'News & Current Affairs';
 
   @override
@@ -1174,4 +1182,262 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exitAppConfirm => 'Leave';
+
+  @override
+  String get handoffConnectTitle => 'Connect to TV Audio';
+
+  @override
+  String get handoffConnectSubtitle =>
+      'Listen in headphones while TV plays on the big screen';
+
+  @override
+  String get handoffFoundTv => 'Found TV on your Wi-Fi / Hotspot';
+
+  @override
+  String get handoffSearching => 'Searching for TV on your network...';
+
+  @override
+  String get handoffSearchingHint =>
+      'Make sure TV is playing and both devices are on the same Wi-Fi / Hotspot';
+
+  @override
+  String get handoffScanQr => 'Scan TV QR';
+
+  @override
+  String get handoffManualIp => 'Manual IP';
+
+  @override
+  String get handoffBackToAutoDetect => 'Back to Auto-Detect';
+
+  @override
+  String get handoffPointCamera => 'Point camera at TV QR Code';
+
+  @override
+  String get handoffManualTitle => 'Manual IP & PIN';
+
+  @override
+  String get handoffIpAddress => 'TV IP Address';
+
+  @override
+  String get handoffPin => 'PIN';
+
+  @override
+  String get handoffPasteQrLink => 'Or paste QR link (http://...)';
+
+  @override
+  String get handoffConnectAction => 'Connect to TV';
+
+  @override
+  String get handoffConnect => 'Connect';
+
+  @override
+  String get handoffListeningTitle => 'Companion Listening';
+
+  @override
+  String get handoffListeningSubtitle => 'Headphone Audio Synchronized';
+
+  @override
+  String get handoffInSync => 'IN SYNC';
+
+  @override
+  String get handoffBuffering => 'BUFFERING';
+
+  @override
+  String get handoffBtDelayTitle => 'Bluetooth Audio Sync';
+
+  @override
+  String get handoffBtDelaySubtitle =>
+      'Adjust if audio is slightly ahead or behind video';
+
+  @override
+  String get handoffAudioAhead => 'Audio Ahead';
+
+  @override
+  String get handoffAudioBehind => 'Audio Behind';
+
+  @override
+  String get handoffMuteTv => 'Mute TV Speakers';
+
+  @override
+  String get handoffUnmuteTv => 'Unmute TV Speakers';
+
+  @override
+  String get handoffDisconnect => 'Disconnect';
+
+  @override
+  String get handoffTvDialogTitle => 'Listen on Phone';
+
+  @override
+  String get handoffTvDialogSubtitle =>
+      'Scan QR code or use companion app to listen privately';
+
+  @override
+  String get handoffTvConnectedClients => 'Connected Devices';
+
+  @override
+  String get handoffQuickActionLabel => 'Handoff';
+
+  @override
+  String get settingsHandoffTitle => 'Companion Listening (Audio Handoff)';
+
+  @override
+  String get settingsHandoffSubtitle =>
+      'Pair with TV or desktop to stream audio with zero latency';
+
+  @override
+  String get settingsHandoffActiveHud => 'Active HUD';
+
+  @override
+  String get companionRemoteTitle => 'TV Remote & Mouse';
+
+  @override
+  String get companionRemoteSubtitle => 'Touchpad, Keyboard & Controls';
+
+  @override
+  String get companionTabTouchpad => 'Touchpad Mouse';
+
+  @override
+  String get companionTabRemote => 'Live Keyboard';
+
+  @override
+  String get companionSensitivity => 'Sensitivity';
+
+  @override
+  String get companionLeftClick => 'Left Click';
+
+  @override
+  String get companionRightClick => 'Right Click';
+
+  @override
+  String get companionTouchpadHint =>
+      'Swipe to move pointer • Tap to click\n2 fingers to scroll';
+
+  @override
+  String get companionKeyboardHint =>
+      'Type text to send to TV / PC search fields...';
+
+  @override
+  String get companionSearch => 'Search';
+
+  @override
+  String get companionClear => 'Clear';
+
+  @override
+  String get companionSelect => 'SELECT';
+
+  @override
+  String get companionBack => 'Back';
+
+  @override
+  String get companionHome => 'Home';
+
+  @override
+  String get companionMenu => 'Menu';
+
+  @override
+  String get companionExit => 'Exit';
+
+  @override
+  String get companionVolUp => 'Vol +';
+
+  @override
+  String get companionVolDown => 'Vol -';
+
+  @override
+  String get companionMute => 'Mute';
+
+  @override
+  String get companionAudioTitle => 'Private Audio Streaming (Headphones)';
+
+  @override
+  String get companionAudioSubtitle =>
+      'Stream TV sound directly to this device';
+
+  @override
+  String get companionDeviceDetected => 'DEVICE DETECTED ON WI-FI';
+
+  @override
+  String get companionTapToControl => 'Tap to Control';
+
+  @override
+  String get companionDevicesFoundOnWifi => 'DEVICES FOUND ON LOCAL WI-FI';
+
+  @override
+  String get companionSearchDevices =>
+      'Searching for devices on local Wi-Fi...';
+
+  @override
+  String get companionSearchDevicesHint =>
+      'Make sure the app is open on your Tablet, TV, or PC connected to the same Wi-Fi.';
+
+  @override
+  String get companionRescanWifi => 'Rescan Wi-Fi Network';
+
+  @override
+  String get companionConnectToDevice => 'Connect to Device / Screen';
+
+  @override
+  String get companionConnectToDeviceSubtitle =>
+      'Touchpad Mouse, Keyboard & Remote Control';
+
+  @override
+  String get companionConnected => 'CONNECTED';
+
+  @override
+  String get disconnect => 'Disconnect';
+
+  @override
+  String get companionScannerTitle => 'TV Companion';
+
+  @override
+  String get companionScannerSubtitle => 'Wireless remote, mouse & audio sync';
+
+  @override
+  String get companionTabNearby => 'Nearby';
+
+  @override
+  String get companionTabScanQr => 'Scan QR';
+
+  @override
+  String get companionTabDirectIp => 'Direct IP';
+
+  @override
+  String get companionAvailableScreens => 'AVAILABLE SCREENS';
+
+  @override
+  String get companionScanningNearby => 'Scanning for nearby screens...';
+
+  @override
+  String get companionScanningHint => 'Open the app on your TV, PC, or Tablet';
+
+  @override
+  String get companionDirectIpAddress => 'TV IP Address';
+
+  @override
+  String get companionDirectPort => 'Port';
+
+  @override
+  String get companionDirectPin => 'PIN (Optional)';
+
+  @override
+  String get companionConnectToScreen => 'Connect to Screen';
+
+  @override
+  String get companionReadyToConnect => 'Ready to Connect';
+
+  @override
+  String companionNowPlaying(String title) {
+    return 'Now Playing: $title';
+  }
+
+  @override
+  String get companionEnterIp => 'Enter TV IP address';
+
+  @override
+  String get companionInvalidQr => 'Invalid QR code. Please try again.';
+
+  @override
+  String companionCouldNotReach(String address) {
+    return 'Could not reach TV at $address';
+  }
 }

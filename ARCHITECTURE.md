@@ -13,8 +13,8 @@ lib/
 ├── app/          # App bootstrap, router, and design system (theme, colors, typography)
 ├── core/         # Cross-cutting concerns (platform detection, networking, logging, errors, storage, database, cache)
 ├── data/         # API clients, DTOs, data mappers, datasources, concrete repository implementations
-├── domain/       # Core business entities, repository interfaces, and use cases
-├── player/       # Abstract media player interface, state models, and platform adapters
+├── domain/       # Core business entities and repository interfaces
+├── player/       # Abstract media player interface, state models, and media_kit engine
 ├── shared/       # Focus system, input/navigation intents, responsive layouts, and reusable widgets
 └── features/     # Feature screens (Splash, Onboarding, Home, Live TV, Guide, Movies, Series, Search, Favorites, History, Settings, Player)
 ```
@@ -44,10 +44,10 @@ Remote DataSource (Dio / Xtream API) ⇄ Local Database (Drift SQLite / SecureSt
 - 12 top-level routes declared in `lib/app/router.dart` with custom fade/instant transitions.
 - All route navigation utilizes typed path constants from `Routes`.
 
-### 2.3 Media Player Abstraction (`IPlayer`)
-- UI depends solely on `IPlayer`, `PlayerState`, and `PlayerSource`.
-- Implementation uses [`VideoPlayerAdapter`](file:///d:/PROJECTS/iptv/lib/player/platform/video_player_adapter.dart) backed by `video_player` (Google ExoPlayer/Media3 for Android & Android TV, Windows Media Foundation via `video_player_win`, HTML5 video on Web).
-- The player implementation is completely swappable without touching screen widgets.
+### 2.3 Media Player Abstraction (`PlayerEngine`)
+- UI depends solely on `PlayerEngine`, `PlayerState`, and `PlayerSource`.
+- Production implementation is [`MediaKitPlayerEngine`](lib/player/infrastructure/media_kit_player_engine.dart) via `media_kit` / `media_kit_video` (hardware-accelerated playback across Android, Android TV, Windows, and Web).
+- Tests use `FakePlayerEngine`. The engine is swappable without touching screen widgets.
 
 ### 2.4 Platform Capabilities Abstraction (`PlatformService`)
 - No scattered `Platform.isX` checks.

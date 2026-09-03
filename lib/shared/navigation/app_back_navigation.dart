@@ -122,6 +122,37 @@ void popOrGoHome(BuildContext context) {
   context.go(Routes.home);
 }
 
+/// Companion / TV remote Back — pops overlays first, then shell back logic.
+Future<void> handleRemoteBack(BuildContext context) async {
+  final rootNav = rootNavigatorKey.currentState;
+  if (rootNav != null && rootNav.canPop()) {
+    await rootNav.maybePop();
+    return;
+  }
+
+  final shellNav = shellNavigatorKey.currentState;
+  if (shellNav != null && shellNav.canPop()) {
+    await shellNav.maybePop();
+    return;
+  }
+
+  if (InnerBackDispatcher.instance.handle()) return;
+
+  if (!context.mounted) return;
+  final path = GoRouter.of(context).state.uri.path;
+  await handleShellSystemBack(context, path);
+}
+
+/// Companion / TV remote Home — dismisses pushed routes, then opens Home tab.
+void handleRemoteHome(BuildContext context) {
+  final rootNav = rootNavigatorKey.currentState;
+  if (rootNav != null && rootNav.canPop()) {
+    rootNav.popUntil((route) => route.isFirst);
+  }
+  if (!context.mounted) return;
+  context.go(Routes.home);
+}
+
 /// Root-level pages (search, account, onboarding, …) that sit on the same
 /// navigator as the player. Blocks Android from closing the process.
 class RootBackScope extends StatelessWidget {

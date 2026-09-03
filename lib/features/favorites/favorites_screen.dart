@@ -1,3 +1,4 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,7 @@ import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
@@ -29,12 +31,15 @@ class FavoritesScreen extends ConsumerStatefulWidget {
 class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   FavoriteType? _selectedTypeFilter;
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  final ValueNotifier<String> _searchQuery = ValueNotifier<String>('');
   bool _isGridView = false;
+
+  static const _listCacheExtent = 300.0;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchQuery.dispose();
     super.dispose();
   }
 
@@ -126,121 +131,111 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
               .where((i) => i.type == FavoriteType.series)
               .length;
 
-          final filteredItems = allItems.where((item) {
-            if (_selectedTypeFilter != null &&
-                item.type != _selectedTypeFilter) {
-              return false;
-            }
-            if (_searchQuery.isNotEmpty &&
-                !item.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
-              return false;
-            }
-            return true;
-          }).toList();
-
-          return Column(
-            children: [
-              // Top Filter & Search Header
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: const BoxDecoration(
-                  color: AppColors.bg1,
-                  border: Border(
-                    bottom: BorderSide(color: AppColors.border, width: 0.8),
+          return DpadRegion(
+            memoryKey: 'favorites/content',
+            debugLabel: 'favorites-content',
+            child: Column(
+              children: [
+                // Top Filter & Search Header
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.xs,
                   ),
-                ),
-                child: Row(
-                  children: [
-                    // Header Title & Total Badge
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const HugeIcon(
-                          icon: AppIcons.star,
-                          size: 18,
-                          color: AppColors.accent,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          context.l10n.favoritesTitle,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w800,
+                  decoration: const BoxDecoration(
+                    color: AppColors.bg1,
+                    border: Border(
+                      bottom: BorderSide(color: AppColors.border, width: 0.8),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Header Title & Total Badge
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const HugeIcon(
+                            icon: AppIcons.star,
+                            size: 18,
+                            color: AppColors.accent,
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.bg3,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${allItems.length}',
+                          const SizedBox(width: 8),
+                          Text(
+                            context.l10n.favoritesTitle,
                             style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      key: const ValueKey('favorites_view_mode_toggle'),
-                      icon: HugeIcon(
-                        icon: _isGridView
-                            ? AppIcons.listView
-                            : AppIcons.gridView,
-                        size: 20,
-                        color: AppColors.textSecondary,
-                      ),
-                      tooltip: _isGridView
-                          ? 'Switch to List View'
-                          : 'Switch to Grid View',
-                      onPressed: () =>
-                          setState(() => _isGridView = !_isGridView),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Search & Filter Row
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  0,
-                ),
-                child: Column(
-                  children: [
-                    // Search Bar
-                    SizedBox(
-                      height: 38,
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (q) {
-                          setState(() => _searchQuery = q.trim());
-                        },
-                        style: const TextStyle(fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: context.l10n.searchHint,
-                          prefixIcon: const HugeIcon(
-                            icon: AppIcons.search,
-                            size: 18,
-                            color: AppColors.textSecondary,
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.bg3,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${allItems.length}',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
+                        ],
+                      ),
+                      const Spacer(),
+                      TvFocusable(
+                        onSelect: () =>
+                            setState(() => _isGridView = !_isGridView),
+                        child: HugeIcon(
+                          icon: _isGridView
+                              ? AppIcons.listView
+                              : AppIcons.gridView,
+                          size: 20,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Search & Filter Row
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    0,
+                  ),
+                  child: Column(
+                    children: [
+                      // Search Bar — keystrokes update notifier only
+                      SizedBox(
+                        height: 38,
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (q) => _searchQuery.value = q.trim(),
+                          style: const TextStyle(fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: context.l10n.searchHint,
+                            prefixIcon: const HugeIcon(
+                              icon: AppIcons.search,
+                              size: 18,
+                              color: AppColors.textSecondary,
+                            ),
+                            suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: _searchController,
+                              builder: (context, value, _) {
+                                if (value.text.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+                                return IconButton(
                                   icon: const HugeIcon(
                                     icon: AppIcons.close,
                                     size: 16,
@@ -248,101 +243,128 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                   ),
                                   onPressed: () {
                                     _searchController.clear();
-                                    setState(() => _searchQuery = '');
+                                    _searchQuery.value = '';
                                   },
-                                )
-                              : null,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 0,
+                                );
+                              },
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 0,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    // Filter Chips
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildFilterChip(
-                            label: context.l10n.labelAll,
-                            count: allItems.length,
-                            isSelected: _selectedTypeFilter == null,
-                            onTap: () =>
-                                setState(() => _selectedTypeFilter = null),
-                          ),
-                          if (channelCount > 0) ...[
-                            const SizedBox(width: 8),
+                      const SizedBox(height: AppSpacing.sm),
+                      // Filter Chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
                             _buildFilterChip(
-                              label: context.l10n.labelChannels,
-                              count: channelCount,
-                              isSelected:
-                                  _selectedTypeFilter == FavoriteType.channel,
-                              onTap: () => setState(
-                                () =>
-                                    _selectedTypeFilter = FavoriteType.channel,
-                              ),
+                              label: context.l10n.labelAll,
+                              count: allItems.length,
+                              isSelected: _selectedTypeFilter == null,
+                              onTap: () =>
+                                  setState(() => _selectedTypeFilter = null),
+                              entry: true,
                             ),
-                          ],
-                          if (movieCount > 0) ...[
-                            const SizedBox(width: 8),
-                            _buildFilterChip(
-                              label: context.l10n.labelMovies,
-                              count: movieCount,
-                              isSelected:
-                                  _selectedTypeFilter == FavoriteType.movie,
-                              onTap: () => setState(
-                                () => _selectedTypeFilter = FavoriteType.movie,
+                            if (channelCount > 0) ...[
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                label: context.l10n.labelChannels,
+                                count: channelCount,
+                                isSelected: _selectedTypeFilter ==
+                                    FavoriteType.channel,
+                                onTap: () => setState(
+                                  () => _selectedTypeFilter =
+                                      FavoriteType.channel,
+                                ),
                               ),
-                            ),
-                          ],
-                          if (seriesCount > 0) ...[
-                            const SizedBox(width: 8),
-                            _buildFilterChip(
-                              label: context.l10n.labelSeries,
-                              count: seriesCount,
-                              isSelected:
-                                  _selectedTypeFilter == FavoriteType.series,
-                              onTap: () => setState(
-                                () => _selectedTypeFilter = FavoriteType.series,
+                            ],
+                            if (movieCount > 0) ...[
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                label: context.l10n.labelMovies,
+                                count: movieCount,
+                                isSelected:
+                                    _selectedTypeFilter == FavoriteType.movie,
+                                onTap: () => setState(
+                                  () => _selectedTypeFilter =
+                                      FavoriteType.movie,
+                                ),
                               ),
-                            ),
+                            ],
+                            if (seriesCount > 0) ...[
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                label: context.l10n.labelSeries,
+                                count: seriesCount,
+                                isSelected:
+                                    _selectedTypeFilter == FavoriteType.series,
+                                onTap: () => setState(
+                                  () => _selectedTypeFilter =
+                                      FavoriteType.series,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.sm),
 
-              // Favorites Content
-              Expanded(
-                child: filteredItems.isEmpty
-                    ? EmptyState(
-                        title: context.l10n.labelNoResults,
-                        subtitle: context.l10n.searchNoResultsSubtitle,
-                        icon: AppIcons.searchOff,
-                      )
-                    : _isGridView
-                    ? GridView.builder(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 180,
-                              childAspectRatio: 0.82,
-                              crossAxisSpacing: AppSpacing.sm,
-                              mainAxisSpacing: AppSpacing.sm,
-                            ),
-                        itemCount: filteredItems.length,
-                        itemBuilder: (context, i) {
-                          final item = filteredItems[i];
-                          return _buildGridCard(item);
-                        },
-                      )
-                    : ListView.separated(
+                // Favorites Content — rebuild only this region on filter keystrokes
+                Expanded(
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: _searchQuery,
+                    builder: (context, query, _) {
+                      final filteredItems = allItems.where((item) {
+                        if (_selectedTypeFilter != null &&
+                            item.type != _selectedTypeFilter) {
+                          return false;
+                        }
+                        if (query.isNotEmpty &&
+                            !item.name
+                                .toLowerCase()
+                                .contains(query.toLowerCase())) {
+                          return false;
+                        }
+                        return true;
+                      }).toList();
+
+                      if (filteredItems.isEmpty) {
+                        return EmptyState(
+                          title: context.l10n.labelNoResults,
+                          subtitle: context.l10n.searchNoResultsSubtitle,
+                          icon: AppIcons.searchOff,
+                        );
+                      }
+
+                      if (_isGridView) {
+                        return GridView.builder(
+                          cacheExtent: _listCacheExtent,
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 180,
+                                childAspectRatio: 0.82,
+                                crossAxisSpacing: AppSpacing.sm,
+                                mainAxisSpacing: AppSpacing.sm,
+                              ),
+                          itemCount: filteredItems.length,
+                          itemBuilder: (context, i) {
+                            final item = filteredItems[i];
+                            return _buildGridCard(item);
+                          },
+                        );
+                      }
+
+                      return ListView.separated(
+                        cacheExtent: _listCacheExtent,
                         padding: const EdgeInsets.all(AppSpacing.md),
                         itemCount: filteredItems.length,
                         separatorBuilder: (_, index) =>
@@ -351,9 +373,12 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                           final item = filteredItems[i];
                           return _buildListCard(item);
                         },
-                      ),
-              ),
-            ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -365,9 +390,11 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     required int count,
     required bool isSelected,
     required VoidCallback onTap,
+    bool entry = false,
   }) {
-    return GestureDetector(
-      onTap: onTap,
+    return TvFocusable(
+      entry: entry,
+      onSelect: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -396,15 +423,15 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.accent.withAlpha(60)
-                    : AppColors.bg2,
+                    : AppColors.bg3,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 '$count',
                 style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textDisabled,
+                  color: isSelected ? Colors.white : AppColors.textSecondary,
                   fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),

@@ -85,8 +85,6 @@ class PlatformService {
   }
 
   Future<bool> _detectTv() async {
-    // TV detection via platform channel is deferred to a future phase.
-    // Override via a setting or ADB property flag in development.
-    return false;
+    return plat.isTelevision();
   }
 }

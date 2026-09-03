@@ -1,9 +1,15 @@
+import 'dart:async';
+
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/features/favorites/favorite_channel_ids.dart';
 import 'package:iptv/features/favorites/favorite_ids.dart';
+import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/favorite_snackbar.dart';
 
 /// Compact heart toggle for channels, movies, and series.
@@ -19,6 +25,8 @@ class FavoriteToggleButton extends ConsumerWidget {
     this.padding = 4,
     this.showSnackBar = true,
     this.idleColor,
+    this.focusNode,
+    this.onDirection,
   });
 
   final FavoriteType type;
@@ -30,6 +38,8 @@ class FavoriteToggleButton extends ConsumerWidget {
   final bool showSnackBar;
   /// Outline color when not favorited. Defaults to white.
   final Color? idleColor;
+  final FocusNode? focusNode;
+  final DpadDirectionCallback? onDirection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,43 +55,31 @@ class FavoriteToggleButton extends ConsumerWidget {
         ),
     };
 
-    return IconButton(
-      tooltip: isFav ? 'Remove Favorite' : 'Add to Favorites',
-      iconSize: size,
-      padding: EdgeInsets.all(padding),
-      constraints: BoxConstraints(
-        minWidth: size + padding * 2,
-        minHeight: size + padding * 2,
-      ),
-      visualDensity: VisualDensity.compact,
-      onPressed: () async {
-        final nowFav = await _toggle(ref);
-        ref.invalidate(favoritesListProvider);
-        if (!showSnackBar || !context.mounted) return;
-        showFavoriteSnackBar(context, name: name, isFavorite: nowFav);
-      },
-      icon: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        switchInCurve: Curves.easeOutBack,
-        switchOutCurve: Curves.easeIn,
-        transitionBuilder: (child, animation) {
-          return ScaleTransition(
-            scale: animation,
-            child: FadeTransition(opacity: animation, child: child),
-          );
-        },
-        child: Icon(
-          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          key: ValueKey(isFav),
-          size: size,
-          color: isFav ? AppColors.live : (idleColor ?? Colors.white),
-          shadows: const [
-            Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 1)),
-            Shadow(color: Colors.black54, blurRadius: 2),
-          ],
+    return TvFocusable(
+      scale: 1.18,
+      focusNode: focusNode,
+      onDirection: onDirection,
+      onSelect: () => unawaited(_handlePressed(context, ref)),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Padding(
+          padding: EdgeInsets.all(padding),
+          // No AnimatedSwitcher / text shadows — Home rows host dozens of these.
+          child: Icon(
+            isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            size: size,
+            color: isFav ? AppColors.live : (idleColor ?? Colors.white),
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _handlePressed(BuildContext context, WidgetRef ref) async {
+    final nowFav = await _toggle(ref);
+    ref.invalidate(favoritesListProvider);
+    if (!showSnackBar || !context.mounted) return;
+    showFavoriteSnackBar(context, name: name, isFavorite: nowFav);
   }
 
   Future<bool> _toggle(WidgetRef ref) {
@@ -107,16 +105,119 @@ class FavoriteToggleButton extends ConsumerWidget {
   }
 }
 
-/// Top poster strip: heart (left) + rating badge (right), same baseline.
+/// Poster with a separate D-pad stop for the favorite heart.
+///
+/// The heart is a sibling of [FocusableCard] (not a child), so it is not
+/// swallowed by [DpadFocusable.excludeChildFocus]. Left/right on the card
+/// row lands on the heart; Up/Down leave the card so the shell and hero
+/// stay reachable.
+class PosterHeartCard extends StatefulWidget {
+  const PosterHeartCard({
+    super.key,
+    required this.onTap,
+    required this.child,
+    required this.favorite,
+    this.borderRadius,
+    this.backgroundColor,
+    this.borderColor,
+    this.padding,
+    this.autofocus = false,
+  });
+
+  final VoidCallback onTap;
+  final Widget child;
+  final Widget Function(
+    FocusNode heartFocus,
+    DpadDirectionCallback onHeartDirection,
+  ) favorite;
+  final BorderRadius? borderRadius;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final EdgeInsets? padding;
+  final bool autofocus;
+
+  @override
+  State<PosterHeartCard> createState() => _PosterHeartCardState();
+}
+
+class _PosterHeartCardState extends State<PosterHeartCard> {
+  late final FocusNode _cardFocus;
+  late final FocusNode _heartFocus;
+
+  @override
+  void initState() {
+    super.initState();
+    _cardFocus = FocusNode(debugLabel: 'poster');
+    _heartFocus = FocusNode(debugLabel: 'favorite');
+  }
+
+  @override
+  void dispose() {
+    _cardFocus.dispose();
+    _heartFocus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final towardHeart =
+        rtl ? TraversalDirection.right : TraversalDirection.left;
+    final towardCard =
+        rtl ? TraversalDirection.left : TraversalDirection.right;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        FocusableCard(
+          autofocus: widget.autofocus,
+          focusNode: _cardFocus,
+          onTap: widget.onTap,
+          padding: widget.padding ?? EdgeInsets.zero,
+          borderRadius: widget.borderRadius ??
+              BorderRadius.circular(AppRadius.card),
+          backgroundColor: widget.backgroundColor,
+          borderColor: widget.borderColor,
+          onDirection: (direction) {
+            if (direction == towardHeart) {
+              _heartFocus.requestFocus();
+              return true;
+            }
+            return false;
+          },
+          child: widget.child,
+        ),
+        // Use start (not physical left) so the heart stays opposite the
+        // rating badge in both LTR and RTL (Arabic).
+        PositionedDirectional(
+          top: 0,
+          start: 0,
+          child: widget.favorite(
+            _heartFocus,
+            (direction) {
+              if (direction == towardCard) {
+                _cardFocus.requestFocus();
+                return true;
+              }
+              return false;
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Top poster strip: optional heart (start) + rating badge (end).
 class PosterTopActions extends StatelessWidget {
   const PosterTopActions({
     super.key,
-    required this.favoriteButton,
+    this.favoriteButton,
     this.rating,
     this.compact = false,
   });
 
-  final Widget favoriteButton;
+  final Widget? favoriteButton;
   final String? rating;
   final bool compact;
 
@@ -128,44 +229,48 @@ class PosterTopActions extends StatelessWidget {
     final hPad = compact ? 5.0 : 6.0;
     final vPad = compact ? 2.0 : 2.0;
 
+    final ratingBadge = !hasRating
+        ? null
+        : Container(
+            padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+            decoration: BoxDecoration(
+              color: Colors.black.withAlpha(200),
+              borderRadius: BorderRadius.circular(compact ? 5 : 4),
+              border: Border.all(
+                color: AppColors.warning.withAlpha(compact ? 120 : 255),
+                width: 0.8,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              textDirection: TextDirection.ltr,
+              children: [
+                Icon(
+                  Icons.star_rounded,
+                  color: AppColors.warning,
+                  size: starSize,
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  rating!,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: textSize,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          favoriteButton,
+          if (favoriteButton != null) favoriteButton!,
           const Spacer(),
-          if (hasRating)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha(200),
-                borderRadius: BorderRadius.circular(compact ? 5 : 4),
-                border: Border.all(
-                  color: AppColors.warning.withAlpha(compact ? 120 : 255),
-                  width: 0.8,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.star_rounded,
-                    color: AppColors.warning,
-                    size: starSize,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    rating!,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: textSize,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          if (ratingBadge != null) ratingBadge,
         ],
       ),
     );
