@@ -9,6 +9,7 @@ import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
+import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/series.dart';
 import 'package:iptv/features/favorites/favorite_ids.dart';
@@ -83,16 +84,52 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
         password: session.password,
         streamId: fav.itemId,
       );
-      ref
-          .read(playerControllerProvider.notifier)
-          .load(
-            LiveSource(
-              url: streamUrl,
-              channelName: fav.name,
-              channelId: fav.itemId,
-              logoUrl: fav.imageUrl,
-            ),
-          );
+
+      final favorites = ref.read(favoritesListProvider).valueOrNull ?? const [];
+      final channelFavorites =
+          favorites.where((f) => f.type == FavoriteType.channel).toList();
+      final channels = channelFavorites
+          .map((f) => Channel(
+                id: f.itemId,
+                serverId: 0,
+                streamId: f.itemId,
+                name: f.name,
+                streamIcon: f.imageUrl,
+              ))
+          .toList();
+      final initialIndex =
+          channels.indexWhere((c) => c.streamId == fav.itemId);
+
+      final playerNotifier = ref.read(playerControllerProvider.notifier);
+      playerNotifier.setLazyLivePlaylist(
+        channels: channels.isNotEmpty
+            ? channels
+            : [
+                Channel(
+                  id: fav.itemId,
+                  serverId: 0,
+                  streamId: fav.itemId,
+                  name: fav.name,
+                  streamIcon: fav.imageUrl,
+                ),
+              ],
+        initialIndex: initialIndex >= 0 ? initialIndex : 0,
+        urlFor: (c) => XtreamRemoteDataSource.buildLiveStreamUrl(
+          serverUrl: session.serverUrl,
+          username: session.username,
+          password: session.password,
+          streamId: c.streamId,
+        ),
+      );
+
+      playerNotifier.load(
+        LiveSource(
+          url: streamUrl,
+          channelName: fav.name,
+          channelId: fav.itemId,
+          logoUrl: fav.imageUrl,
+        ),
+      );
     }
 
     context.push(Routes.player);

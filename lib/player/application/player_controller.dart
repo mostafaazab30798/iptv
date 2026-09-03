@@ -66,9 +66,8 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Materialized playlist (tests / non-live callers). Empty when using lazy live IDs.
   List<PlayerSource> _channelPlaylist = const [];
 
-  /// Lazy live playlist: channel IDs + URL resolver; only neighbors are materialized.
-  List<int> _liveChannelIds = const [];
-  Map<int, Channel> _liveChannelById = const {};
+  /// Lazy live playlist: channels list + URL resolver; only neighbors are materialized.
+  List<Channel> _liveChannels = const [];
   String Function(Channel channel)? _liveUrlFor;
   static const _neighborWindowRadius = 25;
   final Map<int, PlayerSource> _neighborSourceCache = {};
@@ -101,14 +100,14 @@ class PlayerController extends StateNotifier<PlayerState> {
   List<PlayerSource> get channelPlaylist => _channelPlaylist;
 
   bool get _hasLazyLivePlaylist =>
-      _liveChannelIds.isNotEmpty && _liveUrlFor != null;
+      _liveChannels.isNotEmpty && _liveUrlFor != null;
 
   /// True when Live TV registered a lazy playlist so the mini-preview can keep
   /// the current live stream after leaving the fullscreen player route.
   bool get hasLivePreviewHandoff => _hasLazyLivePlaylist;
 
   int get _playlistLength =>
-      _hasLazyLivePlaylist ? _liveChannelIds.length : _channelPlaylist.length;
+      _hasLazyLivePlaylist ? _liveChannels.length : _channelPlaylist.length;
 
   void _startPeriodicProgressSaver() {
     _progressSaveTimer?.cancel();
@@ -260,7 +259,7 @@ class PlayerController extends StateNotifier<PlayerState> {
     }
   }
 
-  /// Lazy live playlist: keeps channel IDs + resolver instead of allocating a
+  /// Lazy live playlist: keeps channel list + resolver instead of allocating a
   /// full [PlayerSource] list (with credentials) on every tap. Next/prev still
   /// traverse the entire filtered set; only a neighbor window is materialized.
   void setLazyLivePlaylist({
@@ -269,36 +268,31 @@ class PlayerController extends StateNotifier<PlayerState> {
     required String Function(Channel channel) urlFor,
   }) {
     _channelPlaylist = const [];
-    _liveChannelIds = List.unmodifiable(channels.map((c) => c.streamId));
-    _liveChannelById = {
-      for (final c in channels) c.streamId: c,
-    };
+    _liveChannels = List.unmodifiable(channels);
     _liveUrlFor = urlFor;
     _neighborSourceCache.clear();
-    if (initialIndex >= 0 && initialIndex < _liveChannelIds.length) {
+    if (initialIndex >= 0 && initialIndex < _liveChannels.length) {
       _currentChannelIndex = initialIndex;
     } else {
-      _currentChannelIndex = _liveChannelIds.isEmpty ? -1 : 0;
+      _currentChannelIndex = _liveChannels.isEmpty ? -1 : 0;
     }
     _warmNeighborWindow(_currentChannelIndex);
   }
 
   void _clearLazyLivePlaylist() {
-    _liveChannelIds = const [];
-    _liveChannelById = const {};
+    _liveChannels = const [];
     _liveUrlFor = null;
     _neighborSourceCache.clear();
   }
 
   PlayerSource? _resolveLiveSourceAt(int index) {
     if (!_hasLazyLivePlaylist) return null;
-    if (index < 0 || index >= _liveChannelIds.length) return null;
+    if (index < 0 || index >= _liveChannels.length) return null;
     final cached = _neighborSourceCache[index];
     if (cached != null) return cached;
-    final id = _liveChannelIds[index];
-    final channel = _liveChannelById[id];
+    final channel = _liveChannels[index];
     final urlFor = _liveUrlFor;
-    if (channel == null || urlFor == null) return null;
+    if (urlFor == null) return null;
     final source = PlayerSource.live(
       url: urlFor(channel),
       title: channel.name,
@@ -311,7 +305,7 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   void _warmNeighborWindow(int center) {
     if (!_hasLazyLivePlaylist || center < 0) return;
-    final len = _liveChannelIds.length;
+    final len = _liveChannels.length;
     if (len == 0) return;
     final start = (center - _neighborWindowRadius).clamp(0, len - 1);
     final end = (center + _neighborWindowRadius).clamp(0, len - 1);
@@ -400,7 +394,7 @@ class PlayerController extends StateNotifier<PlayerState> {
     // playlist (favourites, movies, series, search, etc.).
     if (_hasLazyLivePlaylist) {
       final id = source.channelId;
-      final inLivePlaylist = id != null && _liveChannelIds.contains(id);
+      final inLivePlaylist = id != null && _liveChannels.any((c) => c.streamId == id);
       if (!inLivePlaylist) {
         _clearLazyLivePlaylist();
       }
@@ -488,7 +482,10 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Switches to next channel in current playlist.
   Future<void> nextChannel() async {
     final len = _playlistLength;
-    if (len == 0) return;
+    if (len == 0) {
+      PlayerLogger.debug('[Player] nextChannel ignored: empty playlist');
+      return;
+    }
     _currentChannelIndex = (_currentChannelIndex + 1) % len;
     final nextSource = _sourceAt(_currentChannelIndex);
     if (nextSource == null) return;
@@ -504,7 +501,10 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Switches to previous channel in current playlist.
   Future<void> previousChannel() async {
     final len = _playlistLength;
-    if (len == 0) return;
+    if (len == 0) {
+      PlayerLogger.debug('[Player] previousChannel ignored: empty playlist');
+      return;
+    }
     _currentChannelIndex = (_currentChannelIndex - 1 + len) % len;
     final prevSource = _sourceAt(_currentChannelIndex);
     if (prevSource == null) return;

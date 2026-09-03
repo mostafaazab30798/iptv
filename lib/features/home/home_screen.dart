@@ -497,8 +497,9 @@ abstract final class _HomePlayback {
   static void playChannel(
     BuildContext context,
     WidgetRef ref,
-    Channel channel,
-  ) {
+    Channel channel, {
+    List<Channel>? playlist,
+  }) {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
@@ -509,16 +510,34 @@ abstract final class _HomePlayback {
       streamId: channel.streamId,
     );
 
-    ref
-        .read(playerControllerProvider.notifier)
-        .load(
-          LiveSource(
-            channelId: channel.streamId,
-            channelName: channel.name,
-            url: streamUrl,
-            logoUrl: channel.streamIcon,
-          ),
-        );
+    final homeState = ref.read(homeControllerProvider);
+    final List<Channel> channels = playlist ??
+        (homeState.liveChannels.isNotEmpty
+            ? homeState.liveChannels
+            : [channel]);
+    final initialIndex =
+        channels.indexWhere((c) => c.streamId == channel.streamId);
+
+    final playerNotifier = ref.read(playerControllerProvider.notifier);
+    playerNotifier.setLazyLivePlaylist(
+      channels: channels,
+      initialIndex: initialIndex >= 0 ? initialIndex : 0,
+      urlFor: (c) => XtreamRemoteDataSource.buildLiveStreamUrl(
+        serverUrl: session.serverUrl,
+        username: session.username,
+        password: session.password,
+        streamId: c.streamId,
+      ),
+    );
+
+    playerNotifier.load(
+      LiveSource(
+        channelId: channel.streamId,
+        channelName: channel.name,
+        url: streamUrl,
+        logoUrl: channel.streamIcon,
+      ),
+    );
 
     context.push(Routes.player);
   }
@@ -598,22 +617,15 @@ abstract final class _HomePlayback {
             ),
           );
     } else {
-      final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
+      final channel = Channel(
+        id: entry.itemId,
+        serverId: 0,
         streamId: entry.itemId,
+        name: entry.name,
+        streamIcon: entry.imageUrl,
       );
-      ref
-          .read(playerControllerProvider.notifier)
-          .load(
-            LiveSource(
-              url: streamUrl,
-              channelName: entry.name,
-              channelId: entry.itemId,
-              logoUrl: entry.imageUrl,
-            ),
-          );
+      playChannel(context, ref, channel);
+      return;
     }
 
     context.push(Routes.player);
@@ -646,23 +658,14 @@ abstract final class _HomePlayback {
           );
       context.push(Routes.player);
     } else if (fav.type == FavoriteType.channel) {
-      final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
+      final channel = Channel(
+        id: fav.itemId,
+        serverId: 0,
         streamId: fav.itemId,
+        name: fav.name,
+        streamIcon: fav.imageUrl,
       );
-      ref
-          .read(playerControllerProvider.notifier)
-          .load(
-            PlayerSource.live(
-              url: streamUrl,
-              title: fav.name,
-              channelId: fav.itemId,
-              logoUrl: fav.imageUrl,
-            ),
-          );
-      context.push(Routes.player);
+      playChannel(context, ref, channel);
     } else {
       context.push(Routes.series);
     }

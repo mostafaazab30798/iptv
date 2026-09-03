@@ -584,16 +584,29 @@ class _SearchResultsView extends ConsumerWidget {
       streamId: channel.streamId,
     );
 
-    ref
-        .read(playerControllerProvider.notifier)
-        .load(
-          LiveSource(
-            url: url,
-            channelName: channel.name,
-            channelId: channel.streamId,
-            logoUrl: channel.streamIcon,
-          ),
-        );
+    final initialIndex =
+        channels.indexWhere((c) => c.streamId == channel.streamId);
+
+    final playerNotifier = ref.read(playerControllerProvider.notifier);
+    playerNotifier.setLazyLivePlaylist(
+      channels: channels.isNotEmpty ? channels : [channel],
+      initialIndex: initialIndex >= 0 ? initialIndex : 0,
+      urlFor: (c) => XtreamRemoteDataSource.buildLiveStreamUrl(
+        serverUrl: session.serverUrl,
+        username: session.username,
+        password: session.password,
+        streamId: c.streamId,
+      ),
+    );
+
+    playerNotifier.load(
+      LiveSource(
+        url: url,
+        channelName: channel.name,
+        channelId: channel.streamId,
+        logoUrl: channel.streamIcon,
+      ),
+    );
 
     context.push(Routes.player);
   }

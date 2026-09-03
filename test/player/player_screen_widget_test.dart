@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 import 'package:iptv/features/player/player_screen.dart';
 import 'package:iptv/player/application/player_controller.dart';
@@ -42,16 +43,16 @@ void main() {
       }
     }
 
-    Widget createTestApp() {
+    Widget createTestApp({Locale locale = const Locale('en')}) {
       return ProviderScope(
         overrides: [
           playerControllerProvider.overrideWith((_) => controller),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('en'),
-          home: PlayerScreen(),
+          locale: locale,
+          home: const PlayerScreen(),
         ),
       );
     }
@@ -224,6 +225,103 @@ void main() {
 
       await finishPlayerTest(tester);
     });
+
+    testWidgets('renders Next and Previous channel buttons and handles taps', (tester) async {
+      await tester.pumpWidget(createTestApp());
+      await tester.pump();
+
+      final ch1 = PlayerSource.live(url: 'http://ch1.m3u8', title: 'Channel 1', channelId: 1);
+      final ch2 = PlayerSource.live(url: 'http://ch2.m3u8', title: 'Channel 2', channelId: 2);
+      final ch3 = PlayerSource.live(url: 'http://ch3.m3u8', title: 'Channel 3', channelId: 3);
+      controller.setChannelPlaylist([ch1, ch2, ch3], initialIndex: 0);
+      await controller.load(ch1);
+      await tester.pump();
+
+      final nextBtn = find.byTooltip('Next Channel');
+      final prevBtn = find.byTooltip('Previous Channel');
+
+      expect(nextBtn, findsOneWidget);
+      expect(prevBtn, findsOneWidget);
+
+      await tester.tap(nextBtn);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(controller.state.source?.title, equals('Channel 2'));
+
+      await tester.tap(prevBtn);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(controller.state.source?.title, equals('Channel 1'));
+
+      await finishPlayerTest(tester);
+    });
+
+    testWidgets('in Arabic RTL mode, Previous is on left, Next is on right, and taps switch channels correctly', (tester) async {
+      await tester.pumpWidget(createTestApp(locale: const Locale('ar')));
+      await tester.pump();
+
+      final ch1 = PlayerSource.live(url: 'http://ch1.m3u8', title: 'القناة 1', channelId: 101);
+      final ch2 = PlayerSource.live(url: 'http://ch2.m3u8', title: 'القناة 2', channelId: 102);
+      controller.setChannelPlaylist([ch1, ch2], initialIndex: 0);
+      await controller.load(ch1);
+      await tester.pump();
+
+      final prevBtn = find.byTooltip('القناة السابقة');
+      final nextBtn = find.byTooltip('القناة التالية');
+
+      expect(prevBtn, findsOneWidget);
+      expect(nextBtn, findsOneWidget);
+
+      final prevRect = tester.getRect(prevBtn);
+      final nextRect = tester.getRect(nextBtn);
+
+      // Verify that Previous button remains on the left and Next on the right
+      expect(prevRect.left, lessThan(nextRect.left));
+
+      // Tapping Next advances to Channel 2
+      await tester.tap(nextBtn);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(controller.state.source?.title, equals('القناة 2'));
+
+      // Tapping Prev goes back to Channel 1
+      await tester.tap(prevBtn);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(controller.state.source?.title, equals('القناة 1'));
+
+      await finishPlayerTest(tester);
+    });
+
+    testWidgets('lazy live playlist switches channels via next and previous buttons', (tester) async {
+      await tester.pumpWidget(createTestApp());
+      await tester.pump();
+
+      final channels = [
+        const Channel(id: 1, serverId: 0, streamId: 1, name: 'Live Channel 1'),
+        const Channel(id: 2, serverId: 0, streamId: 2, name: 'Live Channel 2'),
+      ];
+
+      controller.setLazyLivePlaylist(
+        channels: channels,
+        initialIndex: 0,
+        urlFor: (c) => 'http://test.live/${c.streamId}.m3u8',
+      );
+      await controller.load(
+        PlayerSource.live(url: 'http://test.live/1.m3u8', title: 'Live Channel 1', channelId: 1),
+      );
+      await tester.pump();
+
+      final nextBtn = find.byTooltip('Next Channel');
+      final prevBtn = find.byTooltip('Previous Channel');
+
+      await tester.tap(nextBtn);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(controller.state.source?.title, equals('Live Channel 2'));
+
+      await tester.tap(prevBtn);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(controller.state.source?.title, equals('Live Channel 1'));
+
+      await finishPlayerTest(tester);
+    });
+
 
     testWidgets('double-tap on left and right screen edges triggers 10s seek', (tester) async {
       await tester.pumpWidget(createTestApp());

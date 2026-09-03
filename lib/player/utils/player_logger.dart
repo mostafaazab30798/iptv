@@ -20,6 +20,10 @@ class PlayerLogger {
     'timeshift',
   };
 
+  static void debug(String message) {
+    AppLogger.debug(message, feature: 'player');
+  }
+
   static void open(String title, {String? streamType}) {
     AppLogger.info(
       '[Player] open: title="$title", type=${streamType ?? 'auto'}',

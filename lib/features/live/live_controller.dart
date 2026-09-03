@@ -76,6 +76,7 @@ class LiveController extends StateNotifier<LiveState> {
 
   /// Full catalog held once; UI state only mirrors the active visible page.
   List<Channel> _catalog = const [];
+  List<Channel> get catalog => _catalog;
   Timer? _searchDebounce;
   int _searchEpoch = 0;
 

@@ -291,40 +291,43 @@ class LiveMiniPreview extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    Tooltip(
-                      message: context.l10n.playerPreviousChannel,
-                      child: InkWell(
-                        onTap: controller.previousChannel,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Transform.flip(
-                            flipX: context.isRtl,
-                            child: const HugeIcon(
-                              icon: AppIcons.previous,
-                              color: AppColors.textSecondary,
-                              size: 20,
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Tooltip(
+                            message: context.l10n.playerPreviousChannel,
+                            child: InkWell(
+                              onTap: controller.previousChannel,
+                              borderRadius: BorderRadius.circular(16),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: HugeIcon(
+                                  icon: AppIcons.previous,
+                                  color: AppColors.textSecondary,
+                                  size: 20,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    Tooltip(
-                      message: context.l10n.playerNextChannel,
-                      child: InkWell(
-                        onTap: controller.nextChannel,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Transform.flip(
-                            flipX: context.isRtl,
-                            child: const HugeIcon(
-                              icon: AppIcons.next,
-                              color: AppColors.textSecondary,
-                              size: 20,
+                          const SizedBox(width: 2),
+                          Tooltip(
+                            message: context.l10n.playerNextChannel,
+                            child: InkWell(
+                              onTap: controller.nextChannel,
+                              borderRadius: BorderRadius.circular(16),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: HugeIcon(
+                                  icon: AppIcons.next,
+                                  color: AppColors.textSecondary,
+                                  size: 20,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                     const Spacer(),

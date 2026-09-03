@@ -398,25 +398,29 @@ class PlayerControls extends StatelessWidget {
 
                           const Spacer(),
 
-                          // Previous Channel / Episode
-                          _CompactGlassButton(
-                            icon: AppIcons.previous,
-                            flipIcon: context.isRtl,
-                            tooltip: context.l10n.playerPreviousChannel,
-                            size: 32,
-                            iconSize: 16,
-                            onPressed: onPreviousChannel,
-                          ),
-                          const SizedBox(width: 6),
-
-                          // Next Channel / Episode
-                          _CompactGlassButton(
-                            icon: AppIcons.next,
-                            flipIcon: context.isRtl,
-                            tooltip: context.l10n.playerNextChannel,
-                            size: 32,
-                            iconSize: 16,
-                            onPressed: onNextChannel,
+                          // Channel / Episode Navigation (Always LTR: Previous on left, Next on right)
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _CompactGlassButton(
+                                  icon: AppIcons.previous,
+                                  tooltip: context.l10n.playerPreviousChannel,
+                                  size: 32,
+                                  iconSize: 16,
+                                  onPressed: onPreviousChannel,
+                                ),
+                                const SizedBox(width: 4),
+                                _CompactGlassButton(
+                                  icon: AppIcons.next,
+                                  tooltip: context.l10n.playerNextChannel,
+                                  size: 32,
+                                  iconSize: 16,
+                                  onPressed: onNextChannel,
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(width: 6),
 
@@ -502,7 +506,6 @@ class _CompactGlassButton extends StatelessWidget {
     this.tooltip,
     this.size = 36,
     this.iconSize = 17,
-    this.flipIcon = false,
     this.matchTextDirection = false,
   });
 
@@ -511,13 +514,12 @@ class _CompactGlassButton extends StatelessWidget {
   final String? tooltip;
   final double size;
   final double iconSize;
-  final bool flipIcon;
   final bool matchTextDirection;
 
   @override
   Widget build(BuildContext context) {
     final isRtl = Directionality.maybeOf(context) == TextDirection.rtl;
-    final shouldFlip = flipIcon || (matchTextDirection && isRtl);
+    final shouldFlip = matchTextDirection && isRtl;
 
     Widget iconWidget = HugeIcon(icon: icon as List<List<dynamic>>, color: Colors.white, size: iconSize);
     if (shouldFlip) {
@@ -543,12 +545,17 @@ class _CompactGlassButton extends StatelessWidget {
     );
 
     final tooltipLabel = tooltip;
+    final buttonContent = tooltipLabel == null
+        ? visual
+        : Tooltip(message: tooltipLabel, child: visual);
+
     final interactiveVisual = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onPressed,
-      child: tooltipLabel == null
-          ? visual
-          : Tooltip(message: tooltipLabel, child: visual),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        child: Center(child: buttonContent),
+      ),
     );
 
     return TvFocusable(

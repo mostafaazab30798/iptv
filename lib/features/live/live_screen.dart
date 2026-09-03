@@ -99,7 +99,11 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     setState(() => _selectedChannel = channel);
 
     final liveState = ref.read(liveControllerProvider);
-    final channels = liveState.filteredChannels;
+    final channels = liveState.filteredChannels.isNotEmpty
+        ? liveState.filteredChannels
+        : (ref.read(liveControllerProvider.notifier).catalog.isNotEmpty
+            ? ref.read(liveControllerProvider.notifier).catalog
+            : [channel]);
     final initialIndex = channels.indexWhere(
       (c) => c.streamId == channel.streamId,
     );
