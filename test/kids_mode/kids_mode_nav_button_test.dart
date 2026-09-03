@@ -83,21 +83,21 @@ Widget _shellApp({
         builder: (context, state, child) =>
             AppShell(state: state, child: child),
         routes: [
-          GoRoute(path: Routes.home, builder: (_, __) => const SizedBox()),
-          GoRoute(path: Routes.live, builder: (_, __) => const SizedBox()),
+          GoRoute(path: Routes.home, builder: (_, _) => const SizedBox()),
+          GoRoute(path: Routes.live, builder: (_, _) => const SizedBox()),
           GoRoute(
             path: Routes.movies,
-            builder: (_, __) => const Text('movies-stub'),
+            builder: (_, _) => const Text('movies-stub'),
           ),
-          GoRoute(path: Routes.series, builder: (_, __) => const SizedBox()),
-          GoRoute(path: Routes.favorites, builder: (_, __) => const SizedBox()),
+          GoRoute(path: Routes.series, builder: (_, _) => const SizedBox()),
+          GoRoute(path: Routes.favorites, builder: (_, _) => const SizedBox()),
           GoRoute(
             path: Routes.search,
-            builder: (_, __) => const Text('search-stub'),
+            builder: (_, _) => const Text('search-stub'),
           ),
           GoRoute(
             path: Routes.settings,
-            builder: (_, __) => const Text('settings-stub'),
+            builder: (_, _) => const Text('settings-stub'),
           ),
         ],
       ),
@@ -143,7 +143,6 @@ void main() {
 
   testWidgets('is a labeled button, not a switch', (tester) async {
     final controller = KidsModeController(_MemoryKidsModeStorage());
-    addTearDown(controller.dispose);
     await tester.pumpWidget(_buttonApp(controller));
     await tester.pump();
 
@@ -154,7 +153,6 @@ void main() {
 
   testWidgets('tap opens the parent PIN dialog', (tester) async {
     final controller = KidsModeController(_MemoryKidsModeStorage());
-    addTearDown(controller.dispose);
     await tester.pumpWidget(_buttonApp(controller));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
@@ -171,7 +169,6 @@ void main() {
   ) async {
     _setSurface(tester, const Size(1920, 1080));
     final controller = KidsModeController(_MemoryKidsModeStorage());
-    addTearDown(controller.dispose);
 
     await tester.pumpWidget(
       _shellApp(controller: controller, location: Routes.movies),
@@ -187,7 +184,6 @@ void main() {
   ) async {
     _setSurface(tester, const Size(390, 844));
     final controller = KidsModeController(_MemoryKidsModeStorage());
-    addTearDown(controller.dispose);
 
     await tester.pumpWidget(
       _shellApp(controller: controller, location: Routes.movies),

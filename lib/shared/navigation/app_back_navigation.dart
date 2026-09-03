@@ -51,17 +51,17 @@ class InnerBackScope extends StatefulWidget {
 }
 
 class _InnerBackScopeState extends State<InnerBackScope> {
-  late final bool Function() _handler = () => widget.onBack();
+  bool _handleBack() => widget.onBack();
 
   @override
   void initState() {
     super.initState();
-    InnerBackDispatcher.instance.register(_handler);
+    InnerBackDispatcher.instance.register(_handleBack);
   }
 
   @override
   void dispose() {
-    InnerBackDispatcher.instance.unregister(_handler);
+    InnerBackDispatcher.instance.unregister(_handleBack);
     super.dispose();
   }
 

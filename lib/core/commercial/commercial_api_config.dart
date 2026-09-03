@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 
 /// Non-secret commercial control-plane configuration for HOPE TV.
 ///
@@ -12,15 +11,13 @@ class CommercialApiConfig {
 
   static const productName = 'HOPE TV';
 
-  /// Commercial entitlement navigation is enabled by default in release builds.
-  /// Bypassed in debug mode for rapid development.
-  static bool get accessGateEnabled {
-    if (kDebugMode) return false;
-    return const bool.fromEnvironment(
-      'ACCESS_GATE_ENABLED',
-      defaultValue: true,
-    );
-  }
+  /// Commercial entitlement navigation is enabled by default. Development
+  /// builds can opt out explicitly, but production builds must provide the
+  /// Supabase and entitlement public-key defines.
+  static const accessGateEnabled = bool.fromEnvironment(
+    'ACCESS_GATE_ENABLED',
+    defaultValue: true,
+  );
 
   static const supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',

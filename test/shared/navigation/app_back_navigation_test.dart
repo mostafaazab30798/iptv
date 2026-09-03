@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -69,7 +71,7 @@ void main() {
       routes: [
         GoRoute(
           path: Routes.player,
-          builder: (_, __) => const Scaffold(body: Text('player-stub')),
+          builder: (_, _) => const Scaffold(body: Text('player-stub')),
         ),
         ShellRoute(
           navigatorKey: shellNavigatorKey,
@@ -87,11 +89,11 @@ void main() {
           routes: [
             GoRoute(
               path: Routes.home,
-              builder: (_, __) => const Text('home-stub'),
+              builder: (_, _) => const Text('home-stub'),
             ),
             GoRoute(
               path: Routes.live,
-              builder: (_, __) => const Scaffold(body: Text('live-stub')),
+              builder: (_, _) => const Scaffold(body: Text('live-stub')),
             ),
           ],
         ),
@@ -109,7 +111,7 @@ void main() {
     );
     await tester.pump();
 
-    router.push(Routes.player);
+    unawaited(router.push(Routes.player));
     await tester.pumpAndSettle();
     expect(find.text('player-stub'), findsOneWidget);
 

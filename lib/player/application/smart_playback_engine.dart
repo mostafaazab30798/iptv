@@ -523,7 +523,7 @@ class SmartPlaybackEngine {
   Future<void> stop() async {
     _switchStartTime = null;
     _activeSource = null;
-    _firstFrameSubscription?.cancel();
+    unawaited(_firstFrameSubscription?.cancel());
     _firstFrameSubscription = null;
     _retryManager.cancel();
     _stopEscalationMonitor();

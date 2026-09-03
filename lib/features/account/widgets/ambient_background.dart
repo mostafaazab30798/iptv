@@ -22,12 +22,18 @@ class AmbientBackground extends StatefulWidget {
 
 class _AmbientBackgroundState extends State<AmbientBackground>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: AppMotion.ambientDrift,
-  );
+  late final AnimationController _controller;
   bool _started = false;
   bool _staticOnly = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppMotion.ambientDrift,
+    );
+  }
 
   @override
   void didChangeDependencies() {

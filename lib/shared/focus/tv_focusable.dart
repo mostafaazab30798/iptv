@@ -33,14 +33,17 @@ class TvFocusable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DpadFocusable(
-      autofocus: autofocus,
-      enabled: enabled,
-      entry: entry,
-      focusNode: focusNode,
-      onSelect: onSelect,
-      onFocusChange: onFocusChange,
-      onDirection: onDirection,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onSelect,
+      child: DpadFocusable(
+        autofocus: autofocus,
+        enabled: enabled,
+        entry: entry,
+        focusNode: focusNode,
+        onSelect: onSelect,
+        onFocusChange: onFocusChange,
+        onDirection: onDirection,
       builder: (context, state, child) {
         final visual = RemoteFocus.visualOf(context, state);
         final focused = visual.focused;
@@ -78,6 +81,7 @@ class TvFocusable extends StatelessWidget {
         );
       },
       child: child,
+      ),
     );
   }
 }

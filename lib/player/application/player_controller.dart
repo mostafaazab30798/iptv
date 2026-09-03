@@ -547,10 +547,6 @@ class PlayerController extends StateNotifier<PlayerState> {
     _resumeAfterSeekScrub = false;
     _seekScrubPauseOperation = null;
     _clearLazyLivePlaylist();
-    await savePlaybackProgress();
-    await _smartEngine.stop();
-    _onStopCallback?.call();
-    if (!mounted) return;
     positionListenable.value = Duration.zero;
     bufferedPositionListenable.value = Duration.zero;
     _lastPositionStateEmit = null;
@@ -567,6 +563,9 @@ class PlayerController extends StateNotifier<PlayerState> {
       isRetrying: false,
       retryAttempt: 0,
     );
+    unawaited(savePlaybackProgress());
+    await _smartEngine.stop();
+    _onStopCallback?.call();
   }
 
   /// Cancels a pending auto-reconnect without tearing down the current source.
@@ -584,7 +583,13 @@ class PlayerController extends StateNotifier<PlayerState> {
   }
 
   Future<void> seek(Duration position) async {
+    _lastPositionStateEmit = null;
     await _smartEngine.seek(position);
+    if (mounted) {
+      positionListenable.value = position;
+      state = state.copyWith(position: position);
+      _lastPositionStateEmit = DateTime.now();
+    }
     await savePlaybackProgress();
   }
 
@@ -674,7 +679,19 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   /// Relative seek (e.g. -10 seconds or +10 seconds).
   Future<void> seekRelative(Duration offset) async {
+    final startPos = positionListenable.value;
+    var target = startPos + offset;
+    if (target < Duration.zero) target = Duration.zero;
+    if (state.duration > Duration.zero && target > state.duration) {
+      target = state.duration;
+    }
+    _lastPositionStateEmit = null;
     await _smartEngine.seekRelative(offset);
+    if (mounted) {
+      positionListenable.value = target;
+      state = state.copyWith(position: target);
+      _lastPositionStateEmit = DateTime.now();
+    }
     await savePlaybackProgress();
   }
 

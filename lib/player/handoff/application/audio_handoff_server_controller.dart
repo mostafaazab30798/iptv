@@ -389,9 +389,7 @@ final audioHandoffServerProvider = StateNotifierProvider<
     AudioHandoffServerController, AudioHandoffServerState>(
   (ref) {
     final inputManager = ref.read(companionInputProvider.notifier);
-    final controller = AudioHandoffServerController(inputManager: inputManager);
-    ref.onDispose(controller.dispose);
-    return controller;
+    return AudioHandoffServerController(inputManager: inputManager);
   },
 );
 

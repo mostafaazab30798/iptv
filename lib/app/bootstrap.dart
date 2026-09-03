@@ -57,7 +57,7 @@ Future<void> bootstrap() async {
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
   if (isAndroidHost) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    SystemChrome.setSystemUIChangeCallback((systemOverlaysAreVisible) async {
+    await SystemChrome.setSystemUIChangeCallback((systemOverlaysAreVisible) async {
       if (!systemOverlaysAreVisible) return;
       // Android blocks UI-visibility changes briefly after the keyboard closes.
       await Future<void>.delayed(const Duration(seconds: 1));

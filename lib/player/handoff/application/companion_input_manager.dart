@@ -652,7 +652,5 @@ class CompanionInputManager extends StateNotifier<CompanionInputState> {
 /// Global provider for the Host TV Companion Input Manager.
 final companionInputProvider =
     StateNotifierProvider<CompanionInputManager, CompanionInputState>((ref) {
-  final manager = CompanionInputManager();
-  ref.onDispose(manager.dispose);
-  return manager;
+  return CompanionInputManager();
 });

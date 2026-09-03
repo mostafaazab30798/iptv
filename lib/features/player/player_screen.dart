@@ -120,10 +120,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     PlatformService.instance.setFullScreen(false);
     final controller = _controller;
     super.dispose();
-    // Defer provider writes until after the unmount cascade finishes. Calling
-    // setState on listeners mid-unmount marks defunct elements dirty. Use a
-    // post-frame callback (not a microtask) so the fullscreen Video surface is
-    // fully detached before LiveMiniPreview remounts the shared controller.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (controller == null || !controller.mounted) return;
       controller.setPlayerRouteActive(false);

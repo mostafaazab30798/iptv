@@ -543,11 +543,17 @@ class _CompactGlassButton extends StatelessWidget {
     );
 
     final tooltipLabel = tooltip;
-    return TvFocusable(
-      onSelect: onPressed,
+    final interactiveVisual = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
       child: tooltipLabel == null
           ? visual
           : Tooltip(message: tooltipLabel, child: visual),
+    );
+
+    return TvFocusable(
+      onSelect: onPressed,
+      child: interactiveVisual,
     );
   }
 }

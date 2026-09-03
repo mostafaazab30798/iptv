@@ -268,9 +268,9 @@ class PosterTopActions extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (favoriteButton != null) favoriteButton!,
+          ?favoriteButton,
           const Spacer(),
-          if (ratingBadge != null) ratingBadge,
+          ?ratingBadge,
         ],
       ),
     );

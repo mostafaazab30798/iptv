@@ -539,9 +539,5 @@ class CompanionAudioController extends StateNotifier<CompanionAudioState> {
 /// Global provider for Companion Audio Controller.
 final companionAudioProvider =
     StateNotifierProvider<CompanionAudioController, CompanionAudioState>(
-  (ref) {
-    final controller = CompanionAudioController();
-    ref.onDispose(controller.dispose);
-    return controller;
-  },
+  (ref) => CompanionAudioController(),
 );
