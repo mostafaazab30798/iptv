@@ -1,0 +1,25 @@
+name: Sync Supabase Release Build Number
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Android Release Build Number in Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          echo "Updating Android arm64-v8a build number to 2019 in Supabase..."
+          RESPONSE=$(curl --fail-with-body -sS -X PATCH \
+            "${SUPABASE_URL}/rest/v1/release_versions?platform=eq.android&architecture=eq.arm64-v8a&version=eq.1.0.1" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{"build_number": 2019}')
+          echo "Response from Supabase: $RESPONSE"
+          echo "Successfully updated Supabase release_versions."

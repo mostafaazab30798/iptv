@@ -98,6 +98,8 @@ jobs:
     name: Build Android Release
     needs: version
     runs-on: ubuntu-latest
+    outputs:
+      build_number: ${{ steps.artifact.outputs.build_number }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -194,6 +196,16 @@ jobs:
           FILE_SIZE=$(stat -c%s "$TARGET_FILE")
           SHA256_HASH=$(sha256sum "$TARGET_FILE" | awk '{print $1}')
 
+          AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -name aapt 2>/dev/null | sort -V | tail -1 || true)
+          ANDROID_BUILD_NUM=""
+          if [ -n "$AAPT_BIN" ] && [ -x "$AAPT_BIN" ]; then
+            ANDROID_BUILD_NUM=$("$AAPT_BIN" dump badging "$TARGET_FILE" | grep -o "versionCode='[^']*'" | cut -d"'" -f2 || true)
+          fi
+          if [ -z "$ANDROID_BUILD_NUM" ]; then
+            ANDROID_BUILD_NUM=$((2000 + ${{ needs.version.outputs.build_number }}))
+          fi
+
+          echo "build_number=${ANDROID_BUILD_NUM}" >> "$GITHUB_OUTPUT"
           echo "file_name=HOPE_IPTV.apk" >> "$GITHUB_OUTPUT"
           echo "file_path=${TARGET_FILE}" >> "$GITHUB_OUTPUT"
           echo "file_size=${FILE_SIZE}" >> "$GITHUB_OUTPUT"
@@ -368,7 +380,8 @@ jobs:
           TAG="${{ needs.version.outputs.tag_name }}"
           CHANNEL="${{ needs.version.outputs.channel }}"
           VERSION="${{ needs.version.outputs.version }}"
-          BUILD="${{ needs.version.outputs.build_number }}"
+          WINDOWS_BUILD="${{ needs.version.outputs.build_number }}"
+          ANDROID_BUILD="${{ needs.build-android.outputs.build_number }}"
           MANDATORY="${{ needs.version.outputs.mandatory }}"
           NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           REPO="${{ github.repository }}"
@@ -381,7 +394,8 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg channel "$CHANNEL" \
             --arg version "$VERSION" \
-            --argjson build "$BUILD" \
+            --argjson android_build "$ANDROID_BUILD" \
+            --argjson windows_build "$WINDOWS_BUILD" \
             --arg android_url "$ANDROID_URL" \
             --arg windows_url "$WINDOWS_URL" \
             --argjson android_size "${{ steps.meta.outputs.android_size }}" \
@@ -398,7 +412,7 @@ jobs:
                 architecture: "arm64-v8a",
                 channel: $channel,
                 version: $version,
-                build_number: $build,
+                build_number: $android_build,
                 object_key: $android_url,
                 file_size_bytes: $android_size,
                 sha256: $android_sha,
@@ -412,7 +426,7 @@ jobs:
                 architecture: "x64",
                 channel: $channel,
                 version: $version,
-                build_number: $build,
+                build_number: $windows_build,
                 object_key: $windows_url,
                 file_size_bytes: $windows_size,
                 sha256: $windows_sha,
@@ -437,6 +451,6 @@ jobs:
             exit 1
           fi
 
-          echo "$RESPONSE" | jq -e '.[] | select(.platform=="android" and .architecture=="arm64-v8a" and .build_number=='"$BUILD"')' >/dev/null
-          echo "$RESPONSE" | jq -e '.[] | select(.platform=="windows" and .architecture=="x64" and .build_number=='"$BUILD"')' >/dev/null
+          echo "$RESPONSE" | jq -e '.[] | select(.platform=="android" and .architecture=="arm64-v8a" and .build_number=='"$ANDROID_BUILD"')' >/dev/null
+          echo "$RESPONSE" | jq -e '.[] | select(.platform=="windows" and .architecture=="x64" and .build_number=='"$WINDOWS_BUILD"')' >/dev/null
           echo "Registered Android and Windows releases in Supabase."

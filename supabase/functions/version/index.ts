@@ -82,14 +82,35 @@ Deno.serve(async (req) => {
     let updateAvailable = false;
     let manifest = null;
 
-    if (release && Number(release.build_number) > currentBuild) {
+    let isNewer = false;
+    let manifestBuildNumber = 0;
+    if (release) {
+      const releaseBuild = Number(release.build_number);
+      manifestBuildNumber = releaseBuild;
+
+      if (releaseBuild > currentBuild) {
+        isNewer = true;
+      } else if (platform === "android") {
+        // Handle Flutter ABI split offset on Android (arm64 adds 2000: e.g. installed 2017 vs raw 19)
+        const normalizedCurrent = currentBuild >= 1000 ? currentBuild % 1000 : currentBuild;
+        const normalizedRelease = releaseBuild >= 1000 ? releaseBuild % 1000 : releaseBuild;
+        if (normalizedRelease > normalizedCurrent) {
+          isNewer = true;
+          if (currentBuild >= 1000 && releaseBuild < 1000) {
+            manifestBuildNumber = 2000 + releaseBuild;
+          }
+        }
+      }
+    }
+
+    if (isNewer) {
       updateAvailable = true;
       const body = buildManifestBody({
         platform: platform as "android" | "windows",
         architecture: release.architecture ?? architecture,
         channel: channel as "stable" | "beta" | "internal",
         version: release.version,
-        buildNumber: Number(release.build_number),
+        buildNumber: manifestBuildNumber,
         minimumSupportedVersion: release.minimum_supported_prior_version,
         mandatory: Boolean(release.mandatory_update),
         fileSize: release.file_size_bytes,
