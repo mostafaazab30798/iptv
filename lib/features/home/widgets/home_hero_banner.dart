@@ -177,12 +177,15 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
         : null;
     final isMatch =
         currentItem?.type == HeroItemType.live && currentItem?.match != null;
+    final currentFixture = currentItem?.match?.fixture;
+    final goalRows = MatchPosterCard.goalRowsForFixture(currentFixture);
     final posterFocus = _heroPosterFocusGeometry(
       isPortrait: isPortrait,
       screenWidth: screenWidth,
       bannerHeight: bannerHeight,
       topOffset: 0,
       isMatch: isMatch,
+      goalRows: goalRows,
     );
 
     return MouseRegion(
@@ -375,10 +378,14 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
     required double bannerHeight,
     required double topOffset,
     bool isMatch = false,
+    int goalRows = 0,
   }) {
     if (!isPortrait) {
       if (isMatch) {
-        final matchSize = MatchPosterCard.sizeForWidth(screenWidth);
+        final matchSize = MatchPosterCard.sizeForWidth(
+          screenWidth,
+          goalRows: goalRows,
+        );
         return (
           left: AppSpacing.x3l,
           top: bannerHeight - AppSpacing.xxl - matchSize.height,
@@ -594,7 +601,12 @@ class _WideHeroSlide extends StatelessWidget {
 
     if (item.type == HeroItemType.live && item.match != null) {
       final screenWidth = MediaQuery.sizeOf(context).width;
-      final matchSize = MatchPosterCard.sizeForWidth(screenWidth);
+      final fixture = item.match!.fixture;
+      final goalRows = MatchPosterCard.goalRowsForFixture(fixture);
+      final matchSize = MatchPosterCard.sizeForWidth(
+        screenWidth,
+        goalRows: goalRows,
+      );
 
       return Stack(
         fit: StackFit.expand,
@@ -875,9 +887,12 @@ class _MatchHeroCopy extends StatelessWidget {
       rawLeague,
       isArabic: isArabic,
     );
+    final isFinished = fixture?.isFinished ?? false;
     final timeLabel = isLive
         ? (fixture?.clock ?? (isArabic ? 'مباشر' : 'LIVE'))
-        : (scheduledTime.isNotEmpty ? scheduledTime : '—');
+        : (isFinished
+            ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
+            : (scheduledTime.isNotEmpty ? scheduledTime : '—'));
 
     final metaParts = <String>[
       if (league != null && league.isNotEmpty) league,
@@ -1149,18 +1164,38 @@ class MatchPosterCard extends StatelessWidget {
   final double width;
   final double height;
 
+  /// Computes how many distinct player goal rows are needed for a fixture.
+  static int goalRowsForFixture(LiveFixture? fixture) {
+    if (fixture == null) return 0;
+    final homeCount = fixture.homeGoals.map((g) => g.player).toSet().length;
+    final awayCount = fixture.awayGoals.map((g) => g.player).toSet().length;
+    final maxRows = homeCount > awayCount ? homeCount : awayCount;
+    return maxRows;
+  }
+
+  /// Extra height to dynamically expand the card so ALL goals fit without truncation.
+  static double extraHeightForGoals(int goalRows) {
+    if (goalRows <= 0) return 0.0;
+    // 12px for divider + margins, plus 22px per goal row
+    return 12.0 + (goalRows * 22.0);
+  }
+
   /// Responsive card footprint for landscape / TV heroes.
-  static ({double width, double height}) sizeForWidth(double screenWidth) {
+  static ({double width, double height}) sizeForWidth(
+    double screenWidth, {
+    int goalRows = 0,
+  }) {
+    final extraH = extraHeightForGoals(goalRows);
     if (screenWidth >= 1600) {
-      return (width: 640.0, height: 248.0);
+      return (width: 640.0, height: 248.0 + extraH);
     }
     if (screenWidth >= 1200) {
-      return (width: 560.0, height: 228.0);
+      return (width: 560.0, height: 228.0 + extraH);
     }
     if (screenWidth >= 900) {
-      return (width: 480.0, height: 208.0);
+      return (width: 480.0, height: 208.0 + extraH);
     }
-    return (width: 420.0, height: 196.0);
+    return (width: 420.0, height: 196.0 + extraH);
   }
 
   @override
@@ -1188,9 +1223,12 @@ class MatchPosterCard extends StatelessWidget {
       fixture?.awayName ?? 'Away',
       isArabic: isArabic,
     );
+    final isFinished = fixture?.isFinished ?? false;
     final timeLabel = isLive
         ? (fixture?.clock ?? (isArabic ? 'مباشر' : 'LIVE'))
-        : (scheduledTime.isNotEmpty ? scheduledTime : '');
+        : (isFinished
+            ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
+            : (scheduledTime.isNotEmpty ? scheduledTime : ''));
 
     final isExpanded = width >= 520;
     final gutter = isExpanded ? 12.0 : 10.0;
@@ -1200,6 +1238,9 @@ class MatchPosterCard extends StatelessWidget {
     final footerHeight = isExpanded ? 42.0 : 38.0;
     final arenaPadV = isExpanded ? 8.0 : 6.0;
     final teamFont = isExpanded ? 12.5 : 11.5;
+    final goalRows = goalRowsForFixture(fixture);
+    final hasGoals = goalRows > 0;
+    final scorersShelfHeight = hasGoals ? (goalRows * 22.0 + 8.0) : 0.0;
     // Keep emblems inside the arena: card chrome + rows leave a fixed budget.
     final arenaBudget =
         height -
@@ -1208,7 +1249,8 @@ class MatchPosterCard extends StatelessWidget {
         gutter -
         footerHeight -
         gutter -
-        (arenaPadV * 2);
+        (arenaPadV * 2) -
+        scorersShelfHeight;
     final logoSize = (arenaBudget - 6 - teamFont * 1.25)
         .clamp(28.0, isExpanded ? 48.0 : 40.0)
         .toDouble();
@@ -1359,7 +1401,9 @@ class MatchPosterCard extends StatelessWidget {
                                       if (timeLabel.isNotEmpty) ...[
                                         const SizedBox(width: 8),
                                         Text(
-                                          isArabic ? 'اليوم' : 'TODAY',
+                                          isFinished
+                                              ? (isArabic ? 'انتهت' : 'FINAL')
+                                              : (isArabic ? 'اليوم' : 'TODAY'),
                                           style: TextStyle(
                                             color: const Color(0xCCF7F8FA),
                                             fontSize: isExpanded ? 10 : 9,
@@ -1385,7 +1429,7 @@ class MatchPosterCard extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: gutter),
-                // Main arena: teams + score
+                // Main arena: teams + score + broadcast goals shelf
                 Expanded(
                   child: _MatchBentoCell(
                     radius: cellRadius,
@@ -1393,37 +1437,61 @@ class MatchPosterCard extends StatelessWidget {
                       horizontal: isExpanded ? 14 : 10,
                       vertical: arenaPadV,
                     ),
-                    child: Row(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: _TeamEmblemColumn(
-                            name: homeName,
-                            logoUrl: fixture?.homeLogoUrl,
-                            logoSize: logoSize,
-                            fontSize: teamFont,
-                            elevated: true,
-                            maxNameLines: 1,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _TeamEmblemColumn(
+                                  name: homeName,
+                                  logoUrl: fixture?.homeLogoUrl,
+                                  logoSize: logoSize,
+                                  fontSize: teamFont,
+                                  elevated: true,
+                                  maxNameLines: 1,
+                                ),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isExpanded ? 12 : 8,
+                                ),
+                                child: _VersusOrScoreBadge(
+                                  fixture: fixture,
+                                  large: isExpanded,
+                                ),
+                              ),
+                              Expanded(
+                                child: _TeamEmblemColumn(
+                                  name: awayName,
+                                  logoUrl: fixture?.awayLogoUrl,
+                                  logoSize: logoSize,
+                                  fontSize: teamFont,
+                                  elevated: true,
+                                  maxNameLines: 1,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isExpanded ? 12 : 8,
+                        if (hasGoals) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            child: Container(
+                              height: 1,
+                              color: Colors.white.withValues(alpha: 0.08),
+                            ),
                           ),
-                          child: _VersusOrScoreBadge(
-                            fixture: fixture,
-                            large: isExpanded,
+                          _MatchScorersShelf(
+                            homeGoals: fixture!.homeGoals,
+                            awayGoals: fixture.awayGoals,
+                            isExpanded: isExpanded,
                           ),
-                        ),
-                        Expanded(
-                          child: _TeamEmblemColumn(
-                            name: awayName,
-                            logoUrl: fixture?.awayLogoUrl,
-                            logoSize: logoSize,
-                            fontSize: teamFont,
-                            elevated: true,
-                            maxNameLines: 1,
-                          ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -1559,9 +1627,12 @@ class _PortraitMatchSlide extends StatelessWidget {
       fixture?.awayName ?? 'Away',
       isArabic: isArabic,
     );
+    final isFinished = fixture?.isFinished ?? false;
     final timeLabel = isLive
         ? (fixture?.clock ?? (isArabic ? 'مباشر' : 'LIVE'))
-        : (scheduledTime.isNotEmpty ? scheduledTime : '—');
+        : (isFinished
+            ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
+            : (scheduledTime.isNotEmpty ? scheduledTime : '—'));
 
     return Stack(
       fit: StackFit.expand,
@@ -1591,7 +1662,12 @@ class _PortraitMatchSlide extends StatelessWidget {
                     child: _TeamEmblemColumn(
                       name: homeName,
                       logoUrl: fixture?.homeLogoUrl,
-                      logoSize: 64,
+                      goals: fixture?.homeGoals ?? const [],
+                      showGoalsUnder: true,
+                      logoSize: (fixture?.homeGoals.isNotEmpty == true ||
+                              fixture?.awayGoals.isNotEmpty == true)
+                          ? 54
+                          : 64,
                       fontSize: 13,
                       elevated: true,
                     ),
@@ -1606,7 +1682,12 @@ class _PortraitMatchSlide extends StatelessWidget {
                     child: _TeamEmblemColumn(
                       name: awayName,
                       logoUrl: fixture?.awayLogoUrl,
-                      logoSize: 64,
+                      goals: fixture?.awayGoals ?? const [],
+                      showGoalsUnder: true,
+                      logoSize: (fixture?.homeGoals.isNotEmpty == true ||
+                              fixture?.awayGoals.isNotEmpty == true)
+                          ? 54
+                          : 64,
                       fontSize: 13,
                       elevated: true,
                     ),
@@ -1703,6 +1784,13 @@ class _MatchKickoffDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = isLive ? AppColors.live : AppColors.accent;
     final dayLabel = isArabic ? 'اليوم' : 'TODAY';
+    final isFinished = timeLabel.contains('FT') ||
+        timeLabel.contains('انتهت') ||
+        timeLabel.contains('Pen') ||
+        timeLabel.contains('AET');
+    final headerLabel = isLive
+        ? (isArabic ? 'مباشر الآن' : 'LIVE NOW')
+        : (isFinished ? (isArabic ? 'النتيجة النهائية' : 'FINAL') : dayLabel);
 
     if (!large) {
       return Align(
@@ -1719,7 +1807,7 @@ class _MatchKickoffDisplay extends StatelessWidget {
                   : CrossAxisAlignment.center,
               children: [
                 Text(
-                  isLive ? (isArabic ? 'مباشر الآن' : 'LIVE NOW') : dayLabel,
+                  headerLabel,
                   style: TextStyle(
                     color: isLive ? AppColors.live : const Color(0xE6F7F8FA),
                     fontSize: 9.5,
@@ -1825,9 +1913,9 @@ class _MatchKickoffDisplay extends StatelessWidget {
                   children: [
                     if (!isLive) ...[
                       Text(
-                        dayLabel,
+                        headerLabel,
                         style: TextStyle(
-                          color: accent,
+                          color: isFinished ? const Color(0xCCF7F8FA) : AppColors.accent,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.6,
@@ -1968,10 +2056,314 @@ class _MatchWatchCue extends StatelessWidget {
   }
 }
 
+/// Formats a football player's name like official broadcast graphics & shirt names.
+/// If <= 16 chars (e.g. "Mohamed Salah", "Erling Haaland"), keeps full name.
+/// If longer (e.g. "Trent Alexander-Arnold"), uses initial + surname ("T. Alexander-Arnold").
+String _formatPlayerName(String rawName) {
+  final trimmed = rawName.trim();
+  if (trimmed.length <= 16) return trimmed;
+  final parts = trimmed.split(RegExp(r'\s+'));
+  if (parts.length >= 2) {
+    final firstInitial = parts.first.isNotEmpty ? '${parts.first[0]}. ' : '';
+    final lastName = parts.sublist(1).join(' ');
+    final shortened = '$firstInitial$lastName';
+    if (shortened.length <= 18) return shortened;
+    return lastName;
+  }
+  return trimmed;
+}
+
+/// Broadcast-grade goals ticker shelf for landscape / big screens.
+/// Positioned across the full width below the teams, providing ~220-280px of
+/// breathing room per team so player names and minutes never get cut off.
+class _MatchScorersShelf extends StatelessWidget {
+  const _MatchScorersShelf({
+    required this.homeGoals,
+    required this.awayGoals,
+    required this.isExpanded,
+  });
+
+  final List<MatchGoal> homeGoals;
+  final List<MatchGoal> awayGoals;
+  final bool isExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Home scorers (left half)
+          Expanded(
+            child: _TeamGoalsShelfColumn(
+              goals: homeGoals,
+              alignEnd: false,
+              isExpanded: isExpanded,
+            ),
+          ),
+          // Subtle vertical divider matching the center score badge axis
+          Container(
+            width: 1,
+            height: 16,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: Colors.white.withValues(alpha: 0.10),
+          ),
+          // Away scorers (right half)
+          Expanded(
+            child: _TeamGoalsShelfColumn(
+              goals: awayGoals,
+              alignEnd: true,
+              isExpanded: isExpanded,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamGoalsShelfColumn extends StatelessWidget {
+  const _TeamGoalsShelfColumn({
+    required this.goals,
+    required this.alignEnd,
+    required this.isExpanded,
+  });
+
+  final List<MatchGoal> goals;
+  final bool alignEnd;
+  final bool isExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    if (goals.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final grouped = <String, List<String>>{};
+    for (final g in goals) {
+      var minuteLabel = g.minute;
+      if (g.isOwnGoal) minuteLabel += ' (OG)';
+      if (g.isPenalty) minuteLabel += ' (P)';
+      grouped.putIfAbsent(g.player, () => []).add(minuteLabel);
+    }
+
+    final entries = grouped.entries.toList();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        for (final entry in entries)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 1.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment:
+                  alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+              children: alignEnd
+                  ? [
+                      // Away: [23', 68' (P)] PlayerName ⚽
+                      _MinuteBadge(
+                        minutes: entry.value.join(', '),
+                        isExpanded: isExpanded,
+                      ),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          _formatPlayerName(entry.key),
+                          style: TextStyle(
+                            color: AppColors.textPrimary.withValues(alpha: 0.95),
+                            fontSize: isExpanded ? 11 : 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.1,
+                            shadows: const [
+                              Shadow(
+                                color: Color(0x99000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('⚽', style: TextStyle(fontSize: 8.5)),
+                    ]
+                  : [
+                      // Home: ⚽ PlayerName [23', 68' (P)]
+                      const Text('⚽', style: TextStyle(fontSize: 8.5)),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          _formatPlayerName(entry.key),
+                          style: TextStyle(
+                            color: AppColors.textPrimary.withValues(alpha: 0.95),
+                            fontSize: isExpanded ? 11 : 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.1,
+                            shadows: const [
+                              Shadow(
+                                color: Color(0x99000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.start,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      _MinuteBadge(
+                        minutes: entry.value.join(', '),
+                        isExpanded: isExpanded,
+                      ),
+                    ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MinuteBadge extends StatelessWidget {
+  const _MinuteBadge({
+    required this.minutes,
+    required this.isExpanded,
+  });
+
+  final String minutes;
+  final bool isExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.0),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+          width: 0.5,
+        ),
+      ),
+      child: Text(
+        minutes,
+        style: TextStyle(
+          color: const Color(0xFFFFD54F), // Amber gold
+          fontSize: isExpanded ? 9.5 : 8.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.1,
+          height: 1.1,
+        ),
+        maxLines: 1,
+      ),
+    );
+  }
+}
+
+/// Renders goal scorers and minutes (e.g. ⚽ Felix Bacher 28', 53').
+class _TeamGoalsList extends StatelessWidget {
+  const _TeamGoalsList({
+    required this.goals,
+    this.compact = false,
+    this.center = false,
+    this.elevated = false,
+  });
+
+  final List<MatchGoal> goals;
+  final bool compact;
+  final bool center;
+  final bool elevated;
+
+  @override
+  Widget build(BuildContext context) {
+    if (goals.isEmpty) return const SizedBox.shrink();
+
+    // Group goals by player to avoid duplicate lines for multiple goals
+    final grouped = <String, List<String>>{};
+    for (final g in goals) {
+      final key = g.player;
+      var minuteLabel = g.minute;
+      if (g.isOwnGoal) minuteLabel += ' (OG)';
+      if (g.isPenalty) minuteLabel += ' (P)';
+      grouped.putIfAbsent(key, () => []).add(minuteLabel);
+    }
+
+    final entries = grouped.entries.toList();
+
+    final crossAxis = center
+        ? CrossAxisAlignment.center
+        : CrossAxisAlignment.start;
+    final rowMainAxis = center
+        ? MainAxisAlignment.center
+        : MainAxisAlignment.start;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: crossAxis,
+      children: [
+        for (final entry in entries)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 1.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: rowMainAxis,
+              children: [
+                const Text(
+                  '⚽',
+                  style: TextStyle(
+                    fontSize: 8.5,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(width: 3.5),
+                Flexible(
+                  child: Text(
+                    '${_formatPlayerName(entry.key)} ${entry.value.join(', ')}',
+                    style: TextStyle(
+                      color: AppColors.textPrimary.withValues(alpha: 0.90),
+                      fontSize: compact ? 9.5 : 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.1,
+                      height: 1.15,
+                      shadows: elevated
+                          ? const [
+                              Shadow(
+                                color: Color(0x99000000),
+                                blurRadius: 6,
+                                offset: Offset(0, 1),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign:
+                        center ? TextAlign.center : TextAlign.start,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _TeamEmblemColumn extends StatelessWidget {
   const _TeamEmblemColumn({
     required this.name,
     required this.logoUrl,
+    this.goals = const [],
+    this.showGoalsUnder = false,
     this.logoSize = 48,
     this.fontSize = 12,
     this.elevated = false,
@@ -1980,6 +2372,8 @@ class _TeamEmblemColumn extends StatelessWidget {
 
   final String name;
   final String? logoUrl;
+  final List<MatchGoal> goals;
+  final bool showGoalsUnder;
   final double logoSize;
   final double fontSize;
   final bool elevated;
@@ -2030,6 +2424,15 @@ class _TeamEmblemColumn extends StatelessWidget {
           maxLines: maxNameLines,
           overflow: TextOverflow.ellipsis,
         ),
+        if (showGoalsUnder && goals.isNotEmpty) ...[
+          const SizedBox(height: 5),
+          _TeamGoalsList(
+            goals: goals,
+            compact: true,
+            elevated: elevated,
+            center: true,
+          ),
+        ],
       ],
     );
 

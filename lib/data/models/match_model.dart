@@ -14,6 +14,10 @@ class MatchModel {
     required this.time,
     this.status = '',
     required this.channel,
+    this.homePenScore,
+    this.awayPenScore,
+    this.homeGoals = const [],
+    this.awayGoals = const [],
   });
 
   final String league;
@@ -26,6 +30,10 @@ class MatchModel {
   final String time;
   final String status;
   final String channel;
+  final int? homePenScore;
+  final int? awayPenScore;
+  final List<MatchGoal> homeGoals;
+  final List<MatchGoal> awayGoals;
 
   factory MatchModel.fromJson(Map<String, dynamic> json) {
     return MatchModel(
@@ -71,7 +79,9 @@ class MatchModel {
     // 1. Explicit finished status
     if (lowerStatus.contains('انتهت') ||
         lowerStatus.contains('final') ||
-        lowerStatus.contains('ft')) {
+        lowerStatus.contains('ft') ||
+        lowerStatus.contains('pen') ||
+        lowerStatus.contains('aet')) {
       return (state: 'post', clock: status.isNotEmpty ? status : 'انتهت');
     }
 
@@ -79,7 +89,9 @@ class MatchModel {
     if (lowerStatus.contains('جار') ||
         lowerStatus.contains('شوط') ||
         lowerStatus.contains('استراح') ||
-        lowerStatus.contains('live')) {
+        lowerStatus.contains('live') ||
+        lowerStatus.contains('ht') ||
+        lowerStatus.contains('et')) {
       return (state: 'in', clock: status.isNotEmpty ? status : time);
     }
 
@@ -89,13 +101,20 @@ class MatchModel {
       final hour = int.tryParse(parts[0].trim());
       final minute = int.tryParse(parts[1].trim());
       if (hour != null && minute != null) {
-        final matchStartTime = DateTime(
+        var matchStartTime = DateTime(
           current.year,
           current.month,
           current.day,
           hour,
           minute,
         );
+
+        // If it's early in the morning (00:00 - 06:00) and the match
+        // was scheduled for evening (18:00 - 23:59), the match was kicked
+        // off yesterday evening.
+        if (current.hour < 6 && hour >= 18) {
+          matchStartTime = matchStartTime.subtract(const Duration(days: 1));
+        }
 
         if (current.isAfter(matchStartTime) ||
             current.isAtSameMomentAs(matchStartTime)) {
@@ -127,6 +146,40 @@ class MatchModel {
     );
   }
 
+  MatchModel copyWith({
+    String? league,
+    String? teamHome,
+    String? teamAway,
+    String? logoHome,
+    String? logoAway,
+    String? scoreHome,
+    String? scoreAway,
+    String? time,
+    String? status,
+    String? channel,
+    int? homePenScore,
+    int? awayPenScore,
+    List<MatchGoal>? homeGoals,
+    List<MatchGoal>? awayGoals,
+  }) {
+    return MatchModel(
+      league: league ?? this.league,
+      teamHome: teamHome ?? this.teamHome,
+      teamAway: teamAway ?? this.teamAway,
+      logoHome: logoHome ?? this.logoHome,
+      logoAway: logoAway ?? this.logoAway,
+      scoreHome: scoreHome ?? this.scoreHome,
+      scoreAway: scoreAway ?? this.scoreAway,
+      time: time ?? this.time,
+      status: status ?? this.status,
+      channel: channel ?? this.channel,
+      homePenScore: homePenScore ?? this.homePenScore,
+      awayPenScore: awayPenScore ?? this.awayPenScore,
+      homeGoals: homeGoals ?? this.homeGoals,
+      awayGoals: awayGoals ?? this.awayGoals,
+    );
+  }
+
   LiveFixture toLiveFixture({DateTime? now}) {
     final teams = BigMatchDetector.teamsIn('$teamHome $teamAway');
     final timing = resolveMatchTiming(status: status, time: time, now: now);
@@ -152,6 +205,10 @@ class MatchModel {
       broadcastChannel: cleanChannel,
       scheduledTime: time,
       rawStatus: status,
+      homePenScore: homePenScore,
+      awayPenScore: awayPenScore,
+      homeGoals: homeGoals,
+      awayGoals: awayGoals,
     );
   }
 

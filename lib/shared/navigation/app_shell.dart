@@ -90,7 +90,9 @@ class AppShell extends ConsumerWidget {
     final selectedIndex = _getSelectedIndex(currentPath);
     final navItems = getNavItems(context);
 
-    final isHomePortrait = isPortrait && currentPath == Routes.home;
+    final isHomeOrHistoryPortrait =
+        isPortrait &&
+        (currentPath == Routes.home || currentPath.startsWith(Routes.history));
 
     return PopScope(
       canPop: false,
@@ -106,7 +108,7 @@ class AppShell extends ConsumerWidget {
             extendBody: false,
             body: Column(
               children: [
-                if (!isHomePortrait) ...[
+                if (!isHomeOrHistoryPortrait) ...[
                   DpadRegion(
                     memoryKey: 'shell/nav',
                     debugLabel: 'shell-nav',
@@ -224,6 +226,9 @@ class _ShellTopNav extends StatelessWidget {
   final VoidCallback onRefresh;
 
   String _getTitle(BuildContext context, String currentPath) {
+    if (currentPath.startsWith(Routes.history)) {
+      return context.l10n.historyTitle;
+    }
     if (currentPath.startsWith(Routes.movies)) {
       return context.l10n.navMovies;
     }
@@ -238,9 +243,6 @@ class _ShellTopNav extends StatelessWidget {
     }
     if (currentPath.startsWith(Routes.settings)) {
       return context.l10n.navSettings;
-    }
-    if (currentPath.startsWith(Routes.history)) {
-      return context.l10n.labelContinueWatching;
     }
     return context.l10n.actionWatch;
   }
@@ -274,59 +276,65 @@ class _ShellTopNav extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: currentPath == Routes.home
-                    ? AppColors.accent
-                    : Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-                height: 1.1,
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: currentPath == Routes.home
+                      ? AppColors.accent
+                      : Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  height: 1.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Spacer(),
-            if (KidsModeNavButton.visibleFor(context)) ...[
-              const KidsModeNavButton(),
-              const SizedBox(width: 10),
+            if (!currentPath.startsWith(Routes.history)) ...[
+              const SizedBox(width: 12),
+              if (KidsModeNavButton.visibleFor(context)) ...[
+                const KidsModeNavButton(),
+                const SizedBox(width: 10),
+              ],
+              DarkGlassCapsule(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _GlassActionButton(
+                      icon: AppIcons.search,
+                      activeIcon: AppIcons.search,
+                      isActive: currentPath == Routes.search,
+                      tooltip: context.l10n.actionSearch,
+                      onTap: () => context.push(Routes.search),
+                      focusNode: ShellFocusBridge.heroChromeEntryOf(context),
+                    ),
+                    const SizedBox(width: 3),
+                    _GlassActionButton(
+                      icon: AppIcons.generalTv,
+                      activeIcon: AppIcons.generalTv,
+                      isActive: false,
+                      tooltip: 'TV Remote & Mouse',
+                      onTap: () => CompanionScannerModal.show(context),
+                    ),
+                    const SizedBox(width: 3),
+                    _SpinningRefreshButton(
+                      tooltip: context.l10n.actionRefresh,
+                      onTap: onRefresh,
+                    ),
+                    const SizedBox(width: 3),
+                    _GlassActionButton(
+                      icon: AppIcons.settings,
+                      activeIcon: AppIcons.settings,
+                      isActive: currentPath == Routes.settings,
+                      tooltip: context.l10n.navSettings,
+                      onTap: () => context.go(Routes.settings),
+                    ),
+                  ],
+                ),
+              ),
             ],
-            DarkGlassCapsule(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _GlassActionButton(
-                    icon: AppIcons.search,
-                    activeIcon: AppIcons.search,
-                    isActive: currentPath == Routes.search,
-                    tooltip: context.l10n.actionSearch,
-                    onTap: () => context.push(Routes.search),
-                    focusNode: ShellFocusBridge.heroChromeEntryOf(context),
-                  ),
-                  const SizedBox(width: 3),
-                  _GlassActionButton(
-                    icon: AppIcons.generalTv,
-                    activeIcon: AppIcons.generalTv,
-                    isActive: false,
-                    tooltip: 'TV Remote & Mouse',
-                    onTap: () => CompanionScannerModal.show(context),
-                  ),
-                  const SizedBox(width: 3),
-                  _SpinningRefreshButton(
-                    tooltip: context.l10n.actionRefresh,
-                    onTap: onRefresh,
-                  ),
-                  const SizedBox(width: 3),
-                  _GlassActionButton(
-                    icon: AppIcons.settings,
-                    activeIcon: AppIcons.settings,
-                    isActive: currentPath == Routes.settings,
-                    tooltip: context.l10n.navSettings,
-                    onTap: () => context.go(Routes.settings),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       );
@@ -374,62 +382,64 @@ class _ShellTopNav extends StatelessWidget {
                   }),
                 ),
               ),
-              if (KidsModeNavButton.visibleFor(context)) ...[
-                const KidsModeNavButton(),
-                const SizedBox(width: 10),
-              ],
-              // Glass Action Capsule
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: Colors.white.withAlpha(22),
-                    width: 0.8,
+              if (!currentPath.startsWith(Routes.history)) ...[
+                if (KidsModeNavButton.visibleFor(context)) ...[
+                  const KidsModeNavButton(),
+                  const SizedBox(width: 10),
+                ],
+                // Glass Action Capsule
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withAlpha(22),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(60),
+                        blurRadius: 12,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(60),
-                      blurRadius: 12,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _GlassActionButton(
+                        icon: AppIcons.search,
+                        activeIcon: AppIcons.search,
+                        isActive: currentPath == Routes.search,
+                        tooltip: context.l10n.actionSearch,
+                        onTap: () => context.push(Routes.search),
+                      ),
+                      const SizedBox(width: 4),
+                      _GlassActionButton(
+                        icon: AppIcons.generalTv,
+                        activeIcon: AppIcons.generalTv,
+                        isActive: false,
+                        tooltip: 'TV Remote & Mouse',
+                        onTap: () => CompanionScannerModal.show(context),
+                      ),
+                      const SizedBox(width: 4),
+                      _SpinningRefreshButton(
+                        tooltip: context.l10n.actionRefresh,
+                        onTap: onRefresh,
+                      ),
+                      const SizedBox(width: 4),
+                      _GlassActionButton(
+                        icon: AppIcons.settings,
+                        activeIcon: AppIcons.settings,
+                        isActive: currentPath == Routes.settings,
+                        tooltip: context.l10n.navSettings,
+                        onTap: () => context.go(Routes.settings),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _GlassActionButton(
-                      icon: AppIcons.search,
-                      activeIcon: AppIcons.search,
-                      isActive: currentPath == Routes.search,
-                      tooltip: context.l10n.actionSearch,
-                      onTap: () => context.push(Routes.search),
-                    ),
-                    const SizedBox(width: 4),
-                    _GlassActionButton(
-                      icon: AppIcons.generalTv,
-                      activeIcon: AppIcons.generalTv,
-                      isActive: false,
-                      tooltip: 'TV Remote & Mouse',
-                      onTap: () => CompanionScannerModal.show(context),
-                    ),
-                    const SizedBox(width: 4),
-                    _SpinningRefreshButton(
-                      tooltip: context.l10n.actionRefresh,
-                      onTap: onRefresh,
-                    ),
-                    const SizedBox(width: 4),
-                    _GlassActionButton(
-                      icon: AppIcons.settings,
-                      activeIcon: AppIcons.settings,
-                      isActive: currentPath == Routes.settings,
-                      tooltip: context.l10n.navSettings,
-                      onTap: () => context.go(Routes.settings),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ],
           ),
         ),

@@ -15,6 +15,7 @@ import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/focus/tv_focusable.dart';
+import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
@@ -48,63 +49,150 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg0,
-      body: Builder(
-        builder: (context) {
-          if (historyAsync.isLoading && items == null) {
-            return const HistorySkeleton();
-          }
-          if (historyAsync.hasError && items == null) {
-            return Center(
-              child: Text(
-                'Error: ${historyAsync.error}',
-                style: const TextStyle(color: AppColors.error),
-              ),
-            );
-          }
-          if (items == null || items.isEmpty) {
-            return EmptyState(
-              title: context.l10n.historyEmptyTitle,
-              subtitle: context.l10n.historyEmptySubtitle,
-              icon: AppIcons.history,
-            );
-          }
-
-          return DpadRegion(
-            memoryKey: 'history/list',
-            debugLabel: 'history-list',
-            child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                    AppSpacing.sm,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const HugeIcon(
-                            icon: AppIcons.history,
-                            color: AppColors.accent,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            context.l10n.historyTitle,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                              letterSpacing: 0.5,
+      body: SafeArea(
+        bottom: false,
+        child: Builder(
+          builder: (context) {
+            if (historyAsync.isLoading && items == null) {
+              return const HistorySkeleton();
+            }
+            if (historyAsync.hasError && items == null) {
+              return Center(
+                child: Text(
+                  'Error: ${historyAsync.error}',
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              );
+            }
+            if (items == null || items.isEmpty) {
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.md,
+                      AppSpacing.xl,
+                      0,
+                    ),
+                    child: Row(
+                      children: [
+                        TvFocusable(
+                          entry: true,
+                          autofocus: true,
+                          onSelect: () => popOrGoHome(context),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(10),
+                            child: const HugeIcon(
+                              icon: AppIcons.arrowBack,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
-                        ],
-                      ),
-                      TvFocusable(
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const HugeIcon(
+                                icon: AppIcons.history,
+                                color: AppColors.accent,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  context.l10n.historyTitle,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                    letterSpacing: 0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: EmptyState(
+                      title: context.l10n.historyEmptyTitle,
+                      subtitle: context.l10n.historyEmptySubtitle,
+                      icon: AppIcons.history,
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return DpadRegion(
+              memoryKey: 'history/list',
+              debugLabel: 'history-list',
+              child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.lg,
+                      AppSpacing.xl,
+                      AppSpacing.sm,
+                    ),
+                    child: Row(
+                      children: [
+                        // Back Action
+                        TvFocusable(
+                          entry: true,
+                          onSelect: () => popOrGoHome(context),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(10),
+                            child: const HugeIcon(
+                              icon: AppIcons.arrowBack,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const HugeIcon(
+                                icon: AppIcons.history,
+                                color: AppColors.accent,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  context.l10n.historyTitle,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                    letterSpacing: 0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        TvFocusable(
                         onSelect: () => _confirmClearHistory(context),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -311,13 +399,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   },
                 ),
               ),
-            ],
-          ),
+              ],
+            ),
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
   String _buildSubtitle(BuildContext context, WatchHistoryEntry item) {
     final dateStr =

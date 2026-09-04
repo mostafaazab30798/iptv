@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv/data/datasources/fotmob_realtime_datasource.dart';
 import 'package:iptv/data/datasources/yallakora_matches_datasource.dart';
 
 class _FakeHttpClientAdapter implements HttpClientAdapter {
@@ -61,7 +62,10 @@ void main() {
         );
       });
 
-      final dataSource = YallakoraMatchesDataSource(dio: dio);
+      final dataSource = YallakoraMatchesDataSource(
+        dio: dio,
+        fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
+      );
       final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
 
       expect(matches, hasLength(1));
@@ -117,7 +121,10 @@ void main() {
         );
       });
 
-      final dataSource = YallakoraMatchesDataSource(dio: dio);
+      final dataSource = YallakoraMatchesDataSource(
+        dio: dio,
+        fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
+      );
       final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
 
       expect(matches, hasLength(1));
@@ -184,7 +191,10 @@ void main() {
         );
       });
 
-      final dataSource = YallakoraMatchesDataSource(dio: dio);
+      final dataSource = YallakoraMatchesDataSource(
+        dio: dio,
+        fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
+      );
       // Raw list returns all 5
       final allMatches = await dataSource.fetchTodayMatches(forceRefresh: true);
       expect(allMatches, hasLength(5));

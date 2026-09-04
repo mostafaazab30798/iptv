@@ -1,14 +1,19 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:iptv/core/logging/app_logger.dart';
+import 'package:iptv/data/datasources/fotmob_realtime_datasource.dart';
 import 'package:iptv/data/models/match_model.dart';
 import 'package:iptv/domain/entities/live_fixture.dart';
 
 /// Static JSON datasource that fetches matches scraped from Yallakora.
-/// Serves as the primary [LiveScoreSource] implementation.
+/// Serves as the primary [LiveScoreSource] implementation, enriched with
+/// real-time scores, clock, HT, FT, ET, and penalties from FotMob.
 class YallakoraMatchesDataSource implements LiveScoreSource {
-  YallakoraMatchesDataSource({Dio? dio, String? endpointUrl})
-      : _dio = dio ??
+  YallakoraMatchesDataSource({
+    Dio? dio,
+    String? endpointUrl,
+    FotmobRealtimeDataSource? fotmobDataSource,
+  })  : _dio = dio ??
             Dio(
               BaseOptions(
                 connectTimeout: const Duration(seconds: 20),
@@ -20,10 +25,12 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
                 },
               ),
             ),
-        _endpointUrl = endpointUrl ?? defaultEndpointUrl;
+        _endpointUrl = endpointUrl ?? defaultEndpointUrl,
+        _fotmob = fotmobDataSource ?? FotmobRealtimeDataSource();
 
   final Dio _dio;
   final String _endpointUrl;
+  final FotmobRealtimeDataSource _fotmob;
 
   /// Default production URL for matches.json hosted on Cloudflare Pages / Worker / GitHub.
   static const String defaultEndpointUrl =
@@ -79,12 +86,67 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
           list = data['matches'] as List;
         }
 
-        final models = list
+        var models = list
             .whereType<Map<dynamic, dynamic>>()
             .map((item) => MatchModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
 
         if (models.isNotEmpty) {
+          // Enrich with FotMob real-time scores, clock, HT, FT, ET, penalties
+          try {
+            final targetTeams = models
+                .expand((m) => [m.teamHome, m.teamAway])
+                .where((t) => t.trim().isNotEmpty)
+                .toSet();
+            final fotmobMatches = await _fotmob.fetchMatches(
+              forceRefresh: forceRefresh,
+              targetTeams: targetTeams,
+            );
+            if (fotmobMatches.isNotEmpty) {
+              models = await Future.wait(
+                models.map((m) async {
+                  final fm = _fotmob.findMatchFor(
+                    fotmobMatches: fotmobMatches,
+                    homeName: m.teamHome,
+                    awayName: m.teamAway,
+                  );
+                  if (fm == null) return m;
+
+                  List<MatchGoal> homeGoals = m.homeGoals;
+                  List<MatchGoal> awayGoals = m.awayGoals;
+                  final hasGoals = (fm.homeScore != null && fm.homeScore! > 0) ||
+                      (fm.awayScore != null && fm.awayScore! > 0);
+                  if (hasGoals && fm.id > 0) {
+                    try {
+                      final goals = await _fotmob.fetchMatchGoals(
+                        fm.id,
+                        forceRefresh: forceRefresh,
+                      );
+                      homeGoals = goals.homeGoals;
+                      awayGoals = goals.awayGoals;
+                    } catch (_) {}
+                  }
+
+                  return m.copyWith(
+                    scoreHome: fm.homeScore != null
+                        ? fm.homeScore.toString()
+                        : m.scoreHome,
+                    scoreAway: fm.awayScore != null
+                        ? fm.awayScore.toString()
+                        : m.scoreAway,
+                    homePenScore: fm.homePenScore,
+                    awayPenScore: fm.awayPenScore,
+                    status: fm.resolveClock(fallbackTime: m.time),
+                    homeGoals: homeGoals,
+                    awayGoals: awayGoals,
+                  );
+                }),
+              );
+            }
+          } catch (_) {
+            // Silently fall back to raw matches.json data on any network or parsing error
+          }
+
           _cachedModels = models;
           _cachedFixtures = null;
           _cachedAt = now;
@@ -102,13 +164,16 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
         );
       } catch (e) {
         AppLogger.warning(
-          'Failed fetching matches from $url: $e',
+          'Matches fetch candidate failed ($url): $e',
           feature: 'sports',
         );
       }
     }
 
-    // Safe fallback to previous cached data or empty list
+    AppLogger.error(
+      'All matches sources failed. Falling back to empty or stale cache.',
+      feature: 'sports',
+    );
     return _cachedModels ?? const [];
   }
 
@@ -122,12 +187,78 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
       return _cachedFixtures!;
     }
 
-    final models = await fetchTodayMatches(forceRefresh: forceRefresh);
-    // Filter to ONLY Barcelona, Real Madrid, and the Premier League Big Six clubs
-    final bigMatchFixtures = models
+    final allMatches = await fetchTodayMatches(forceRefresh: forceRefresh);
+    var bigMatchFixtures = allMatches
         .map((m) => m.toLiveFixture(now: now))
         .where((fixture) => fixture.teams.isNotEmpty)
         .toList();
+
+    // Enrich filtered big matches with FotMob real-time data
+    try {
+      final targetTeams = bigMatchFixtures
+          .expand((f) => [f.homeName, f.awayName, ...f.teams.map((t) => t.toString())])
+          .where((t) => t.trim().isNotEmpty)
+          .toSet();
+      final fotmobMatches = await _fotmob.fetchMatches(
+        forceRefresh: forceRefresh,
+        targetTeams: targetTeams,
+      );
+      if (fotmobMatches.isNotEmpty) {
+        bigMatchFixtures = await Future.wait(
+          bigMatchFixtures.map((fixture) async {
+            final fm = _fotmob.findMatchFor(
+              fotmobMatches: fotmobMatches,
+              homeName: fixture.homeName,
+              awayName: fixture.awayName,
+              teams: fixture.teams,
+            );
+            if (fm == null) return fixture;
+
+            final homeScore = fm.homeScore != null
+                ? fm.homeScore.toString()
+                : fixture.homeScore;
+            final awayScore = fm.awayScore != null
+                ? fm.awayScore.toString()
+                : fixture.awayScore;
+            final clock = fm.resolveClock(fallbackTime: fixture.scheduledTime);
+            final state = fm.state;
+
+            List<MatchGoal> homeGoals = fixture.homeGoals;
+            List<MatchGoal> awayGoals = fixture.awayGoals;
+
+            final hasGoals = (fm.homeScore != null && fm.homeScore! > 0) ||
+                (fm.awayScore != null && fm.awayScore! > 0);
+            if (hasGoals && fm.id > 0) {
+              try {
+                final goals = await _fotmob.fetchMatchGoals(
+                  fm.id,
+                  forceRefresh: forceRefresh,
+                );
+                homeGoals = goals.homeGoals;
+                awayGoals = goals.awayGoals;
+              } catch (_) {}
+            }
+
+            return fixture.copyWith(
+              homeScore: homeScore,
+              awayScore: awayScore,
+              homePenScore: fm.homePenScore,
+              awayPenScore: fm.awayPenScore,
+              clock: clock,
+              state: state,
+              rawStatus: fm.scoreStr ?? fm.reasonLong ?? fixture.rawStatus,
+              homeGoals: homeGoals,
+              awayGoals: awayGoals,
+            );
+          }),
+        );
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Failed to enrich big matches with FotMob: $e',
+        feature: 'sports',
+      );
+    }
 
     // Sort order:
     // 1. Live Now matches first (real time >= start time or explicit live status)

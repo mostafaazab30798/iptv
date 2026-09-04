@@ -53,6 +53,38 @@ class HomeHeroItem {
   final Movie? movie;
   final Series? series;
   final LiveMatch? match;
+
+  HomeHeroItem copyWith({
+    String? title,
+    String? subtitle,
+    HeroItemType? type,
+    String? badge,
+    String? rating,
+    String? genre,
+    String? description,
+    String? backdropUrl,
+    String? posterUrl,
+    Channel? channel,
+    Movie? movie,
+    Series? series,
+    LiveMatch? match,
+  }) {
+    return HomeHeroItem(
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      type: type ?? this.type,
+      badge: badge ?? this.badge,
+      rating: rating ?? this.rating,
+      genre: genre ?? this.genre,
+      description: description ?? this.description,
+      backdropUrl: backdropUrl ?? this.backdropUrl,
+      posterUrl: posterUrl ?? this.posterUrl,
+      channel: channel ?? this.channel,
+      movie: movie ?? this.movie,
+      series: series ?? this.series,
+      match: match ?? this.match,
+    );
+  }
 }
 
 class HomeState {
@@ -417,6 +449,7 @@ class HomeController extends StateNotifier<HomeState> {
       heroItems: items,
       isHeroPending: false,
     );
+    _startScoreboardPolling();
   }
 
   List<HomeHeroItem> _heroFromMatches(List<LiveMatch> matches) {
@@ -648,6 +681,75 @@ class HomeController extends StateNotifier<HomeState> {
         state = state.copyWith(continueWatching: active);
       }
     } catch (_) {}
+  }
+
+  Timer? _scoreboardTimer;
+
+  void _startScoreboardPolling() {
+    _scoreboardTimer?.cancel();
+    _scoreboardTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      if (!_hasLiveMatchHero) {
+        _scoreboardTimer?.cancel();
+        return;
+      }
+      unawaited(_refreshLiveScores());
+    });
+  }
+
+  Future<void> _refreshLiveScores() async {
+    final scores = _liveScores;
+    if (scores == null || !mounted) return;
+    try {
+      final fixtures = await scores.fetchLiveBigMatches(forceRefresh: true);
+      if (!mounted || fixtures.isEmpty) return;
+
+      final updatedItems = state.heroItems.map((item) {
+        if (item.type != HeroItemType.live || item.match == null) return item;
+        final currentMatch = item.match!;
+        final currentFixture = currentMatch.fixture;
+        if (currentFixture == null) return item;
+
+        final freshFixture = fixtures.firstWhere(
+          (f) =>
+              f.homeName == currentFixture.homeName &&
+              f.awayName == currentFixture.awayName,
+          orElse: () => currentFixture,
+        );
+
+        if (freshFixture == currentFixture) return item;
+
+        final updatedMatch = LiveMatch(
+          channel: currentMatch.channel,
+          programTitle: currentMatch.programTitle,
+          teams: currentMatch.teams,
+          fromEpg: currentMatch.fromEpg,
+          fixture: freshFixture,
+        );
+
+        final isLive = freshFixture.isLive;
+        return item.copyWith(
+          subtitle: [
+            if (freshFixture.clock != null) freshFixture.clock!,
+            updatedMatch.teamsLabel,
+          ].join(' • '),
+          genre: isLive
+              ? 'LIVE MATCH'
+              : (freshFixture.isFinished ? 'FINISHED' : 'UPCOMING MATCH'),
+          match: updatedMatch,
+        );
+      }).toList();
+
+      if (mounted) {
+        state = state.copyWith(heroItems: updatedItems);
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _scoreboardTimer?.cancel();
+    super.dispose();
   }
 }
 

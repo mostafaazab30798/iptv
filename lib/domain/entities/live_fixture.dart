@@ -1,6 +1,29 @@
 import 'package:equatable/equatable.dart';
 import 'package:iptv/core/sports/big_match_detector.dart';
 
+/// Represents a goal event (scorer, minute, own goal, penalty).
+class MatchGoal extends Equatable {
+  const MatchGoal({
+    required this.player,
+    required this.minute,
+    this.isOwnGoal = false,
+    this.isPenalty = false,
+  });
+
+  final String player;
+  final String minute;
+  final bool isOwnGoal;
+  final bool isPenalty;
+
+  String get displayLabel {
+    final prefix = isOwnGoal ? '(OG) ' : (isPenalty ? '(P) ' : '');
+    return '$prefix$player $minute';
+  }
+
+  @override
+  List<Object?> get props => [player, minute, isOwnGoal, isPenalty];
+}
+
 /// A currently live (or imminent) football match from an external scoreboard.
 class LiveFixture extends Equatable {
   const LiveFixture({
@@ -20,6 +43,10 @@ class LiveFixture extends Equatable {
     this.broadcastChannel,
     this.scheduledTime,
     this.rawStatus,
+    this.homePenScore,
+    this.awayPenScore,
+    this.homeGoals = const [],
+    this.awayGoals = const [],
   });
 
   final String homeName;
@@ -48,6 +75,14 @@ class LiveFixture extends Equatable {
 
   /// Raw scraped status string (e.g. "لم تبدأ", "جارية").
   final String? rawStatus;
+
+  /// Penalty shootout scores (if match decided on penalties).
+  final int? homePenScore;
+  final int? awayPenScore;
+
+  /// Goal events for each side.
+  final List<MatchGoal> homeGoals;
+  final List<MatchGoal> awayGoals;
 
   String get headline => '$homeName vs $awayName';
 
@@ -79,6 +114,56 @@ class LiveFixture extends Equatable {
       broadcastChannel: broadcastChannel,
       scheduledTime: scheduledTime,
       rawStatus: rawStatus,
+      homePenScore: homePenScore,
+      awayPenScore: awayPenScore,
+      homeGoals: homeGoals,
+      awayGoals: awayGoals,
+    );
+  }
+
+  LiveFixture copyWith({
+    String? homeName,
+    String? awayName,
+    List<BigTeam>? teams,
+    String? state,
+    String? clock,
+    String? league,
+    String? homeScore,
+    String? awayScore,
+    String? bannerUrl,
+    String? posterUrl,
+    String? homeLogoUrl,
+    String? awayLogoUrl,
+    DateTime? start,
+    String? broadcastChannel,
+    String? scheduledTime,
+    String? rawStatus,
+    int? homePenScore,
+    int? awayPenScore,
+    List<MatchGoal>? homeGoals,
+    List<MatchGoal>? awayGoals,
+  }) {
+    return LiveFixture(
+      homeName: homeName ?? this.homeName,
+      awayName: awayName ?? this.awayName,
+      teams: teams ?? this.teams,
+      state: state ?? this.state,
+      clock: clock ?? this.clock,
+      league: league ?? this.league,
+      homeScore: homeScore ?? this.homeScore,
+      awayScore: awayScore ?? this.awayScore,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
+      posterUrl: posterUrl ?? this.posterUrl,
+      homeLogoUrl: homeLogoUrl ?? this.homeLogoUrl,
+      awayLogoUrl: awayLogoUrl ?? this.awayLogoUrl,
+      start: start ?? this.start,
+      broadcastChannel: broadcastChannel ?? this.broadcastChannel,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
+      rawStatus: rawStatus ?? this.rawStatus,
+      homePenScore: homePenScore ?? this.homePenScore,
+      awayPenScore: awayPenScore ?? this.awayPenScore,
+      homeGoals: homeGoals ?? this.homeGoals,
+      awayGoals: awayGoals ?? this.awayGoals,
     );
   }
 
@@ -105,6 +190,12 @@ class LiveFixture extends Equatable {
         broadcastChannel,
         scheduledTime,
         rawStatus,
+        homeScore,
+        awayScore,
+        homePenScore,
+        awayPenScore,
+        homeGoals,
+        awayGoals,
       ];
 }
 
