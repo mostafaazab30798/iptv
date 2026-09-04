@@ -5,6 +5,8 @@
 -keep class io.flutter.view.** { *; }
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
+-dontwarn io.flutter.embedding.**
+-dontwarn com.google.android.play.core.**
 
 # Google ML Kit Barcode Scanning for mobile_scanner
 -keep class com.google.mlkit.** { *; }

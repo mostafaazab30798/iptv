@@ -56,10 +56,8 @@ android {
                 // Local/dev fallback only. CI must provide key.properties.
                 signingConfigs.getByName("debug")
             }
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
