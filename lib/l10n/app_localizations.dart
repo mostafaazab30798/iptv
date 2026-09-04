@@ -2677,6 +2677,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not reach TV at {address}'**
   String companionCouldNotReach(String address);
+
+  /// No description provided for @authDividerOr.
+  ///
+  /// In en, this message translates to:
+  /// **'OR'**
+  String get authDividerOr;
+
+  /// No description provided for @companionSignInButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Companion Device'**
+  String get companionSignInButton;
+
+  /// No description provided for @companionSignInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Companion'**
+  String get companionSignInTitle;
+
+  /// No description provided for @companionSignInSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer your login instantly from your phone'**
+  String get companionSignInSubtitle;
+
+  /// No description provided for @companionPairingCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing PIN'**
+  String get companionPairingCodeLabel;
+
+  /// No description provided for @companionStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Open HOPE TV on your phone where you are already signed in'**
+  String get companionStep1;
+
+  /// No description provided for @companionStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the Scan icon in Header, Settings, or Companion'**
+  String get companionStep2;
+
+  /// No description provided for @companionStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan this QR code to sign in instantly'**
+  String get companionStep3;
+
+  /// No description provided for @companionWaitingForScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for companion device...'**
+  String get companionWaitingForScan;
+
+  /// No description provided for @companionAuthenticatingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Credentials received! Authenticating...'**
+  String get companionAuthenticatingTitle;
+
+  /// No description provided for @companionReceivedFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Received from {device}'**
+  String companionReceivedFrom(String device);
+
+  /// No description provided for @companionSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed In Successfully!'**
+  String get companionSuccessTitle;
+
+  /// No description provided for @companionSuccessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your channels and content...'**
+  String get companionSuccessSubtitle;
+
+  /// No description provided for @companionErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-In Failed'**
+  String get companionErrorTitle;
+
+  /// No description provided for @companionAuthorizeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer Login to Screen?'**
+  String get companionAuthorizeTitle;
+
+  /// No description provided for @companionTransferAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer & Sign In'**
+  String get companionTransferAction;
+
+  /// No description provided for @companionTransferSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully signed into {device}!'**
+  String companionTransferSuccess(String device);
+
+  /// No description provided for @companionTransferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer failed: {error}'**
+  String companionTransferFailed(String error);
+
+  /// No description provided for @companionPhoneNotSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone is not signed in to an IPTV server yet.'**
+  String get companionPhoneNotSignedIn;
+
+  /// No description provided for @authBackToOnboarding.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to IPTV Server Setup'**
+  String get authBackToOnboarding;
 }
 
 class _AppLocalizationsDelegate

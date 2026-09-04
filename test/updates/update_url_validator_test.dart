@@ -21,6 +21,30 @@ void main() {
       );
     });
 
+    test('allows github.com release tag page URLs', () {
+      expect(
+        UpdateUrlValidator.isAllowedDownloadUrl(
+          'https://github.com/hope-tv/iptv/releases/tag/v0.1.0-build.2',
+        ),
+        isTrue,
+      );
+    });
+
+    test('allows AWS S3 and Azure blob CDN redirect URLs', () {
+      expect(
+        UpdateUrlValidator.isAllowedDownloadUrl(
+          'https://github-production-release-asset-2e65be.s3.amazonaws.com/123/HOPE_IPTV.apk',
+        ),
+        isTrue,
+      );
+      expect(
+        UpdateUrlValidator.isAllowedDownloadUrl(
+          'https://releaseassetproduction.blob.core.windows.net/releases/HOPE_IPTV.apk',
+        ),
+        isTrue,
+      );
+    });
+
     test('rejects non-HTTPS URLs', () {
       expect(
         UpdateUrlValidator.isAllowedDownloadUrl(

@@ -57,6 +57,16 @@ void main() {
       );
     }
 
+    testWidgets('attaches PlayerView after the route owns the surface', (tester) async {
+      await tester.pumpWidget(createTestApp());
+
+      expect(controller.state.isPlayerRouteActive, isTrue);
+      await tester.pump();
+      expect(find.byType(PlayerView), findsOneWidget);
+
+      await finishPlayerTest(tester);
+    });
+
     testWidgets('renders PlayerView and overlay initial state', (tester) async {
       await tester.pumpWidget(createTestApp());
       // Overlay schedules a 4s hide timer — advance past it instead of hanging

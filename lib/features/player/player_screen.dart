@@ -246,6 +246,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
                 final aspectRatioIndex = ref.watch(
                   playerControllerProvider.select((s) => s.aspectRatioIndex),
                 );
+                final ownsSurface = ref.watch(
+                  playerControllerProvider.select((s) => s.isPlayerRouteActive),
+                );
+                // Stay detached until this route owns the Texture. Mounting
+                // mkv.Video while LiveMiniPreview is still bound produces a
+                // zero-size GLES viewport on Huawei/Honor GPUs.
+                if (!ownsSurface) {
+                  return const ColoredBox(color: Colors.black);
+                }
                 return PlayerView(
                   aspectRatioIndex: aspectRatioIndex,
                   platformHandle: controller.engine.platformHandle,

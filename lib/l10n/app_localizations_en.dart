@@ -1440,4 +1440,75 @@ class AppLocalizationsEn extends AppLocalizations {
   String companionCouldNotReach(String address) {
     return 'Could not reach TV at $address';
   }
+
+  @override
+  String get authDividerOr => 'OR';
+
+  @override
+  String get companionSignInButton => 'Sign in with Companion Device';
+
+  @override
+  String get companionSignInTitle => 'Sign in with Companion';
+
+  @override
+  String get companionSignInSubtitle =>
+      'Transfer your login instantly from your phone';
+
+  @override
+  String get companionPairingCodeLabel => 'Pairing PIN';
+
+  @override
+  String get companionStep1 =>
+      'Open HOPE TV on your phone where you are already signed in';
+
+  @override
+  String get companionStep2 =>
+      'Tap the Scan icon in Header, Settings, or Companion';
+
+  @override
+  String get companionStep3 => 'Scan this QR code to sign in instantly';
+
+  @override
+  String get companionWaitingForScan => 'Waiting for companion device...';
+
+  @override
+  String get companionAuthenticatingTitle =>
+      'Credentials received! Authenticating...';
+
+  @override
+  String companionReceivedFrom(String device) {
+    return 'Received from $device';
+  }
+
+  @override
+  String get companionSuccessTitle => 'Signed In Successfully!';
+
+  @override
+  String get companionSuccessSubtitle => 'Loading your channels and content...';
+
+  @override
+  String get companionErrorTitle => 'Sign-In Failed';
+
+  @override
+  String get companionAuthorizeTitle => 'Transfer Login to Screen?';
+
+  @override
+  String get companionTransferAction => 'Transfer & Sign In';
+
+  @override
+  String companionTransferSuccess(String device) {
+    return 'Successfully signed into $device!';
+  }
+
+  @override
+  String companionTransferFailed(String error) {
+    return 'Transfer failed: $error';
+  }
+
+  @override
+  String get companionPhoneNotSignedIn =>
+      'This phone is not signed in to an IPTV server yet.';
+
+  @override
+  String get authBackToOnboarding => 'Back to IPTV Server Setup';
 }

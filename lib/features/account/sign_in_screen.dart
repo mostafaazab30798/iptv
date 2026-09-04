@@ -198,6 +198,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
           ),
         ],
       ),
+      const SizedBox(height: AppSpacing.lg),
+      Center(
+        child: TextButton.icon(
+          onPressed: _submitting ? null : () => context.go(Routes.onboarding),
+          icon: const Icon(Icons.arrow_back_rounded, size: 16),
+          label: Text(l10n.authBackToOnboarding),
+        ),
+      ),
     ];
 
     return Scaffold(

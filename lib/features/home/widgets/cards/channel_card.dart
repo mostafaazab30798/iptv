@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
+import 'package:iptv/core/sports/sports_localization.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
@@ -108,16 +109,26 @@ class ChannelCard extends StatelessWidget {
             const SizedBox(height: 5),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: Text(
-                channel.name,
-                style: TextStyle(
-                  color: isPlaying ? AppColors.accent : Colors.white,
-                  fontSize: 11.5,
-                  fontWeight: isPlaying ? FontWeight.w800 : FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
+              child: Builder(
+                builder: (context) {
+                  final isArabic =
+                      Localizations.localeOf(context).languageCode == 'ar';
+                  final displayName = SportsLocalization.localizeChannel(
+                    channel.name,
+                    isArabic: isArabic,
+                  );
+                  return Text(
+                    displayName,
+                    style: TextStyle(
+                      color: isPlaying ? AppColors.accent : Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: isPlaying ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  );
+                },
               ),
             ),
             const SizedBox(height: 2),

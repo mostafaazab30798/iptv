@@ -1,7 +1,7 @@
 name: iptv
 description: "Premium IPTV client for Android, Android TV, Windows, and Web."
 publish_to: 'none'
-version: 1.0.1+16
+version: 1.0.1+17
 
 environment:
   sdk: ^3.10.7
@@ -84,6 +84,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/logos/bein/
+    - assets/images/
 
   fonts:
     - family: NotoSans

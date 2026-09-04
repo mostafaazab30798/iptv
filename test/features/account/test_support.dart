@@ -93,6 +93,21 @@ class FakeAppAccountRepository implements AppAccountRepository {
   Future<AppAccount?> refreshProfile() async => _current;
 
   @override
+  Future<AppAccount?> setSessionFromToken({
+    required String refreshToken,
+    String? email,
+  }) async {
+    final account = AppAccount(
+      id: 'fake-companion-user',
+      status: AppAccountStatus.active,
+      email: email ?? 'companion@example.com',
+    );
+    _current = account;
+    _controller.add(account);
+    return account;
+  }
+
+  @override
   Future<AccountDeletionRequest> requestDeletion({
     required String confirmation,
     bool acknowledgeSubscriptionLoss = false,

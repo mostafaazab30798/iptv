@@ -7,6 +7,7 @@ import 'package:iptv/core/analytics/analytics_queue.dart';
 import 'package:iptv/core/analytics/installation_marker.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/core/commercial/commercial_edge_functions_client.dart';
+import 'package:iptv/core/commercial/supabase_client_factory.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/core/identity/installation_identity.dart';
 import 'package:iptv/core/logging/app_logger.dart';
@@ -171,11 +172,14 @@ class AnalyticsClient with WidgetsBindingObserver {
         body: {
           'events': batch.map((e) => e.toJson()).toList(),
         },
+        requireSession: false,
       );
     } catch (e) {
       AppLogger.error('Analytics flush failed: $e', feature: 'analytics');
-      for (final event in batch) {
-        await _queue.enqueue(event);
+      if (e is! CommercialApiException || e.status >= 500) {
+        for (final event in batch) {
+          await _queue.enqueue(event);
+        }
       }
     }
   }
@@ -184,6 +188,12 @@ class AnalyticsClient with WidgetsBindingObserver {
     if (!CommercialApiConfig.isConfigured || _deviceId == null) return;
     // Only send meaningful heartbeats when foregrounded.
     if (meaningful && !_foreground) return;
+
+    // Heartbeats are tied to an authenticated account session on the backend.
+    final ok = await SupabaseClientFactory.ensureInitialized();
+    if (!ok || SupabaseClientFactory.client.auth.currentSession == null) {
+      return;
+    }
 
     try {
       final response = await _api.invoke(

@@ -51,19 +51,25 @@ class AudioHandoffDiscoveryBroadcaster {
       _socket?.broadcastEnabled = true;
 
       // Listen for incoming probe queries from companion clients
-      _socket?.listen((event) {
-        if (event == RawSocketEvent.read) {
-          final datagram = _socket?.receive();
-          if (datagram != null) {
-            _handleIncomingPacket(datagram);
+      _socket?.listen(
+        (event) {
+          if (event == RawSocketEvent.read) {
+            final datagram = _socket?.receive();
+            if (datagram != null) {
+              _handleIncomingPacket(datagram);
+            }
           }
-        }
-      });
+        },
+        onError: (Object error, StackTrace stack) {
+          // Socket network errors (e.g. ENETUNREACH / Network unreachable) handled gracefully
+        },
+        cancelOnError: false,
+      );
 
       // Broadcast beacon every 1.5 seconds
       _beaconTimer = Timer.periodic(
         const Duration(milliseconds: 1500),
-        (_) => _sendBeacon(),
+        (_) => unawaited(_sendBeacon()),
       );
 
       // Send initial beacon immediately
@@ -84,7 +90,7 @@ class AudioHandoffDiscoveryBroadcaster {
 
   void updateSession(HandoffSessionInfo sessionInfo) {
     _sessionInfo = sessionInfo;
-    _sendBeacon();
+    unawaited(_sendBeacon());
   }
 
   Future<void> _sendBeacon() async {
@@ -266,14 +272,20 @@ class AudioHandoffDiscoveryScanner {
       );
       _socket?.broadcastEnabled = true;
 
-      _socket?.listen((event) {
-        if (event == RawSocketEvent.read) {
-          final datagram = _socket?.receive();
-          if (datagram != null) {
-            _processDatagram(datagram);
+      _socket?.listen(
+        (event) {
+          if (event == RawSocketEvent.read) {
+            final datagram = _socket?.receive();
+            if (datagram != null) {
+              _processDatagram(datagram);
+            }
           }
-        }
-      });
+        },
+        onError: (Object error, StackTrace stack) {
+          // Socket network errors handled gracefully
+        },
+        cancelOnError: false,
+      );
 
       // Send probe broadcasts every 1.5 seconds
       _probeTimer = Timer.periodic(
@@ -499,7 +511,7 @@ class AudioHandoffDiscoveryScanner {
               }
             }
           }
-        });
+        }).catchError((_) {});
       } catch (_) {}
 
       // Clean up stale sessions (older than 8 seconds)

@@ -21,6 +21,12 @@ abstract class AppAccountRepository {
 
   Future<AppAccount?> refreshProfile();
 
+  /// Restore or inherit an active session from a companion device token.
+  Future<AppAccount?> setSessionFromToken({
+    required String refreshToken,
+    String? email,
+  });
+
   /// Request account deletion after user confirms with [accountDeletionConfirmPhrase].
   Future<AccountDeletionRequest> requestDeletion({
     required String confirmation,

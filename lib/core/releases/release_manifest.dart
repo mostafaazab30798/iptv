@@ -50,6 +50,10 @@ class ReleaseManifest {
     return 'https://github.com/mostafaazab30798/iptv/releases/download/v$version-build.$buildNumber/$fileName';
   }
 
+  String get releasePageUrl {
+    return 'https://github.com/mostafaazab30798/iptv/releases/tag/v$version-build.$buildNumber';
+  }
+
   factory ReleaseManifest.fromJson(Map<String, dynamic> json) {
     return ReleaseManifest(
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 1,

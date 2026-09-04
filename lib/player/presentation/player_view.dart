@@ -39,12 +39,10 @@ class PlayerView extends StatelessWidget {
           fit = BoxFit.contain;
       }
 
-      Widget videoWidget = Center(
-        child: mkv.Video(
-          controller: videoController,
-          fit: fit,
-          controls: (state) => const SizedBox.shrink(),
-        ),
+      Widget videoWidget = mkv.Video(
+        controller: videoController,
+        fit: fit,
+        controls: (state) => const SizedBox.shrink(),
       );
 
       if (forcedAspectRatio != null) {

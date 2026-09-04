@@ -6,6 +6,7 @@ import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_motion.dart';
 import 'package:iptv/app/theme/app_radius.dart';
+import 'package:iptv/core/logging/app_logger.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/core/releases/release_manifest.dart';
 import 'package:iptv/features/updates/update_controller.dart';
@@ -294,7 +295,11 @@ class _OptionalUpdateDialogState extends ConsumerState<_OptionalUpdateDialog> {
                             isLoading: isLaunching,
                             onPressed: isLaunching
                                 ? null
-                                : () => _launchDownload(context, ref),
+                                : () => _launchDownload(
+                                      context,
+                                      ref,
+                                      manifest: widget.manifest,
+                                    ),
                           ),
                         ),
                       ],
@@ -516,7 +521,11 @@ class _MandatoryUpdateScreenState
                         isLoading: isLaunching,
                         onPressed: isLaunching
                             ? null
-                            : () => _launchDownload(context, ref),
+                            : () => _launchDownload(
+                                  context,
+                                  ref,
+                                  manifest: widget.manifest,
+                                ),
                       ),
 
                       const SizedBox(height: 10),
@@ -831,14 +840,27 @@ class _ActionButtonState extends State<_ActionButton> {
   }
 }
 
-Future<void> _launchDownload(BuildContext context, WidgetRef ref) async {
+Future<void> _launchDownload(
+  BuildContext context,
+  WidgetRef ref, {
+  ReleaseManifest? manifest,
+}) async {
   final l10n = AppLocalizations.of(context)!;
   final session = ref.read(appAccountSessionProvider);
-  final url = await ref
+  final updateManifest = manifest ?? ref.read(updateProvider).manifest;
+  var url = await ref
       .read(updateProvider.notifier)
-      .requestDownloadUrl(isSignedIn: session.isSignedIn);
+      .requestDownloadUrl(
+        isSignedIn: session.isSignedIn,
+        manifestOverride: updateManifest,
+      );
+
+  if ((url == null || url.isEmpty) && updateManifest != null) {
+    url = updateManifest.directDownloadUrl;
+  }
 
   if (url == null || url.isEmpty) {
+    AppLogger.error('Download URL could not be resolved.', feature: 'updates');
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -851,33 +873,55 @@ Future<void> _launchDownload(BuildContext context, WidgetRef ref) async {
     return;
   }
 
+  AppLogger.info('Launching download URL: $url', feature: 'updates');
   final uri = Uri.parse(url);
+  var launched = false;
+
   try {
-    var launched = false;
+    launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (e) {
+    AppLogger.warning('launch externalApplication failed: $e', feature: 'updates');
+  }
+
+  if (!launched) {
     try {
-      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
-
-    if (!launched) {
       launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+    } catch (e) {
+      AppLogger.warning('launch platformDefault failed: $e', feature: 'updates');
     }
+  }
 
-    if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.updateLaunchFailed),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+  // Fallback: If opening direct asset failed, try opening the GitHub release page
+  if (!launched && updateManifest != null) {
+    final pageUri = Uri.parse(updateManifest.releasePageUrl);
+    AppLogger.info('Attempting fallback to release page: $pageUri', feature: 'updates');
+    try {
+      launched = await launchUrl(pageUri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+    if (!launched) {
+      try {
+        launched = await launchUrl(pageUri, mode: LaunchMode.platformDefault);
+      } catch (_) {}
     }
-  } catch (_) {
+  }
+
+  // If still not launched, copy URL to clipboard as reliable fallback
+  if (!launched) {
+    await Clipboard.setData(ClipboardData(text: url));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.updateLaunchFailed),
+          content: Text('${l10n.updateLaunchFailed} (Link copied)'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Copy',
+            textColor: Colors.white,
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: url!));
+            },
+          ),
         ),
       );
     }

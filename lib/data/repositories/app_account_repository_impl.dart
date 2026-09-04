@@ -135,6 +135,30 @@ class AppAccountRepositoryImpl implements AppAccountRepository {
   }
 
   @override
+  Future<AppAccount?> setSessionFromToken({
+    required String refreshToken,
+    String? email,
+  }) async {
+    _ensureConfigured();
+    final response = await SupabaseClientFactory.client.auth.setSession(
+      refreshToken,
+    );
+    final session = response.session;
+    if (session == null) {
+      throw StateError('Companion session transfer did not establish a session.');
+    }
+    try {
+      final account = await refreshProfile();
+      return account ?? _accountFromSession(session);
+    } catch (_) {
+      final account = _accountFromSession(session);
+      _cached = account;
+      _controller.add(account);
+      return account;
+    }
+  }
+
+  @override
   Future<AppAccount?> refreshProfile() async {
     _ensureConfigured();
     final session = SupabaseClientFactory.client.auth.currentSession;

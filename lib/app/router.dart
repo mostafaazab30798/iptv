@@ -68,41 +68,42 @@ String? routeRedirectForSession({
   final onAccessRequired = location == Routes.accessRequired;
 
   if (accessGateEnabled) {
-    if (!appAccountSignedIn && !onAppAuthRoute) return Routes.signIn;
-    if (appAccountSignedIn && onAppAuthRoute) {
-      return iptvAuthenticated ? Routes.home : Routes.onboarding;
+    if (onAppAuthRoute) {
+      return appAccountSignedIn ? Routes.home : null;
     }
-    if (appAccountSignedIn && !iptvAuthenticated && !onAccountRoute) {
-      return onOnboarding ? null : Routes.onboarding;
+    if (onAccountRoute) {
+      return appAccountSignedIn ? null : Routes.signIn;
     }
-    if (appAccountSignedIn &&
-        iptvAuthenticated &&
-        !onAccountRoute &&
-        !onAppAuthRoute) {
-      if (!entitlementInitialized) return Routes.splash;
-      if (entitlementAllowsPremium) {
-        return onAccessRequired ? Routes.home : null;
-      }
-      if (entitlementLoading) return null;
-      return onAccessRequired ? null : Routes.accessRequired;
+
+    if (onOnboarding) {
+      return (iptvAuthenticated && appAccountSignedIn) ? Routes.home : null;
     }
-    return null;
+
+    if (!iptvAuthenticated) {
+      return Routes.onboarding;
+    }
+    if (!appAccountSignedIn) {
+      return Routes.signIn;
+    }
+
+    if (!entitlementInitialized) return Routes.splash;
+    if (entitlementAllowsPremium) {
+      return onAccessRequired ? Routes.home : null;
+    }
+    if (entitlementLoading) return null;
+    return onAccessRequired ? null : Routes.accessRequired;
   }
 
-  if (iptvAuthenticated) {
-    if (onAccountRoute && !appAccountSignedIn) return Routes.signIn;
-    if (onAppAuthRoute || onOnboarding || onAccessRequired) return Routes.home;
-    return null;
+  if (onOnboarding) {
+    return iptvAuthenticated ? Routes.home : null;
+  }
+  if (!iptvAuthenticated) {
+    return Routes.onboarding;
   }
 
-  if (onAccountRoute) {
-    return appAccountSignedIn ? null : Routes.signIn;
-  }
-  if (onAppAuthRoute) {
-    return appAccountSignedIn ? Routes.onboarding : null;
-  }
-  if (onOnboarding) return null;
-  return Routes.onboarding;
+  if (onAccountRoute && !appAccountSignedIn) return Routes.signIn;
+  if (onAppAuthRoute || onAccessRequired) return Routes.home;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

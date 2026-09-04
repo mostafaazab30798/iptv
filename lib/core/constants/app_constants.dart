@@ -2,17 +2,17 @@
 abstract final class AppConstants {
   // App identity
   static const String appName = 'HOPE IPTV';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.1';
   /// Integer build number compared against server release metadata.
-  static const int appBuildNumber = 13;
+  static const int appBuildNumber = 17;
   static const String appLogo = 'assets/icons/app_logo.png';
 
 
   // Timeouts
-  static const Duration connectTimeout = Duration(seconds: 15);
-  static const Duration receiveTimeout = Duration(seconds: 30);
-  static const Duration sendTimeout = Duration(seconds: 15);
-  static const Duration networkRetryDelay = Duration(seconds: 3);
+  static const Duration connectTimeout = Duration(seconds: 20);
+  static const Duration receiveTimeout = Duration(seconds: 60);
+  static const Duration sendTimeout = Duration(seconds: 20);
+  static const Duration networkRetryDelay = Duration(seconds: 2);
   static const int maxRetryCount = 2;
 
   // Cache TTL

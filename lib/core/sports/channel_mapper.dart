@@ -72,11 +72,11 @@ abstract final class ChannelMapper {
     final isXtra = n.contains('xtra') || n.contains('extra') || n.contains('اكسترا');
     final isPremium = n.contains('premium') || n.contains('بريميوم') || n.contains('بريميم');
 
-    // Clean resolution tags so attached suffixes like "1hd" or "4k" are accurately parsed
+    // Clean resolution tags so attached suffixes/prefixes like "1hd", "hd1", or "4k" are accurately parsed
     var textForNumber = ' $n ';
     textForNumber = textForNumber.replaceAll(RegExp(r'[48]k', caseSensitive: false), ' ');
     textForNumber = textForNumber.replaceAll(
-        RegExp(r'(?<=\d)(?:hd|fhd|uhd|sd)', caseSensitive: false), ' ');
+        RegExp(r'(?:hd|fhd|uhd|sd)', caseSensitive: false), ' ');
 
     // Extract channel number (1 to 16)
     String? number;

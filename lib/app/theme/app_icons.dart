@@ -156,6 +156,8 @@ abstract final class AppIcons {
   static const List<List<dynamic>> securityCheck =
       HugeIcons.strokeRoundedSecurityCheck;
   static const List<List<dynamic>> kids = HugeIcons.strokeRoundedKid;
+  static const List<List<dynamic>> devices = HugeIcons.strokeRoundedSmartPhone01;
+  static const List<List<dynamic>> qrCode = HugeIcons.strokeRoundedQrCode;
 }
 
 /// Convenience widget wrapper for rendering HugeIcons

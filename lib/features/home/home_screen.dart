@@ -8,6 +8,7 @@ import 'package:iptv/app/providers.dart';
 import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
+import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/channel.dart';
@@ -30,6 +31,7 @@ import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/layouts/responsive_builder.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
+import 'package:iptv/shared/widgets/shimmer.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -111,7 +113,8 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
         (s) => (
           isLoading: s.isLoading,
           error: s.error,
-          hasContent: s.heroItem != null ||
+          hasContent:
+              s.heroItem != null ||
               s.continueWatching.isNotEmpty ||
               s.liveChannels.isNotEmpty ||
               s.favorites.isNotEmpty ||
@@ -237,10 +240,13 @@ class _HomeHeroSliver extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hero = ref.watch(
       homeControllerProvider.select(
-        (s) => (item: s.heroItem, items: s.heroItems),
+        (s) => (item: s.heroItem, items: s.heroItems, pending: s.isHeroPending),
       ),
     );
     if (hero.item == null && hero.items.isEmpty) {
+      if (hero.pending) {
+        return const SliverToBoxAdapter(child: _HomeHeroPendingSkeleton());
+      }
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
@@ -255,6 +261,60 @@ class _HomeHeroSliver extends ConsumerWidget {
           onRefresh: () => ref
               .read(homeControllerProvider.notifier)
               .loadData(forceRefresh: true),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHeroPendingSkeleton extends StatelessWidget {
+  const _HomeHeroPendingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final bannerHeight = HomeHeroBanner.heightOf(context);
+    return Shimmer(
+      child: SizedBox(
+        width: double.infinity,
+        height: bannerHeight,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.bg2,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const ShimmerBox(width: 80, height: 22, borderRadius: 6),
+                  const SizedBox(height: 12),
+                  ShimmerBox(
+                    width: screenWidth * 0.45 > 280 ? 280 : screenWidth * 0.45,
+                    height: 28,
+                    borderRadius: 6,
+                  ),
+                  const SizedBox(height: 10),
+                  const ShimmerBox(width: 180, height: 14, borderRadius: 4),
+                  const SizedBox(height: 20),
+                  const Row(
+                    children: [
+                      ShimmerBox(width: 120, height: 40, borderRadius: 10),
+                      SizedBox(width: 12),
+                      ShimmerBox(width: 110, height: 40, borderRadius: 10),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -443,9 +503,7 @@ class _HomeFavoritesSliver extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(
-      homeControllerProvider.select((s) => s.favorites),
-    );
+    final items = ref.watch(homeControllerProvider.select((s) => s.favorites));
     if (items.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
@@ -482,11 +540,7 @@ class _HomeFavoritesSliver extends ConsumerWidget {
 
 /// Playback helpers shared by home section slivers.
 abstract final class _HomePlayback {
-  static void playHero(
-    BuildContext context,
-    WidgetRef ref,
-    HomeHeroItem hero,
-  ) {
+  static void playHero(BuildContext context, WidgetRef ref, HomeHeroItem hero) {
     if (hero.movie != null) {
       playMovie(context, ref, hero.movie!);
     } else if (hero.channel != null) {
@@ -511,12 +565,14 @@ abstract final class _HomePlayback {
     );
 
     final homeState = ref.read(homeControllerProvider);
-    final List<Channel> channels = playlist ??
+    final List<Channel> channels =
+        playlist ??
         (homeState.liveChannels.isNotEmpty
             ? homeState.liveChannels
             : [channel]);
-    final initialIndex =
-        channels.indexWhere((c) => c.streamId == channel.streamId);
+    final initialIndex = channels.indexWhere(
+      (c) => c.streamId == channel.streamId,
+    );
 
     final playerNotifier = ref.read(playerControllerProvider.notifier);
     playerNotifier.setLazyLivePlaylist(
@@ -631,11 +687,7 @@ abstract final class _HomePlayback {
     context.push(Routes.player);
   }
 
-  static void playFavorite(
-    BuildContext context,
-    WidgetRef ref,
-    Favorite fav,
-  ) {
+  static void playFavorite(BuildContext context, WidgetRef ref, Favorite fav) {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 

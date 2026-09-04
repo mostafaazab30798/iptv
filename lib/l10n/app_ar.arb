@@ -578,6 +578,26 @@
   "companionNowPlaying": "يعرض الآن: {title}",
   "companionEnterIp": "يرجى إدخال عنوان IP للشاشة",
   "companionInvalidQr": "رمز QR غير صالح. يرجى المحاولة مرة أخرى.",
-  "companionCouldNotReach": "تعذر الاتصال بالشاشة عند {address}"
+  "companionCouldNotReach": "تعذر الاتصال بالشاشة عند {address}",
+  "authDividerOr": "أو",
+  "companionSignInButton": "تسجيل الدخول عبر جهاز مرافق",
+  "companionSignInTitle": "تسجيل الدخول عبر جهاز مرافق",
+  "companionSignInSubtitle": "انقل بيانات تسجيل الدخول فوراً من هاتفك",
+  "companionPairingCodeLabel": "رمز التأكيد",
+  "companionStep1": "افتح HOPE TV على هاتفك المسجل دخوله بالفعل",
+  "companionStep2": "اضغط على أيقونة المسح في الشريط العلوي أو الإعدادات",
+  "companionStep3": "امسح رمز QR هذا لتسجيل الدخول فوراً",
+  "companionWaitingForScan": "بانتظار مسح الرمز من الجهاز المرافق...",
+  "companionAuthenticatingTitle": "تم استلام البيانات! جارٍ تسجيل الدخول...",
+  "companionReceivedFrom": "تم الاستلام من {device}",
+  "companionSuccessTitle": "تم تسجيل الدخول بنجاح!",
+  "companionSuccessSubtitle": "جارٍ تحميل القنوات والمحتوى الخاص بك...",
+  "companionErrorTitle": "فشل تسجيل الدخول",
+  "companionAuthorizeTitle": "نقل تسجيل الدخول إلى الشاشة؟",
+  "companionTransferAction": "نقل وتسجيل الدخول",
+  "companionTransferSuccess": "تم تسجيل الدخول بنجاح على {device}!",
+  "companionTransferFailed": "فشل النقل: {error}",
+  "companionPhoneNotSignedIn": "هذا الهاتف غير مسجل الدخول على سيرفر IPTV بعد.",
+  "authBackToOnboarding": "العودة إلى إعداد سيرفر IPTV"
 }
 

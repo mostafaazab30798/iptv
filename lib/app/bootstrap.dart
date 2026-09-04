@@ -49,6 +49,10 @@ Future<void> _initializeAfterFirstFrame() async {
 /// Initializes the minimum synchronous services needed to render Flutter UI.
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    AppLogger.warning('Unhandled platform error: $error', feature: 'app');
+    return true; // Handled to prevent crash
+  };
   MediaKit.ensureInitialized();
 
   // Android is a permanently immersive app: keep status/navigation bars hidden

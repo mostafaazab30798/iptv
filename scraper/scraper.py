@@ -112,6 +112,17 @@ def fetch_today_matches(output_path: str = DEFAULT_OUTPUT, target_date: str = No
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(matches_data, f, ensure_ascii=False, indent=2)
 
+        # Keep services/matches_api/matches.json synchronized if directory exists
+        services_api_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "services",
+            "matches_api",
+            "matches.json",
+        )
+        if os.path.exists(os.path.dirname(services_api_path)):
+            with open(services_api_path, "w", encoding="utf-8") as f:
+                json.dump(matches_data, f, ensure_ascii=False, indent=2)
+
         print(f"Successfully scraped and exported {len(matches_data)} matches to {output_path}.")
         return matches_data
 

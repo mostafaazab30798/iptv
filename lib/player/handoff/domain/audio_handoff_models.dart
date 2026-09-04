@@ -50,6 +50,10 @@ class HandoffSessionInfo extends Equatable {
           trimmed.startsWith('iptv://') ||
           trimmed.startsWith('ws://')) {
         final uri = Uri.parse(trimmed);
+        if (uri.queryParameters['act'] == 'auth_handoff' ||
+            uri.queryParameters['type'] == 'auth_handoff') {
+          return null; // Handled by CompanionAuthHandoffInfo
+        }
         final host = uri.host.isNotEmpty ? uri.host : (uri.queryParameters['host'] ?? uri.queryParameters['ip']);
         final port = uri.hasPort ? uri.port : (int.tryParse(uri.queryParameters['port'] ?? uri.queryParameters['p'] ?? '') ?? 8998);
         final tok = uri.queryParameters['tok'] ?? uri.queryParameters['token'] ?? 'companion_token';
@@ -280,6 +284,150 @@ class HandoffCommand {
     return HandoffCommand(
       action: json['act'] as String? ?? '',
       payload: (json['data'] as Map<String, dynamic>?) ?? const {},
+    );
+  }
+}
+
+/// Information packet describing an active TV Companion Auth pairing session.
+class CompanionAuthHandoffInfo extends Equatable {
+  const CompanionAuthHandoffInfo({
+    required this.hostIp,
+    required this.port,
+    required this.sessionToken,
+    required this.pinCode,
+    this.targetDeviceName = 'HOPE IPTV Screen',
+  });
+
+  final String hostIp;
+  final int port;
+  final String sessionToken;
+  final String pinCode;
+  final String targetDeviceName;
+
+  String get transferUrl => 'http://$hostIp:$port/transfer-auth';
+  String get wsUrl => 'ws://$hostIp:$port/companion-auth?tok=$sessionToken';
+
+  /// Serializes into a standard QR string with auth_handoff indicator
+  String toQrPayload() =>
+      'http://$hostIp:$port/auth-handoff?act=auth_handoff&ip=$hostIp&p=$port&tok=$sessionToken&pin=$pinCode&dev=${Uri.encodeComponent(targetDeviceName)}';
+
+  static CompanionAuthHandoffInfo? fromQrPayload(String raw) {
+    try {
+      final trimmed = raw.trim();
+      if (trimmed.startsWith('http://') ||
+          trimmed.startsWith('https://') ||
+          trimmed.startsWith('hope-auth://') ||
+          trimmed.startsWith('iptv://')) {
+        final uri = Uri.parse(trimmed);
+        final act = uri.queryParameters['act'] ?? uri.queryParameters['type'];
+        final isAuthHandoff = act == 'auth_handoff' ||
+            uri.path.contains('auth-handoff') ||
+            trimmed.startsWith('hope-auth://');
+        if (!isAuthHandoff) return null;
+
+        final host = uri.host.isNotEmpty
+            ? uri.host
+            : (uri.queryParameters['host'] ?? uri.queryParameters['ip']);
+        final port = uri.hasPort
+            ? uri.port
+            : (int.tryParse(uri.queryParameters['p'] ?? uri.queryParameters['port'] ?? '') ?? 8998);
+        final tok = uri.queryParameters['tok'] ?? uri.queryParameters['token'] ?? '';
+        final pin = uri.queryParameters['pin'] ?? '0000';
+        final dev = uri.queryParameters['dev'] != null
+            ? Uri.decodeComponent(uri.queryParameters['dev']!)
+            : 'HOPE IPTV Screen';
+
+        if (host != null && host.isNotEmpty) {
+          return CompanionAuthHandoffInfo(
+            hostIp: host,
+            port: port,
+            sessionToken: tok,
+            pinCode: pin,
+            targetDeviceName: dev,
+          );
+        }
+      }
+
+      if (trimmed.startsWith('{')) {
+        final map = jsonDecode(trimmed) as Map<String, dynamic>;
+        final act = map['act'] ?? map['type'];
+        if (act != 'auth_handoff') return null;
+
+        final host = map['ip'] as String?;
+        final port = (map['p'] as num?)?.toInt() ?? 8998;
+        final tok = map['tok'] as String? ?? '';
+        final pin = map['pin']?.toString() ?? '0000';
+        final dev = map['dev'] as String? ?? 'HOPE IPTV Screen';
+
+        if (host != null && host.isNotEmpty) {
+          return CompanionAuthHandoffInfo(
+            hostIp: host,
+            port: port,
+            sessionToken: tok,
+            pinCode: pin,
+            targetDeviceName: dev,
+          );
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  @override
+  List<Object?> get props => [hostIp, port, sessionToken, pinCode, targetDeviceName];
+}
+
+/// Transferred credentials packet sent from companion phone to target screen.
+class CompanionAuthCredentialsPayload {
+  const CompanionAuthCredentialsPayload({
+    required this.token,
+    required this.pin,
+    required this.serverUrl,
+    required this.username,
+    required this.password,
+    this.email,
+    this.refreshToken,
+    this.companionDeviceName,
+  });
+
+  final String token;
+  final String pin;
+  final String serverUrl;
+  final String username;
+  final String password;
+  final String? email;
+  final String? refreshToken;
+  final String? companionDeviceName;
+
+  Map<String, dynamic> toJson() => {
+    'type': 'auth_transfer',
+    'tok': token,
+    'pin': pin,
+    'iptv': {
+      'url': serverUrl,
+      'user': username,
+      'pass': password,
+    },
+    if (email != null || refreshToken != null)
+      'account': {
+        if (email != null) 'email': email,
+        if (refreshToken != null) 'refresh_token': refreshToken,
+      },
+    if (companionDeviceName != null) 'dev': companionDeviceName,
+  };
+
+  factory CompanionAuthCredentialsPayload.fromJson(Map<String, dynamic> json) {
+    final iptv = (json['iptv'] as Map<String, dynamic>?) ?? {};
+    final account = json['account'] as Map<String, dynamic>?;
+    return CompanionAuthCredentialsPayload(
+      token: json['tok'] as String? ?? '',
+      pin: json['pin']?.toString() ?? '',
+      serverUrl: iptv['url'] as String? ?? '',
+      username: iptv['user'] as String? ?? '',
+      password: iptv['pass'] as String? ?? '',
+      email: account?['email'] as String?,
+      refreshToken: account?['refresh_token'] as String?,
+      companionDeviceName: json['dev'] as String?,
     );
   }
 }

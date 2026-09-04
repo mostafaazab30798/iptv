@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
+import 'package:iptv/core/logging/app_logger.dart';
 import 'package:iptv/core/releases/release_manifest.dart';
 import 'package:iptv/core/releases/release_verifier.dart';
 import 'package:iptv/core/releases/update_platform.dart';
@@ -226,8 +227,11 @@ class UpdateController extends StateNotifier<UpdateState> {
     );
   }
 
-  Future<String?> requestDownloadUrl({bool isSignedIn = true}) async {
-    final manifest = state.manifest;
+  Future<String?> requestDownloadUrl({
+    bool isSignedIn = true,
+    ReleaseManifest? manifestOverride,
+  }) async {
+    final manifest = manifestOverride ?? state.manifest;
 
     // 1. Direct download URL from manifest if present
     if (manifest != null &&
@@ -258,9 +262,19 @@ class UpdateController extends StateNotifier<UpdateState> {
             pendingDownloadAfterSignIn: false,
           );
           return auth.downloadUrl;
+        } else {
+          AppLogger.warning(
+            'Authorized download URL not permitted by validator: ${auth.downloadUrl}, falling back',
+            feature: 'updates',
+          );
         }
-      } catch (_) {
-        // Fallback to direct release link below
+      } catch (e, st) {
+        AppLogger.error(
+          'Failed to authorize download endpoint: $e, falling back to direct link',
+          error: e,
+          stackTrace: st,
+          feature: 'updates',
+        );
       }
     }
 
@@ -274,6 +288,11 @@ class UpdateController extends StateNotifier<UpdateState> {
           pendingDownloadAfterSignIn: false,
         );
         return direct;
+      } else {
+        AppLogger.warning(
+          'Direct download URL not permitted by validator: $direct',
+          feature: 'updates',
+        );
       }
     }
 

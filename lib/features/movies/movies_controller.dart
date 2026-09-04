@@ -164,12 +164,39 @@ class MoviesController extends StateNotifier<MoviesState> {
       return;
     }
 
+    final cachedForCategory =
+        _catalog.where((m) => m.categoryId == categoryId).toList();
+    if (cachedForCategory.isNotEmpty || _vodRepo == null) {
+      state = state.copyWith(
+        selectedCategoryId: categoryId,
+        searchQuery: '',
+        filteredMovies: cachedForCategory,
+        isLoading: false,
+      );
+      return;
+    }
+
+    // Lazy-load on demand if not yet cached
     state = state.copyWith(
       selectedCategoryId: categoryId,
       searchQuery: '',
-      filteredMovies: _catalog
-          .where((m) => m.categoryId == categoryId)
-          .toList(),
+      filteredMovies: const [],
+      isLoading: true,
+    );
+
+    final res = await _vodRepo.getMovies(categoryId: categoryId);
+    if (!mounted) return;
+    final movies = res.when(ok: (m) => m, err: (_) => <Movie>[]);
+
+    final existingIds = _catalog.map((m) => m.streamId).toSet();
+    final newMovies =
+        movies.where((m) => !existingIds.contains(m.streamId)).toList();
+    if (newMovies.isNotEmpty) {
+      _catalog = [..._catalog, ...newMovies];
+    }
+
+    state = state.copyWith(
+      filteredMovies: movies,
       isLoading: false,
     );
   }

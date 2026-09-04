@@ -131,8 +131,14 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     );
 
     if (openFullscreen) {
-      context.push(Routes.player);
+      _openFullscreenPlayer();
     }
+  }
+
+  /// Detach the mini-preview Texture before the fullscreen [PlayerView] mounts.
+  void _openFullscreenPlayer() {
+    ref.read(playerControllerProvider.notifier).setPlayerRouteActive(true);
+    context.push(Routes.player);
   }
 
   @override
@@ -401,7 +407,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                         ),
                         child: LiveMiniPreview(
                           selectedChannel: _selectedChannel,
-                          onExpandFullscreen: () => context.push(Routes.player),
+                          onExpandFullscreen: _openFullscreenPlayer,
                         ),
                       ),
 
@@ -486,7 +492,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                       padding: const EdgeInsets.all(AppSpacing.md),
                       child: LiveMiniPreview(
                         selectedChannel: _selectedChannel,
-                        onExpandFullscreen: () => context.push(Routes.player),
+                        onExpandFullscreen: _openFullscreenPlayer,
                       ),
                     ),
                   ),

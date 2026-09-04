@@ -18,6 +18,8 @@ class LiveFixture extends Equatable {
     this.awayLogoUrl,
     this.start,
     this.broadcastChannel,
+    this.scheduledTime,
+    this.rawStatus,
   });
 
   final String homeName;
@@ -41,9 +43,17 @@ class LiveFixture extends Equatable {
   /// Name of the broadcasting channel (e.g. from Yallakora).
   final String? broadcastChannel;
 
+  /// Original scheduled starting time string (e.g. "22:00").
+  final String? scheduledTime;
+
+  /// Raw scraped status string (e.g. "لم تبدأ", "جارية").
+  final String? rawStatus;
+
   String get headline => '$homeName vs $awayName';
 
   bool get isLive => state == 'in';
+  bool get isUpcoming => state == 'pre';
+  bool get isFinished => state == 'post';
 
   String? get heroBackdropUrl =>
       _firstUrl([bannerUrl, posterUrl, homeLogoUrl, awayLogoUrl]);
@@ -67,6 +77,8 @@ class LiveFixture extends Equatable {
       awayLogoUrl: awayLogoUrl,
       start: start,
       broadcastChannel: broadcastChannel,
+      scheduledTime: scheduledTime,
+      rawStatus: rawStatus,
     );
   }
 
@@ -85,16 +97,24 @@ class LiveFixture extends Equatable {
   }
 
   @override
-  List<Object?> get props => [homeName, awayName, state, clock, broadcastChannel];
+  List<Object?> get props => [
+        homeName,
+        awayName,
+        state,
+        clock,
+        broadcastChannel,
+        scheduledTime,
+        rawStatus,
+      ];
 }
 
 abstract interface class LiveScoreSource {
-  Future<List<LiveFixture>> fetchLiveBigMatches();
+  Future<List<LiveFixture>> fetchLiveBigMatches({bool forceRefresh = false});
 }
 
 class EmptyLiveScoreSource implements LiveScoreSource {
   const EmptyLiveScoreSource();
 
   @override
-  Future<List<LiveFixture>> fetchLiveBigMatches() async => const [];
+  Future<List<LiveFixture>> fetchLiveBigMatches({bool forceRefresh = false}) async => const [];
 }

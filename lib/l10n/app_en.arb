@@ -618,7 +618,48 @@
         "type": "String"
       }
     }
-  }
+  },
+  "authDividerOr": "OR",
+  "companionSignInButton": "Sign in with Companion Device",
+  "companionSignInTitle": "Sign in with Companion",
+  "companionSignInSubtitle": "Transfer your login instantly from your phone",
+  "companionPairingCodeLabel": "Pairing PIN",
+  "companionStep1": "Open HOPE TV on your phone where you are already signed in",
+  "companionStep2": "Tap the Scan icon in Header, Settings, or Companion",
+  "companionStep3": "Scan this QR code to sign in instantly",
+  "companionWaitingForScan": "Waiting for companion device...",
+  "companionAuthenticatingTitle": "Credentials received! Authenticating...",
+  "companionReceivedFrom": "Received from {device}",
+  "@companionReceivedFrom": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "companionSuccessTitle": "Signed In Successfully!",
+  "companionSuccessSubtitle": "Loading your channels and content...",
+  "companionErrorTitle": "Sign-In Failed",
+  "companionAuthorizeTitle": "Transfer Login to Screen?",
+  "companionTransferAction": "Transfer & Sign In",
+  "companionTransferSuccess": "Successfully signed into {device}!",
+  "@companionTransferSuccess": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "companionTransferFailed": "Transfer failed: {error}",
+  "@companionTransferFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "companionPhoneNotSignedIn": "This phone is not signed in to an IPTV server yet.",
+  "authBackToOnboarding": "Back to IPTV Server Setup"
 }
 
 

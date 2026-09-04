@@ -37,6 +37,7 @@ class HomeHeroItem {
     this.channel,
     this.movie,
     this.series,
+    this.match,
   });
 
   final String title;
@@ -51,6 +52,7 @@ class HomeHeroItem {
   final Channel? channel;
   final Movie? movie;
   final Series? series;
+  final LiveMatch? match;
 }
 
 class HomeState {
@@ -65,6 +67,7 @@ class HomeState {
     this.sportsChannels = const [],
     this.newsChannels = const [],
     this.isLoading = false,
+    this.isHeroPending = false,
     this.error,
   });
 
@@ -78,6 +81,9 @@ class HomeState {
   final List<Channel> sportsChannels;
   final List<Channel> newsChannels;
   final bool isLoading;
+
+  /// True while we still might replace the hero with live matches.
+  final bool isHeroPending;
   final String? error;
 
   HomeState copyWith({
@@ -91,6 +97,7 @@ class HomeState {
     List<Channel>? sportsChannels,
     List<Channel>? newsChannels,
     bool? isLoading,
+    bool? isHeroPending,
     String? error,
     bool clearError = false,
   }) {
@@ -105,6 +112,7 @@ class HomeState {
       sportsChannels: sportsChannels ?? this.sportsChannels,
       newsChannels: newsChannels ?? this.newsChannels,
       isLoading: isLoading ?? this.isLoading,
+      isHeroPending: isHeroPending ?? this.isHeroPending,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -119,16 +127,16 @@ class HomeController extends StateNotifier<HomeState> {
     required HistoryRepository historyRepo,
     LiveScoreSource? liveScores,
     KidsAllowedContent allowedContent = const KidsAllowedContent.unrestricted(),
-  })  : _liveRepo = liveRepo,
-        _vodRepo = vodRepo,
-        _seriesRepo = seriesRepo,
-        _favoritesRepo = favoritesRepo,
-        _historyRepo = historyRepo,
-        _liveScores = liveScores,
-        _allowedContent = allowedContent,
-        // Start loading so Home shows skeleton instead of an empty flash
-        // before the first loadData() frame runs.
-        super(const HomeState(isLoading: true)) {
+  }) : _liveRepo = liveRepo,
+       _vodRepo = vodRepo,
+       _seriesRepo = seriesRepo,
+       _favoritesRepo = favoritesRepo,
+       _historyRepo = historyRepo,
+       _liveScores = liveScores,
+       _allowedContent = allowedContent,
+       // Start loading so Home shows skeleton instead of an empty flash
+       // before the first loadData() frame runs.
+       super(const HomeState(isLoading: true, isHeroPending: true)) {
     loadData();
   }
 
@@ -141,6 +149,8 @@ class HomeController extends StateNotifier<HomeState> {
   final KidsAllowedContent _allowedContent;
 
   bool _isFetching = false;
+  bool _matchHeroResolved = false;
+  List<Movie>? _pendingHeroMovies;
 
   Future<void> loadData({bool forceRefresh = false}) async {
     final liveRepo = _liveRepo;
@@ -148,14 +158,24 @@ class HomeController extends StateNotifier<HomeState> {
       // Session / kids-mode gate is not ready yet. Stay in loading so Home
       // keeps the skeleton instead of flashing "No media content found".
       if (mounted && !state.isLoading) {
-        state = state.copyWith(isLoading: true, clearError: true);
+        state = state.copyWith(
+          isLoading: true,
+          isHeroPending: true,
+          clearError: true,
+        );
       }
       return;
     }
     if (_isFetching && !forceRefresh) return;
     _isFetching = true;
+    _matchHeroResolved = false;
+    _pendingHeroMovies = null;
 
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(
+      isLoading: true,
+      isHeroPending: true,
+      clearError: true,
+    );
 
     try {
       // 1. Instant local DB data (History & Favorites) — resolves in < 5ms
@@ -165,16 +185,27 @@ class HomeController extends StateNotifier<HomeState> {
       ]);
 
       final historyRes = localResults[0] as Result<List<WatchHistoryEntry>>?;
-      final history = historyRes?.when(ok: (h) => h, err: (_) => <WatchHistoryEntry>[]) ?? <WatchHistoryEntry>[];
+      final history =
+          historyRes?.when(ok: (h) => h, err: (_) => <WatchHistoryEntry>[]) ??
+          <WatchHistoryEntry>[];
       final activeContinueWatching = history
           .where(_allowedContent.allowsHistory)
-          .where((h) => h.type != WatchHistoryType.channel && !h.isFinished && h.positionSecs >= 5)
+          .where(
+            (h) =>
+                h.type != WatchHistoryType.channel &&
+                !h.isFinished &&
+                h.positionSecs >= 5,
+          )
           .take(20)
           .toList();
 
       final favoritesRes = localResults[1] as Result<List<Favorite>>?;
-      final favorites = favoritesRes?.when(ok: (f) => f, err: (_) => <Favorite>[]) ?? <Favorite>[];
-      final visibleFavorites = favorites.where(_allowedContent.allowsFavorite).toList();
+      final favorites =
+          favoritesRes?.when(ok: (f) => f, err: (_) => <Favorite>[]) ??
+          <Favorite>[];
+      final visibleFavorites = favorites
+          .where(_allowedContent.allowsFavorite)
+          .toList();
 
       // Immediately render local data if mounted
       if (!mounted) return;
@@ -183,59 +214,80 @@ class HomeController extends StateNotifier<HomeState> {
         favorites: visibleFavorites,
       );
 
+      // Kick off the scoreboard immediately so match hero does not wait on VOD
+      // or sports/news rows. Movies still load in parallel; only the movie
+      // hero is held until we know whether matches exist.
+      final fixturesFuture = _fetchLiveFixtures(forceRefresh: forceRefresh);
+      if (_liveScores == null) {
+        _finishMatchHeroResolution();
+      } else {
+        unawaited(
+          fixturesFuture.then((fixtures) {
+            if (fixtures.isEmpty) _finishMatchHeroResolution();
+          }),
+        );
+      }
+
       // 2. Launch catalog fetches in parallel, updating state progressively as each finishes.
       // Featured live uses take(20); sports/news use category-indexed slices
       // (no full-catalog name keyword scan on Home).
       final liveTask = () async {
         try {
-          final channelsRes =
-              await liveRepo.getChannels(forceRefresh: forceRefresh);
-          final channels =
-              channelsRes.when(ok: (c) => c, err: (_) => <Channel>[]);
+          final channelsRes = await liveRepo.getChannels(
+            forceRefresh: forceRefresh,
+          );
+          final channels = channelsRes.when(
+            ok: (c) => c,
+            err: (_) => <Channel>[],
+          );
+          unawaited(_bindMatchHero(channels, fixturesFuture));
           if (channels.isEmpty || !mounted) return;
 
-          final rowSlices =
-              await _loadSportsAndNewsRows(forceRefresh: forceRefresh);
+          if (mounted) {
+            state = state.copyWith(liveChannels: channels.take(20).toList());
+          }
+
+          final rowSlices = await _loadSportsAndNewsRows(
+            forceRefresh: forceRefresh,
+          );
           if (!mounted) return;
 
           state = state.copyWith(
-            liveChannels: channels.take(20).toList(),
             sportsChannels: rowSlices.sports,
             newsChannels: rowSlices.news,
           );
-
-          unawaited(_loadLiveMatchHero(channels));
-        } catch (_) {}
+        } catch (_) {
+          unawaited(_bindMatchHero(const [], fixturesFuture));
+        }
       }();
 
       final vodTask = (_vodRepo != null)
-          ? _vodRepo.getMovies(forceRefresh: forceRefresh).then((res) {
-              final movies = res.when(ok: (m) => m, err: (_) => <Movie>[]);
-              if (movies.isNotEmpty && mounted) {
-                final featured = movies.take(20).toList();
-                state = state.copyWith(featuredMovies: featured);
-                if (!_hasLiveMatchHero) {
-                  final items = _computeHeroItems(movies);
-                  if (items.isNotEmpty && mounted && !_hasLiveMatchHero) {
+          ? _vodRepo
+                .getMovies(forceRefresh: forceRefresh)
+                .then((res) {
+                  final movies = res.when(ok: (m) => m, err: (_) => <Movie>[]);
+                  if (movies.isNotEmpty && mounted) {
                     state = state.copyWith(
-                      heroItem: items.first,
-                      heroItems: items,
+                      featuredMovies: movies.take(20).toList(),
                     );
+                    _maybeApplyMovieHero(movies);
                   }
-                }
-              }
-            }).catchError((_) {})
+                })
+                .catchError((_) {})
           : Future<void>.value();
 
       final seriesTask = (_seriesRepo != null)
-          ? _seriesRepo.getSeries(forceRefresh: forceRefresh).then((res) {
-              final series = res.when(ok: (s) => s, err: (_) => <Series>[]);
-              if (series.isNotEmpty && mounted) {
-                state = state.copyWith(
-                  popularSeries: series.take(20).toList(),
-                );
-              }
-            }).catchError((_) {})
+          ? _seriesRepo
+                .getSeries(forceRefresh: forceRefresh)
+                .then((res) {
+                  final series = res.when(ok: (s) => s, err: (_) => <Series>[]);
+                  if (series.isNotEmpty && mounted) {
+                    state = state.copyWith(
+                      popularSeries: series.take(20).toList(),
+                    );
+                  }
+                })
+                .catchError((_) {})
           : Future<void>.value();
 
       await Future.wait([liveTask, vodTask, seriesTask]);
@@ -243,6 +295,7 @@ class HomeController extends StateNotifier<HomeState> {
         state = state.copyWith(isLoading: false);
       }
     } catch (e) {
+      _finishMatchHeroResolution();
       if (mounted) {
         state = state.copyWith(isLoading: false, error: e.toString());
       }
@@ -275,7 +328,9 @@ class HomeController extends StateNotifier<HomeState> {
     final top3 = validMovies.take(3).toList();
 
     return top3.map((m) {
-      final ratingStr = m.rating != null && m.rating!.isNotEmpty ? m.rating! : null;
+      final ratingStr = m.rating != null && m.rating!.isNotEmpty
+          ? m.rating!
+          : null;
       final yearStr = m.releaseYear != null ? '${m.releaseYear}' : null;
       final genreStr = m.genre ?? 'Action';
 
@@ -291,7 +346,9 @@ class HomeController extends StateNotifier<HomeState> {
         badge: ratingStr != null ? '★ $ratingStr' : (yearStr ?? 'HD'),
         rating: ratingStr,
         genre: genreStr,
-        description: m.plot ?? 'Stream in ultra high definition on your favorite screen.',
+        description:
+            m.plot ??
+            'Stream in ultra high definition on your favorite screen.',
         backdropUrl: m.streamIcon,
         posterUrl: m.streamIcon,
         movie: m,
@@ -302,6 +359,55 @@ class HomeController extends StateNotifier<HomeState> {
   bool get _hasLiveMatchHero =>
       state.heroItems.any((item) => item.type == HeroItemType.live);
 
+  Future<List<LiveFixture>> _fetchLiveFixtures({
+    required bool forceRefresh,
+  }) async {
+    final scores = _liveScores;
+    if (scores == null) return const [];
+    try {
+      return await scores.fetchLiveBigMatches(forceRefresh: forceRefresh);
+    } catch (e) {
+      AppLogger.error('Live match hero failed', feature: 'sports', error: e);
+      return const [];
+    }
+  }
+
+  void _maybeApplyMovieHero(List<Movie> movies) {
+    if (!mounted || _hasLiveMatchHero) return;
+    if (!_matchHeroResolved) {
+      _pendingHeroMovies = movies;
+      return;
+    }
+    _pendingHeroMovies = null;
+    final items = _computeHeroItems(movies);
+    if (items.isEmpty || !mounted || _hasLiveMatchHero) return;
+    state = state.copyWith(
+      heroItem: items.first,
+      heroItems: items,
+      isHeroPending: false,
+    );
+  }
+
+  void _finishMatchHeroResolution() {
+    _matchHeroResolved = true;
+    final pending = _pendingHeroMovies;
+    _pendingHeroMovies = null;
+    if (!mounted) return;
+    if (_hasLiveMatchHero) {
+      if (state.isHeroPending) {
+        state = state.copyWith(isHeroPending: false);
+      }
+      return;
+    }
+    if (pending != null) {
+      _maybeApplyMovieHero(pending);
+      return;
+    }
+    if (state.isHeroPending) {
+      state = state.copyWith(isHeroPending: false);
+    }
+  }
+
   void _applyMatchHero(List<LiveMatch> matches) {
     if (matches.isEmpty || !mounted) return;
     final items = _heroFromMatches(matches);
@@ -309,71 +415,61 @@ class HomeController extends StateNotifier<HomeState> {
     state = state.copyWith(
       heroItem: items.first,
       heroItems: items,
+      isHeroPending: false,
     );
   }
 
   List<HomeHeroItem> _heroFromMatches(List<LiveMatch> matches) {
     return matches.take(LiveMatchFinder.heroLimit).map((match) {
       final channelName = match.channel.name;
+      final fixture = match.fixture;
+      final isLive = fixture?.isLive == true;
       return HomeHeroItem(
         title: match.displayTitle,
         subtitle: [
-          if (match.fixture?.clock != null) match.fixture!.clock!,
+          if (fixture?.clock != null) fixture!.clock!,
           match.teamsLabel,
         ].join(' • '),
         type: HeroItemType.live,
         badge: match.resolutionLabel,
-        genre: 'LIVE MATCH',
+        genre: isLive ? 'LIVE MATCH' : 'UPCOMING MATCH',
         description: 'Watch on $channelName',
-        backdropUrl: match.fixture?.heroBackdropUrl ?? match.channel.streamIcon,
-        posterUrl: match.fixture?.heroPosterUrl ??
-            match.fixture?.heroBackdropUrl ??
+        backdropUrl: fixture?.heroBackdropUrl ?? match.channel.streamIcon,
+        posterUrl:
+            fixture?.heroPosterUrl ??
+            fixture?.heroBackdropUrl ??
             match.channel.streamIcon,
         channel: match.channel,
+        match: match,
       );
     }).toList();
   }
 
-  Future<void> _loadLiveMatchHero(List<Channel> channels) async {
-    final liveRepo = _liveRepo;
-    final scores = _liveScores;
-    if (liveRepo == null || scores == null) return;
-
+  Future<void> _bindMatchHero(
+    List<Channel> channels,
+    Future<List<LiveFixture>> fixturesFuture,
+  ) async {
     try {
-      final fixtures = await scores.fetchLiveBigMatches();
+      final fixtures = await fixturesFuture;
       if (!mounted) return;
       if (fixtures.isEmpty) {
         AppLogger.info(
           'No live big matches on the scoreboard',
           feature: 'sports',
         );
+        _finishMatchHeroResolution();
+        return;
+      }
+      if (channels.isEmpty) {
+        _finishMatchHeroResolution();
         return;
       }
 
-      final probe = LiveMatchFinder.epgProbeChannels(channels);
-      final epgTitles = <int, String>{};
-      for (var i = 0; i < probe.length; i += 4) {
-        final chunk = probe.skip(i).take(4);
-        final rows = await Future.wait(
-          chunk.map((channel) async {
-            final result =
-                await liveRepo.getShortEpg(channel.streamId, limit: 2);
-            final programs =
-                result.when(ok: (p) => p, err: (_) => const <EpgProgram>[]);
-            if (programs.isEmpty) return null;
-            return MapEntry(channel.streamId, programs.first.title);
-          }),
-        );
-        for (final row in rows) {
-          if (row != null) epgTitles[row.key] = row.value;
-        }
-      }
-      if (!mounted) return;
-
+      // Bind immediately (channel names / broadcast / fallback) so the match
+      // hero can paint without waiting on EPG probes.
       final matches = LiveMatchFinder.bindFixtures(
         fixtures: fixtures,
         channels: channels,
-        epgTitles: epgTitles,
       );
       AppLogger.info(
         'Live match hero bind',
@@ -384,8 +480,58 @@ class HomeController extends StateNotifier<HomeState> {
         },
       );
       _applyMatchHero(matches);
+      _finishMatchHeroResolution();
+      unawaited(_refineMatchHeroWithEpg(channels, fixtures));
     } catch (e) {
       AppLogger.error('Live match hero failed', feature: 'sports', error: e);
+      _finishMatchHeroResolution();
+    }
+  }
+
+  Future<void> _refineMatchHeroWithEpg(
+    List<Channel> channels,
+    List<LiveFixture> fixtures,
+  ) async {
+    final liveRepo = _liveRepo;
+    if (liveRepo == null || fixtures.isEmpty) return;
+
+    try {
+      final probe = LiveMatchFinder.epgProbeChannels(channels);
+      final epgTitles = <int, String>{};
+      for (var i = 0; i < probe.length; i += 4) {
+        final chunk = probe.skip(i).take(4);
+        final rows = await Future.wait(
+          chunk.map((channel) async {
+            final result = await liveRepo.getShortEpg(
+              channel.streamId,
+              limit: 2,
+            );
+            final programs = result.when(
+              ok: (p) => p,
+              err: (_) => const <EpgProgram>[],
+            );
+            if (programs.isEmpty) return null;
+            return MapEntry(channel.streamId, programs.first.title);
+          }),
+        );
+        for (final row in rows) {
+          if (row != null) epgTitles[row.key] = row.value;
+        }
+      }
+      if (!mounted || epgTitles.isEmpty) return;
+
+      final matches = LiveMatchFinder.bindFixtures(
+        fixtures: fixtures,
+        channels: channels,
+        epgTitles: epgTitles,
+      );
+      _applyMatchHero(matches);
+    } catch (e) {
+      AppLogger.error(
+        'Live match hero EPG refine failed',
+        feature: 'sports',
+        error: e,
+      );
     }
   }
 
@@ -490,7 +636,12 @@ class HomeController extends StateNotifier<HomeState> {
       );
       final active = history
           .where(_allowedContent.allowsHistory)
-          .where((h) => h.type != WatchHistoryType.channel && !h.isFinished && h.positionSecs >= 5)
+          .where(
+            (h) =>
+                h.type != WatchHistoryType.channel &&
+                !h.isFinished &&
+                h.positionSecs >= 5,
+          )
           .take(20)
           .toList();
       if (mounted) {
@@ -500,23 +651,25 @@ class HomeController extends StateNotifier<HomeState> {
   }
 }
 
-final homeControllerProvider =
-    StateNotifierProvider<HomeController, HomeState>((ref) {
-  final liveRepo = ref.watch(liveRepositoryProvider);
-  final vodRepo = ref.watch(vodRepositoryProvider);
-  final seriesRepo = ref.watch(seriesRepositoryProvider);
-  final favoritesRepo = ref.watch(favoritesRepositoryProvider);
-  final historyRepo = ref.watch(historyRepositoryProvider);
-  final allowedContent = ref.watch(kidsAllowedContentProvider).valueOrNull ??
-      const KidsAllowedContent.denyAll();
+final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>(
+  (ref) {
+    final liveRepo = ref.watch(liveRepositoryProvider);
+    final vodRepo = ref.watch(vodRepositoryProvider);
+    final seriesRepo = ref.watch(seriesRepositoryProvider);
+    final favoritesRepo = ref.watch(favoritesRepositoryProvider);
+    final historyRepo = ref.watch(historyRepositoryProvider);
+    final allowedContent =
+        ref.watch(kidsAllowedContentProvider).valueOrNull ??
+        const KidsAllowedContent.denyAll();
 
-  return HomeController(
-    liveRepo: liveRepo,
-    vodRepo: vodRepo,
-    seriesRepo: seriesRepo,
-    favoritesRepo: favoritesRepo,
-    historyRepo: historyRepo,
-    liveScores: ref.watch(liveScoreSourceProvider),
-    allowedContent: allowedContent,
-  );
-});
+    return HomeController(
+      liveRepo: liveRepo,
+      vodRepo: vodRepo,
+      seriesRepo: seriesRepo,
+      favoritesRepo: favoritesRepo,
+      historyRepo: historyRepo,
+      liveScores: ref.watch(liveScoreSourceProvider),
+      allowedContent: allowedContent,
+    );
+  },
+);

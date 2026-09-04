@@ -262,6 +262,78 @@ class AppAccountController extends StateNotifier<AppAccountSessionState> {
     state = state.copyWith(clearAccount: true, clearPendingEmail: true);
   }
 
+  /// Signs in from credentials/session transferred by a companion device.
+  Future<void> signInFromCompanion({
+    required String email,
+    String? refreshToken,
+  }) async {
+    state = state.copyWith(loading: true, clearError: true);
+    try {
+      final normalized = email.trim().toLowerCase();
+      if (debugEmailOtpPreviewEnabled) {
+        final account = AppAccount(
+          id: 'companion-transfer-user',
+          status: AppAccountStatus.active,
+          email: normalized,
+          lastLoginAt: DateTime.now().toUtc(),
+        );
+        await _clearPendingOtpEmail();
+        state = state.copyWith(
+          loading: false,
+          configured: true,
+          account: account,
+          clearPendingEmail: true,
+        );
+        return;
+      }
+
+      if (refreshToken != null &&
+          refreshToken.isNotEmpty &&
+          CommercialApiConfig.isConfigured) {
+        try {
+          final account = await _accounts.setSessionFromToken(
+            refreshToken: refreshToken,
+            email: normalized,
+          );
+          if (account != null) {
+            await _clearPendingOtpEmail();
+            await _registerDeviceQuietly();
+            state = state.copyWith(
+              loading: false,
+              configured: true,
+              account: account,
+              clearPendingEmail: true,
+            );
+            return;
+          }
+        } catch (e) {
+          AppLogger.warning(
+            'setSessionFromToken failed, falling back to local claim: $e',
+            feature: 'account',
+          );
+        }
+      }
+
+      final fallback = AppAccount(
+        id: 'companion-transferred-${DateTime.now().millisecondsSinceEpoch}',
+        status: AppAccountStatus.active,
+        email: normalized,
+        lastLoginAt: DateTime.now().toUtc(),
+      );
+      await _clearPendingOtpEmail();
+      state = state.copyWith(
+        loading: false,
+        configured: true,
+        account: fallback,
+        clearPendingEmail: true,
+      );
+    } catch (e) {
+      AppLogger.error('Companion sign-in error: $e', feature: 'account');
+      state = state.copyWith(loading: false, errorMessage: e.toString());
+      rethrow;
+    }
+  }
+
   /// Re-runs the server-authoritative account bootstrap after OTP verification.
   ///
   /// This calls `me` again (which provisions the one-time trial), then requires

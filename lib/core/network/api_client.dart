@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show compute, kDebugMode, kIsWeb;
 import 'package:iptv/core/constants/api_constants.dart';
+import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/core/errors/app_error.dart';
 import 'package:iptv/core/network/api_config.dart';
 import 'package:iptv/core/network/api_exception.dart';
@@ -52,30 +53,50 @@ class ApiClient {
     Map<String, dynamic>? params,
     T Function(dynamic json)? fromJson,
     CancelToken? cancelToken,
+    int retries = AppConstants.maxRetryCount,
   }) async {
-    try {
-      final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-      final response = await _dio.get<dynamic>(
-        cleanPath,
-        queryParameters: params,
-        cancelToken: cancelToken,
-      );
-      return await _parse<T>(response.data, fromJson);
-    } on DioException catch (e) {
-      if (kDebugMode) {
-        dev.log(
-          'DioException on GET $path: type=${e.type}, message=${e.message}, error=${e.error}, statusCode=${e.response?.statusCode}',
-          name: 'ApiClient',
-          error: e,
+    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    int attempt = 0;
+    while (true) {
+      try {
+        final response = await _dio.get<dynamic>(
+          cleanPath,
+          queryParameters: params,
+          cancelToken: cancelToken,
         );
+        return await _parse<T>(response.data, fromJson);
+      } on DioException catch (e) {
+        final canRetry = attempt < retries &&
+            e.type != DioExceptionType.cancel &&
+            (e.type == DioExceptionType.connectionError ||
+                e.type == DioExceptionType.connectionTimeout ||
+                e.type == DioExceptionType.receiveTimeout);
+        if (canRetry) {
+          attempt++;
+          if (kDebugMode) {
+            dev.log(
+              'GET $cleanPath failed (${e.type}: ${e.message}). Retrying ($attempt/$retries)...',
+              name: 'ApiClient',
+            );
+          }
+          await Future<void>.delayed(AppConstants.networkRetryDelay * attempt);
+          continue;
+        }
+        if (kDebugMode) {
+          dev.log(
+            'DioException on GET $path: type=${e.type}, message=${e.message}, error=${e.error}, statusCode=${e.response?.statusCode}',
+            name: 'ApiClient',
+            error: e,
+          );
+        }
+        throw ApiException(_translateDioError(e));
+      } catch (e) {
+        if (kDebugMode) {
+          dev.log('Exception on GET $path: $e', name: 'ApiClient', error: e);
+        }
+        if (e is ApiException) rethrow;
+        throw ApiException(NetworkError(message: e.toString(), cause: e));
       }
-      throw ApiException(_translateDioError(e));
-    } catch (e) {
-      if (kDebugMode) {
-        dev.log('Exception on GET $path: $e', name: 'ApiClient', error: e);
-      }
-      if (e is ApiException) rethrow;
-      throw ApiException(NetworkError(message: e.toString(), cause: e));
     }
   }
 

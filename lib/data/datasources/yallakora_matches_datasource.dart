@@ -11,8 +11,8 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
       : _dio = dio ??
             Dio(
               BaseOptions(
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 10),
+                connectTimeout: const Duration(seconds: 20),
+                receiveTimeout: const Duration(seconds: 20),
                 responseType: ResponseType.json,
                 headers: const {
                   'Accept': 'application/json',
@@ -27,7 +27,7 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
 
   /// Default production URL for matches.json hosted on Cloudflare Pages / Worker / GitHub.
   static const String defaultEndpointUrl =
-      'https://hope-tv.site/matches.json';
+      'https://matches.hope-tv.site/matches.json';
 
   /// Fallback URL (e.g. raw GitHub content)
   static const String fallbackEndpointUrl =
@@ -43,7 +43,7 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
     if (!kIsWeb) return target;
     final pageHost = Uri.base.host;
     final isLocal = pageHost == 'localhost' || pageHost == '127.0.0.1';
-    if (!isLocal && Uri.base.scheme == 'https') {
+    if (!isLocal && target.contains(pageHost)) {
       return '${Uri.base.origin}/matches.json';
     }
     return target;
@@ -59,10 +59,13 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
       return _cachedModels!;
     }
 
-    final urlsToTry = <String>[
+    final normalizedEndpoint = _endpointUrl.replaceAll(RegExp(r'/+$'), '');
+    final urlsToTry = <String>{
       _resolveUrl(_endpointUrl),
+      if (!normalizedEndpoint.endsWith('/matches.json'))
+        '$normalizedEndpoint/matches.json',
       fallbackEndpointUrl,
-    ];
+    }.toList();
 
     for (final url in urlsToTry) {
       try {
@@ -81,15 +84,22 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
             .map((item) => MatchModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
 
-        _cachedModels = models;
-        _cachedFixtures = models.map((m) => m.toLiveFixture()).toList();
-        _cachedAt = now;
+        if (models.isNotEmpty) {
+          _cachedModels = models;
+          _cachedFixtures = null;
+          _cachedAt = now;
 
-        AppLogger.info(
-          'Fetched ${models.length} matches from $url',
+          AppLogger.info(
+            'Fetched ${models.length} matches from $url',
+            feature: 'sports',
+          );
+          return models;
+        }
+
+        AppLogger.warning(
+          'Received empty or non-match response from $url, trying next candidate...',
           feature: 'sports',
         );
-        return models;
       } catch (e) {
         AppLogger.warning(
           'Failed fetching matches from $url: $e',
@@ -103,17 +113,35 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
   }
 
   @override
-  Future<List<LiveFixture>> fetchLiveBigMatches() async {
+  Future<List<LiveFixture>> fetchLiveBigMatches({bool forceRefresh = false}) async {
     final now = DateTime.now();
-    if (_cachedFixtures != null &&
+    if (!forceRefresh &&
+        _cachedFixtures != null &&
         _cachedAt != null &&
         now.difference(_cachedAt!) < _cacheTtl) {
       return _cachedFixtures!;
     }
 
-    final models = await fetchTodayMatches();
-    final fixtures = models.map((m) => m.toLiveFixture()).toList();
-    _cachedFixtures = fixtures;
-    return fixtures;
+    final models = await fetchTodayMatches(forceRefresh: forceRefresh);
+    // Filter to ONLY Barcelona, Real Madrid, and the Premier League Big Six clubs
+    final bigMatchFixtures = models
+        .map((m) => m.toLiveFixture(now: now))
+        .where((fixture) => fixture.teams.isNotEmpty)
+        .toList();
+
+    // Sort order:
+    // 1. Live Now matches first (real time >= start time or explicit live status)
+    // 2. Upcoming matches next (sorted chronologically by scheduled start time)
+    // 3. Finished matches last
+    bigMatchFixtures.sort((a, b) {
+      if (a.isLive && !b.isLive) return -1;
+      if (!a.isLive && b.isLive) return 1;
+      if (a.isUpcoming && b.isFinished) return -1;
+      if (a.isFinished && b.isUpcoming) return 1;
+      return (a.scheduledTime ?? '').compareTo(b.scheduledTime ?? '');
+    });
+
+    _cachedFixtures = bigMatchFixtures;
+    return bigMatchFixtures;
   }
 }

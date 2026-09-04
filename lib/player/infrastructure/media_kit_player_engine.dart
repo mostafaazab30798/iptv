@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
 import 'package:iptv/player/domain/entities/player_metrics.dart';
@@ -73,6 +74,17 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
   PlaybackBufferMode get currentBufferMode => _bufferMode;
 
+  static bool get _isAndroidHost =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  String get _hwdecPreference {
+    if (!enableHardwareAcceleration) return 'no';
+    // auto-safe uses a copy-back decoder so Flutter's GLES compositor and the
+    // video Surface do not share an invalid viewport on Mali/Maleoon GPUs.
+    if (_isAndroidHost) return 'auto-safe';
+    return 'auto';
+  }
+
   @override
   Stream<PlayerStatus> get statusStream => _statusController.stream;
 
@@ -116,8 +128,17 @@ class MediaKitPlayerEngine implements PlayerEngine {
       _player!,
       configuration: mkv.VideoControllerConfiguration(
         enableHardwareAcceleration: enableHardwareAcceleration,
+        hwdec: _hwdecPreference,
+        androidAttachSurfaceAfterVideoParameters: true,
       ),
     );
+
+    // VideoController.create is async; wait so hwdec/vo writes cannot race it.
+    try {
+      await _videoController!.platform.future;
+    } catch (e) {
+      PlayerLogger.note('[engine] VideoController platform init failed: $e');
+    }
 
     // Apply low-level mpv optimizations for streaming and low-latency sports
     await _applyLowLevelMpvProperties();
@@ -150,7 +171,10 @@ class MediaKitPlayerEngine implements PlayerEngine {
     await _setProperty('deinterlace', 'no');
 
     // ── Hardware decoding & multithreading ────────────────────────────────────
-    if (enableHardwareAcceleration) {
+    // Android stays on media_kit's auto-safe path (mediacodec-copy). Overriding
+    // to hwdec=auto enables zero-copy Surfaces that fight Flutter Impeller and
+    // spam Huawei/Honor GLES_DRAW "viewport prepare failed" logs.
+    if (enableHardwareAcceleration && !_isAndroidHost) {
       await _setProperty('hwdec', 'auto');
       await _setProperty('hwdec-codecs', 'all');
     }

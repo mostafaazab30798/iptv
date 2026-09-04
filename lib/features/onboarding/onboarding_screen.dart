@@ -8,6 +8,7 @@ import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
+import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/core/constants/server_presets.dart';
 
@@ -16,6 +17,7 @@ import 'package:iptv/features/auth/auth_controller.dart';
 import 'package:iptv/features/home/home_controller.dart';
 import 'package:iptv/features/onboarding/widgets/m3u_converter_dialog.dart';
 import 'package:iptv/features/onboarding/widgets/server_gateway_picker_dialog.dart';
+import 'package:iptv/player/handoff/presentation/companion_auth_dialog.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 
@@ -167,8 +169,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     res.when(
       ok: (_) {
-        ref.read(homeControllerProvider.notifier).loadData();
-        if (mounted) context.go(Routes.home);
+        if (CommercialApiConfig.accessGateEnabled &&
+            !ref.read(appAccountSessionProvider).isSignedIn) {
+          if (mounted) context.go(Routes.signIn);
+        } else {
+          ref.read(homeControllerProvider.notifier).loadData();
+          if (mounted) context.go(Routes.home);
+        }
       },
       err: (err) {
         if (mounted) {
@@ -885,6 +892,74 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               size: 18,
             ),
             label: Text(context.l10n.onboardingHaveM3u),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              const Expanded(child: Divider(color: AppColors.border)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  context.l10n.authDividerOr,
+                  style: const TextStyle(
+                    color: AppColors.textDisabled,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Expanded(child: Divider(color: AppColors.border)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Sign in with Companion Device (QR & Handoff)
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF131C2E).withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              border: Border.all(
+                color: AppColors.accent.withValues(alpha: 0.35),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: isLoading
+                    ? null
+                    : () => CompanionAuthDialog.show(context),
+                borderRadius: BorderRadius.circular(AppRadius.button),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const HugeIcon(
+                      icon: AppIcons.devices,
+                      color: AppColors.accent,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      context.l10n.companionSignInButton,
+                      style: const TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),

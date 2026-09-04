@@ -1443,4 +1443,76 @@ class AppLocalizationsAr extends AppLocalizations {
   String companionCouldNotReach(String address) {
     return 'تعذر الاتصال بالشاشة عند $address';
   }
+
+  @override
+  String get authDividerOr => 'أو';
+
+  @override
+  String get companionSignInButton => 'تسجيل الدخول عبر جهاز مرافق';
+
+  @override
+  String get companionSignInTitle => 'تسجيل الدخول عبر جهاز مرافق';
+
+  @override
+  String get companionSignInSubtitle =>
+      'انقل بيانات تسجيل الدخول فوراً من هاتفك';
+
+  @override
+  String get companionPairingCodeLabel => 'رمز التأكيد';
+
+  @override
+  String get companionStep1 => 'افتح HOPE TV على هاتفك المسجل دخوله بالفعل';
+
+  @override
+  String get companionStep2 =>
+      'اضغط على أيقونة المسح في الشريط العلوي أو الإعدادات';
+
+  @override
+  String get companionStep3 => 'امسح رمز QR هذا لتسجيل الدخول فوراً';
+
+  @override
+  String get companionWaitingForScan =>
+      'بانتظار مسح الرمز من الجهاز المرافق...';
+
+  @override
+  String get companionAuthenticatingTitle =>
+      'تم استلام البيانات! جارٍ تسجيل الدخول...';
+
+  @override
+  String companionReceivedFrom(String device) {
+    return 'تم الاستلام من $device';
+  }
+
+  @override
+  String get companionSuccessTitle => 'تم تسجيل الدخول بنجاح!';
+
+  @override
+  String get companionSuccessSubtitle =>
+      'جارٍ تحميل القنوات والمحتوى الخاص بك...';
+
+  @override
+  String get companionErrorTitle => 'فشل تسجيل الدخول';
+
+  @override
+  String get companionAuthorizeTitle => 'نقل تسجيل الدخول إلى الشاشة؟';
+
+  @override
+  String get companionTransferAction => 'نقل وتسجيل الدخول';
+
+  @override
+  String companionTransferSuccess(String device) {
+    return 'تم تسجيل الدخول بنجاح على $device!';
+  }
+
+  @override
+  String companionTransferFailed(String error) {
+    return 'فشل النقل: $error';
+  }
+
+  @override
+  String get companionPhoneNotSignedIn =>
+      'هذا الهاتف غير مسجل الدخول على سيرفر IPTV بعد.';
+
+  @override
+  String get authBackToOnboarding => 'العودة إلى إعداد سيرفر IPTV';
 }

@@ -43,9 +43,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     await ref.read(sessionProvider.notifier).loadSession();
     if (!mounted) return;
 
+    final iptv = ref.read(sessionProvider).valueOrNull;
+    if (iptv == null || !iptv.isValid) {
+      context.go(Routes.onboarding);
+      return;
+    }
+
     if (CommercialApiConfig.accessGateEnabled) {
-      // The commercial gate may be re-enabled in a future build. Only that
-      // build needs to wait for account bootstrap before choosing a route.
       for (var i = 0; i < 40; i++) {
         if (!ref.read(appAccountSessionProvider).loading) break;
         await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -54,28 +58,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       final app = ref.read(appAccountSessionProvider);
       if (!app.isSignedIn) {
-        context.go(Routes.signIn);
+        context.go(Routes.onboarding);
         return;
       }
-    }
 
-    final iptv = ref.read(sessionProvider).valueOrNull;
-
-    if (iptv != null && iptv.isValid) {
-      if (CommercialApiConfig.accessGateEnabled) {
-        await ref.read(entitlementProvider.notifier).refresh();
-        if (!mounted) return;
-        final entitlement = ref.read(entitlementProvider);
-        context.go(
-          (kDebugMode || entitlement.allowsPremium)
-              ? Routes.home
-              : Routes.accessRequired,
-        );
-      } else {
-        context.go(Routes.home);
-      }
+      await ref.read(entitlementProvider.notifier).refresh();
+      if (!mounted) return;
+      final entitlement = ref.read(entitlementProvider);
+      context.go(
+        (kDebugMode || entitlement.allowsPremium)
+            ? Routes.home
+            : Routes.accessRequired,
+      );
     } else {
-      context.go(Routes.onboarding);
+      context.go(Routes.home);
     }
   }
 

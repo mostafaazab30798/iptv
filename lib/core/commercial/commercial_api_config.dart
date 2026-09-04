@@ -11,12 +11,11 @@ class CommercialApiConfig {
 
   static const productName = 'HOPE TV';
 
-  /// Commercial entitlement navigation is enabled by default. Development
-  /// builds can opt out explicitly, but production builds must provide the
-  /// Supabase and entitlement public-key defines.
+  /// Commercial entitlement navigation is intentionally disabled for now.
+  /// Re-enable in a future build with `--dart-define=ACCESS_GATE_ENABLED=true`.
   static const accessGateEnabled = bool.fromEnvironment(
     'ACCESS_GATE_ENABLED',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   static const supabaseUrl = String.fromEnvironment(

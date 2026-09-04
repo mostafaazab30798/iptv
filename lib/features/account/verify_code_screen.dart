@@ -15,6 +15,7 @@ import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/domain/entities/app_entitlement.dart';
 import 'package:iptv/features/account/account_auth_errors.dart';
 import 'package:iptv/features/account/account_controller.dart';
+import 'package:iptv/features/home/home_controller.dart';
 import 'package:iptv/features/account/widgets/auth_announcer.dart';
 import 'package:iptv/features/account/widgets/auth_card.dart';
 import 'package:iptv/features/account/widgets/auth_header.dart';
@@ -162,6 +163,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen>
 
       final iptv = ref.read(sessionProvider).valueOrNull;
       if (iptv != null && iptv.isValid) {
+        unawaited(ref.read(homeControllerProvider.notifier).loadData());
         context.go(Routes.home);
       } else {
         context.go(Routes.onboarding);

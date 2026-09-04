@@ -23,6 +23,7 @@ import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/navigation/shell_focus_bridge.dart';
+import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:iptv/shared/widgets/landscape_gate.dart';
 import 'package:dpad/dpad.dart';
 
@@ -113,17 +114,13 @@ class AppShell extends ConsumerWidget {
                       items: navItems,
                       selectedIndex: selectedIndex,
                       currentPath: currentPath,
-                      onItemTap: (index, route) =>
-                          _onNavigate(context, route),
-                      onRefresh: () =>
-                          _handleSmartRefresh(ref, currentPath),
+                      onItemTap: (index, route) => _onNavigate(context, route),
+                      onRefresh: () => _handleSmartRefresh(ref, currentPath),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                 ],
-                Expanded(
-                  child: child,
-                ),
+                Expanded(child: child),
               ],
             ),
             bottomNavigationBar: isPortrait
@@ -185,10 +182,10 @@ class _ShellNavFocusScope extends StatefulWidget {
 }
 
 class _ShellNavFocusScopeState extends State<_ShellNavFocusScope> {
-  late final FocusNode _navEntry =
-      FocusNode(debugLabel: 'shell-nav-entry');
-  late final FocusNode _heroChromeEntry =
-      FocusNode(debugLabel: 'hero-chrome-entry');
+  late final FocusNode _navEntry = FocusNode(debugLabel: 'shell-nav-entry');
+  late final FocusNode _heroChromeEntry = FocusNode(
+    debugLabel: 'hero-chrome-entry',
+  );
 
   @override
   void dispose() {
@@ -264,11 +261,7 @@ class _ShellTopNav extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             stops: [0.0, 0.70, 1.0],
-            colors: [
-              Color(0xF5080B12),
-              Color(0xDC080B12),
-              Colors.transparent,
-            ],
+            colors: [Color(0xF5080B12), Color(0xDC080B12), Colors.transparent],
           ),
         ),
         padding: EdgeInsets.fromLTRB(
@@ -298,24 +291,7 @@ class _ShellTopNav extends StatelessWidget {
               const KidsModeNavButton(),
               const SizedBox(width: 10),
             ],
-            // Modern Glass Action Capsule
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha(90),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withAlpha(35),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(70),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            DarkGlassCapsule(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -572,58 +548,55 @@ class _DockNavItemState extends State<_DockNavItem> {
         onExit: (_) => setState(() => _hovered = false),
         cursor: SystemMouseCursors.click,
         child: AnimatedContainer(
-            duration: MotionPolicy.of(context).standard,
-            curve: AppMotion.curveEnter,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: isSelected
-                  ? AppColors.accent.withAlpha(28)
-                  : _hovered
-                      ? Colors.white.withAlpha(12)
-                      : Colors.transparent,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedScale(
-                  scale: isSelected ? 1.15 : (_hovered ? 1.05 : 1.0),
-                  duration: MotionPolicy.of(context).focus,
-                  curve: AppMotion.curveEnter,
-                  child: HugeIcon(
-                    icon: isSelected
-                        ? widget.item.activeIcon
-                        : widget.item.icon,
-                    size: widget.isCompact ? 20 : 22,
-                    color: isSelected
-                        ? AppColors.accent
-                        : (_hovered
+          duration: MotionPolicy.of(context).standard,
+          curve: AppMotion.curveEnter,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: isSelected
+                ? AppColors.accent.withAlpha(28)
+                : _hovered
+                ? Colors.white.withAlpha(12)
+                : Colors.transparent,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedScale(
+                scale: isSelected ? 1.15 : (_hovered ? 1.05 : 1.0),
+                duration: MotionPolicy.of(context).focus,
+                curve: AppMotion.curveEnter,
+                child: HugeIcon(
+                  icon: isSelected ? widget.item.activeIcon : widget.item.icon,
+                  size: widget.isCompact ? 20 : 22,
+                  color: isSelected
+                      ? AppColors.accent
+                      : (_hovered
                             ? AppColors.textPrimary
                             : AppColors.textSecondary),
-                  ),
                 ),
-                if (!widget.isCompact) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    widget.item.label,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected
-                          ? Colors.white
-                          : (_hovered
+              ),
+              if (!widget.isCompact) ...[
+                const SizedBox(height: 3),
+                Text(
+                  widget.item.label,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : (_hovered
                               ? AppColors.textPrimary
                               : AppColors.textSecondary),
-                      letterSpacing: 0.2,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    letterSpacing: 0.2,
                   ),
-                ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
-            ),
+            ],
           ),
         ),
+      ),
     );
   }
 }
@@ -779,8 +752,7 @@ class _SpinningRefreshButtonState extends State<_SpinningRefreshButton>
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color:
-                  _hovered ? Colors.white.withAlpha(25) : Colors.transparent,
+              color: _hovered ? Colors.white.withAlpha(25) : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
             ),
             child: RotationTransition(
@@ -849,8 +821,8 @@ class _GlassActionButtonState extends State<_GlassActionButton> {
               color: active
                   ? AppColors.accent.withAlpha(35)
                   : (_hovered
-                      ? Colors.white.withAlpha(25)
-                      : Colors.transparent),
+                        ? Colors.white.withAlpha(25)
+                        : Colors.transparent),
               borderRadius: BorderRadius.circular(10),
               border: active
                   ? Border.all(

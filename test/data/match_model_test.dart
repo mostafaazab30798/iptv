@@ -67,5 +67,31 @@ void main() {
       expect(fixture.awayScore, isNull);
       expect(fixture.broadcastChannel, 'beIN Sports 1');
     });
+
+    test('differentiates live games when real time exceeds start time', () {
+      final model = MatchModel.fromJson({
+        'team_home': 'ليفربول',
+        'team_away': 'إيبسويتش تاون',
+        'time': '20:00',
+        'status': 'لم تبدأ',
+        'channel': 'beIN Sports 1',
+      });
+
+      // Simulated current time: 20:30 (30 mins after kickoff)
+      final testTimeLive = DateTime(2026, 9, 4, 20, 30);
+      final liveFixture = model.toLiveFixture(now: testTimeLive);
+      expect(liveFixture.isLive, isTrue);
+      expect(liveFixture.isUpcoming, isFalse);
+      expect(liveFixture.state, 'in');
+      expect(liveFixture.clock, "'+30");
+
+      // Simulated current time: 18:00 (2 hours before kickoff)
+      final testTimeUpcoming = DateTime(2026, 9, 4, 18, 0);
+      final upcomingFixture = model.toLiveFixture(now: testTimeUpcoming);
+      expect(upcomingFixture.isLive, isFalse);
+      expect(upcomingFixture.isUpcoming, isTrue);
+      expect(upcomingFixture.state, 'pre');
+      expect(upcomingFixture.clock, '20:00');
+    });
   });
 }
