@@ -74,6 +74,88 @@ class CompanionAuthServer {
         if (request.url.path == 'auth-handoff' ||
             request.url.path == 'companion-info' ||
             request.url.path.isEmpty) {
+          final isBrowser = request.headers['accept']?.contains('text/html') ?? false;
+          if (isBrowser) {
+            final html = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOPE TV Companion Sign-In</title>
+  <style>
+    body {
+      background: #0B101B;
+      color: #E6EDF3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    .card {
+      background: #131C2E;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 32px 24px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(0,210,140,0.15);
+      color: #00D28C;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 20px; margin: 0 0 8px; font-weight: 800; }
+    p { font-size: 14px; color: #8B949E; line-height: 1.5; margin: 0 0 20px; }
+    .pin-box {
+      background: #0B101B;
+      border: 1px dashed rgba(0,210,140,0.4);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      color: #00D28C;
+      margin-bottom: 20px;
+    }
+    .hint {
+      font-size: 13px;
+      color: #C9D1D9;
+      background: rgba(255,255,255,0.04);
+      padding: 12px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">IPTV Pairing Screen</div>
+    <h1>$_deviceName</h1>
+    <p>This TV / Screen is actively waiting for sign-in transfer from your companion device.</p>
+    <div class="pin-box">PIN: $pin</div>
+    <div class="hint">
+      Please open the <strong>HOPE TV</strong> app on your companion phone and use the in-app scanner to authorize.
+    </div>
+  </div>
+</body>
+</html>''';
+            return shelf.Response.ok(
+              html,
+              headers: {'content-type': 'text/html; charset=utf-8'},
+            );
+          }
+
           return shelf.Response.ok(
             jsonEncode({
               'type': 'auth_handoff',
@@ -256,49 +338,98 @@ class CompanionAuthServer {
   }
 
   Future<String> _findLocalIpAddress() async {
-    try {
-      final interfaces = await NetworkInterface.list(
-        type: InternetAddressType.IPv4,
+    final ips = await getAvailableLocalIps();
+    if (ips.isNotEmpty) {
+      AppLogger.info(
+        'Companion Auth Server selected LAN IP: ${ips.first} (all available: $ips)',
+        feature: 'companion_auth',
       );
-      for (final iface in interfaces) {
-        final name = iface.name.toLowerCase();
-        // Skip virtual or VPN adapters
-        if (name.contains('vethernet') ||
-            name.contains('wsl') ||
-            name.contains('virtual') ||
-            name.contains('pseudo') ||
-            name.contains('vmware') ||
-            name.contains('vbox') ||
-            name.contains('tun') ||
-            name.contains('tap') ||
-            name.contains('docker') ||
-            name.contains('loopback')) {
-          continue;
-        }
-        for (final addr in iface.addresses) {
-          if (!addr.isLoopback &&
-              !addr.address.startsWith('169.254.') &&
-              !addr.address.startsWith('127.')) {
-            return addr.address;
-          }
-        }
-      }
-    } catch (_) {}
+      return ips.first;
+    }
 
     try {
       final s = await Socket.connect(
         '8.8.8.8',
         53,
-        timeout: const Duration(milliseconds: 350),
+        timeout: const Duration(milliseconds: 1200),
       );
       final ip = s.address.address;
       s.destroy();
-      if (ip != '127.0.0.1' && !ip.startsWith('169.254.')) {
+      if (ip != '127.0.0.1' && !ip.startsWith('169.254.') && ip != '0.0.0.0') {
         return ip;
       }
     } catch (_) {}
 
     return '127.0.0.1';
+  }
+
+  /// Lists all non-virtual local IPv4 addresses, physical interfaces first.
+  Future<List<String>> getAvailableLocalIps() async {
+    final physicalIps = <String>[];
+    final otherIps = <String>[];
+
+    const virtualKeywords = [
+      'wsl',
+      'vethernet',
+      'hyper-v',
+      'virtual',
+      'vmware',
+      'vbox',
+      'docker',
+      'container',
+      'tap',
+      'tun',
+      'pseudo',
+      'dummy',
+      'bridge',
+      'teredo',
+      'isatap',
+      'bluetooth',
+      'loopback',
+      'p2p',
+    ];
+
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+      );
+
+      for (final iface in interfaces) {
+        final nameLower = iface.name.toLowerCase();
+        final isVirtual = virtualKeywords.any(nameLower.contains);
+
+        for (final addr in iface.addresses) {
+          if (addr.isLoopback || addr.type != InternetAddressType.IPv4) continue;
+          final ip = addr.address;
+          if (ip.startsWith('169.254.') || ip == '0.0.0.0' || ip == '127.0.0.1') {
+            continue;
+          }
+
+          if (!isVirtual) {
+            final isWifiOrEth = nameLower.contains('wi-fi') ||
+                nameLower.contains('wifi') ||
+                nameLower.contains('wlan') ||
+                nameLower.contains('eth') ||
+                nameLower.contains('en');
+            if (isWifiOrEth) {
+              physicalIps.insert(0, ip);
+            } else {
+              physicalIps.add(ip);
+            }
+          } else {
+            otherIps.add(ip);
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Failed to query network interfaces: $e',
+        feature: 'companion_auth',
+      );
+    }
+
+    return [...physicalIps, ...otherIps];
   }
 
   String _generateRandomToken(int length) {

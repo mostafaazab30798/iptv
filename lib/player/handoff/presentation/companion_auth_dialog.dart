@@ -401,7 +401,7 @@ class _CompanionAuthDialogState extends ConsumerState<CompanionAuthDialog>
         ),
         const SizedBox(height: AppSpacing.md),
 
-        // Pulsing Listener Indicator
+        // Pulsing Listener Indicator & Network Info
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -439,6 +439,32 @@ class _CompanionAuthDialogState extends ConsumerState<CompanionAuthDialog>
             ),
           ],
         ),
+        const SizedBox(height: 6),
+        if (info.hostIp == '127.0.0.1')
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+            ),
+            child: const Text(
+              '⚠️ Wi-Fi not detected (127.0.0.1). Ensure TV & phone are on the same Wi-Fi network.',
+              style: TextStyle(color: Colors.amber, fontSize: 11.5),
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          Text(
+            'LAN: http://${info.hostIp}:${info.port}',
+            style: TextStyle(
+              color: AppColors.textSecondary.withValues(alpha: 0.6),
+              fontSize: 11,
+              fontFamily: 'monospace',
+            ),
+            textAlign: TextAlign.center,
+          ),
       ],
     );
   }

@@ -79,9 +79,12 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
   }
 
   void _startCamera() {
+    _cameraController?.dispose();
     _cameraController = MobileScannerController(
       detectionSpeed: DetectionSpeed.noDuplicates,
       facing: CameraFacing.back,
+      formats: const [BarcodeFormat.qrCode],
+      returnImage: false,
     );
     setState(() {
       _mode = _ScannerMode.camera;
@@ -842,11 +845,61 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
               children: [
                 MobileScanner(
                   controller: _cameraController,
+                  errorBuilder: (context, error, child) {
+                    final isPermDenied =
+                        error.errorCode == MobileScannerErrorCode.permissionDenied;
+                    return Container(
+                      color: const Color(0xFF131C2E),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isPermDenied
+                                  ? Icons.no_photography_rounded
+                                  : Icons.error_outline_rounded,
+                              color: Colors.amber,
+                              size: 32,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isPermDenied
+                                  ? 'Camera permission is required to scan the TV QR code.'
+                                  : 'Could not start camera (${error.errorCode.name}).',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 10),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
+                              ),
+                              onPressed: _startCamera,
+                              child: const Text(
+                                'Retry Camera',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                   onDetect: (capture) {
                     final barcodes = capture.barcodes;
                     for (final barcode in barcodes) {
                       final raw = barcode.rawValue;
                       if (raw != null && raw.isNotEmpty && !_isConnecting) {
+                        unawaited(HapticFeedback.mediumImpact());
                         _connectWithQrPayload(raw);
                         break;
                       }
@@ -899,8 +952,181 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        // Fallback option: Manual pairing code
+        TextButton.icon(
+          onPressed: _showManualPairingDialog,
+          icon: const Icon(Icons.dialpad_rounded, size: 16, color: AppColors.accent),
+          label: const Text(
+            'Enter TV IP & PIN Manually',
+            style: TextStyle(
+              color: AppColors.accent,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  Future<void> _showManualPairingDialog() async {
+    final ipController = TextEditingController();
+    final pinController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF131C2E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(
+            color: AppColors.accent.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.dialpad_rounded, color: AppColors.accent, size: 22),
+            SizedBox(width: 10),
+            Text(
+              'Enter Pairing Code',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Enter the TV IP address and 4-digit PIN displayed on your TV screen.',
+              style: TextStyle(color: Colors.white70, fontSize: 12.5),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ipController,
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              style: const TextStyle(color: Colors.white, fontSize: 13.5),
+              decoration: InputDecoration(
+                labelText: 'TV IP Address',
+                hintText: 'e.g. 192.168.1.50',
+                labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12.5),
+                prefixIcon: const Icon(Icons.lan_outlined, size: 18, color: AppColors.accent),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.05),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: pinController,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              style: const TextStyle(
+                color: AppColors.accent,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 4,
+              ),
+              decoration: InputDecoration(
+                labelText: '4-Digit PIN Code',
+                hintText: '0000',
+                counterText: '',
+                labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12.5),
+                prefixIcon: const Icon(Icons.password_rounded, size: 18, color: AppColors.accent),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.05),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Connect', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    var host = ipController.text.trim();
+    final pin = pinController.text.trim();
+    if (host.isEmpty || pin.isEmpty) return;
+
+    if (host.startsWith('http://')) host = host.substring(7);
+    if (host.startsWith('https://')) host = host.substring(8);
+    if (host.endsWith('/')) host = host.substring(0, host.length - 1);
+
+    int port = 8998;
+    if (host.contains(':')) {
+      final parts = host.split(':');
+      host = parts[0];
+      port = int.tryParse(parts[1]) ?? 8998;
+    }
+
+    setState(() {
+      _isConnecting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
+        ),
+      );
+      final res = await dio.get<Map<String, dynamic>>('http://$host:$port/auth-handoff');
+      final data = res.data ?? {};
+      final serverPin = data['pin']?.toString() ?? '';
+      final token = data['tok']?.toString() ?? '';
+      final dev = data['dev']?.toString() ?? 'HOPE IPTV Screen';
+
+      if (serverPin.isNotEmpty && serverPin != pin) {
+        throw Exception('Incorrect PIN code entered');
+      }
+
+      final info = CompanionAuthHandoffInfo(
+        hostIp: host,
+        port: port,
+        sessionToken: token,
+        pinCode: pin,
+        targetDeviceName: dev,
+      );
+
+      await _handleAuthHandoffQr(info);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isConnecting = false;
+        _errorMessage = 'Could not connect to TV at $host:$port: $e';
+      });
+    }
   }
 
   static IconData _getDeviceIcon(String devName) {
