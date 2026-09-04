@@ -129,7 +129,7 @@ void main() {
       );
     });
 
-    test('fetchLiveBigMatches filters to ONLY Barcelona, Real Madrid, and PL Big Six', () async {
+    test('fetchLiveBigMatches filters to tracked big matches and sorts live first', () async {
       final dio = Dio();
       dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
         final sampleJson = jsonEncode([
@@ -189,13 +189,14 @@ void main() {
       final allMatches = await dataSource.fetchTodayMatches(forceRefresh: true);
       expect(allMatches, hasLength(5));
 
-      // fetchLiveBigMatches filters down to only Liverpool, Real Madrid, Barcelona (3 matches)
+      // fetchLiveBigMatches filters down to tracked big clubs (Liverpool, Real Madrid, Barcelona, Zamalek - 4 matches)
       final bigMatches = await dataSource.fetchLiveBigMatches();
-      expect(bigMatches, hasLength(3));
+      expect(bigMatches, hasLength(4));
       final names = bigMatches.map((m) => '${m.homeName} vs ${m.awayName}').toList();
       expect(names, contains('إيبسويتش تاون vs ليفربول'));
       expect(names, contains('ريال بيتيس vs ريال مدريد'));
       expect(names, contains('باريس سان جيرمان vs برشلونة'));
+      expect(names, contains('إيه أس بورت vs الزمالك'));
 
       // Live match (PSG vs Barcelona) sorted first!
       expect(bigMatches.first.homeName, 'باريس سان جيرمان');

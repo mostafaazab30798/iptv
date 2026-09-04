@@ -8,7 +8,7 @@ import 'package:iptv/domain/entities/app_entitlement.dart';
 void main() {
   test('CommercialApiConfig treats placeholders as unconfigured', () {
     expect(CommercialApiConfig.isConfigured, isFalse);
-    expect(CommercialApiConfig.accessGateEnabled, isTrue);
+    expect(CommercialApiConfig.accessGateEnabled, isFalse);
     expect(CommercialApiConfig.productName, 'HOPE TV');
     expect(CommercialApiConfig.subscriptionPortalUri, isNull);
   });
