@@ -3,17 +3,22 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/core/logging/app_logger.dart';
+import 'package:iptv/core/platform/platform_service.dart';
+import 'package:iptv/core/releases/app_update_installer.dart';
 import 'package:iptv/core/releases/release_manifest.dart';
 import 'package:iptv/core/releases/release_verifier.dart';
 import 'package:iptv/core/releases/update_platform.dart';
 import 'package:iptv/domain/repositories/release_repository.dart';
 import 'package:iptv/features/updates/update_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum UpdateFlowStatus {
   idle,
   checking,
   available,
   launching,
+  downloading,
+  installing,
   upToDate,
   unsupported,
   notConfigured,
@@ -31,6 +36,10 @@ class UpdateState {
     this.downloadUrl,
     this.installedBuildNumber,
     this.pendingDownloadAfterSignIn = false,
+    this.downloadProgress = 0.0,
+    this.receivedBytes = 0,
+    this.totalBytes = 0,
+    this.statusMessage,
   });
 
   final UpdateFlowStatus status;
@@ -42,6 +51,10 @@ class UpdateState {
   final String? downloadUrl;
   final int? installedBuildNumber;
   final bool pendingDownloadAfterSignIn;
+  final double downloadProgress;
+  final int receivedBytes;
+  final int totalBytes;
+  final String? statusMessage;
 
   bool get isMandatoryBlocking =>
       updateAvailable && manifest != null && manifest!.mandatory;
@@ -56,6 +69,10 @@ class UpdateState {
     String? downloadUrl,
     int? installedBuildNumber,
     bool? pendingDownloadAfterSignIn,
+    double? downloadProgress,
+    int? receivedBytes,
+    int? totalBytes,
+    String? statusMessage,
     bool clearError = false,
     bool clearDownloadUrl = false,
     bool clearManifest = false,
@@ -71,6 +88,10 @@ class UpdateState {
       installedBuildNumber: installedBuildNumber ?? this.installedBuildNumber,
       pendingDownloadAfterSignIn:
           pendingDownloadAfterSignIn ?? this.pendingDownloadAfterSignIn,
+      downloadProgress: downloadProgress ?? this.downloadProgress,
+      receivedBytes: receivedBytes ?? this.receivedBytes,
+      totalBytes: totalBytes ?? this.totalBytes,
+      statusMessage: statusMessage ?? this.statusMessage,
     );
   }
 }
@@ -301,6 +322,100 @@ class UpdateController extends StateNotifier<UpdateState> {
       errorMessage: 'Could not resolve a valid download URL.',
     );
     return null;
+  }
+
+  AppUpdateInstaller? _activeInstaller;
+
+  void cancelDownload() {
+    _activeInstaller?.cancelDownload();
+    _activeInstaller = null;
+    state = state.copyWith(
+      status: UpdateFlowStatus.available,
+      downloadProgress: 0.0,
+      receivedBytes: 0,
+      totalBytes: 0,
+    );
+  }
+
+  Future<void> startDownloadAndInstall({
+    bool isSignedIn = true,
+    ReleaseManifest? manifestOverride,
+  }) async {
+    final manifest = manifestOverride ?? state.manifest;
+    if (manifest == null) return;
+
+    var url = await requestDownloadUrl(
+      isSignedIn: isSignedIn,
+      manifestOverride: manifest,
+    );
+
+    if (url == null || url.isEmpty) {
+      url = manifest.directDownloadUrl;
+    }
+
+    if (url == null || url.isEmpty || !UpdateUrlValidator.isAllowedDownloadUrl(url)) {
+      state = state.copyWith(
+        status: UpdateFlowStatus.error,
+        errorMessage: 'Could not resolve a valid download URL.',
+      );
+      return;
+    }
+
+    final isAndroid = PlatformService.instance.isAndroid || PlatformService.instance.isAndroidTv;
+    final isWindows = PlatformService.instance.isWindows;
+
+    if (isAndroid || isWindows) {
+      state = state.copyWith(
+        status: UpdateFlowStatus.downloading,
+        downloadProgress: 0.0,
+        receivedBytes: 0,
+        totalBytes: manifest.fileSize ?? 0,
+        statusMessage: 'Downloading update...',
+        clearError: true,
+      );
+
+      final installer = AppUpdateInstaller();
+      _activeInstaller = installer;
+
+      try {
+        await installer.downloadAndInstall(
+          manifest: manifest,
+          downloadUrl: url,
+          onProgress: (progress, received, total) {
+            state = state.copyWith(
+              downloadProgress: progress,
+              receivedBytes: received,
+              totalBytes: total,
+            );
+          },
+        );
+
+        state = state.copyWith(
+          status: UpdateFlowStatus.installing,
+          downloadProgress: 1.0,
+          statusMessage: 'Opening installer...',
+        );
+      } catch (e, st) {
+        AppLogger.error('In-app update download failed: $e', error: e, stackTrace: st, feature: 'updates');
+        state = state.copyWith(
+          status: UpdateFlowStatus.error,
+          errorMessage: e.toString(),
+        );
+      } finally {
+        _activeInstaller = null;
+      }
+    } else {
+      state = state.copyWith(status: UpdateFlowStatus.launching);
+      try {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        state = state.copyWith(status: UpdateFlowStatus.available);
+      } catch (e) {
+        state = state.copyWith(
+          status: UpdateFlowStatus.error,
+          errorMessage: e.toString(),
+        );
+      }
+    }
   }
 
   void clearPendingDownloadAfterSignIn() {

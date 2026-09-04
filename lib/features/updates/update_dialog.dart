@@ -97,6 +97,9 @@ class _OptionalUpdateDialogState extends ConsumerState<_OptionalUpdateDialog> {
     final notes = _releaseNotes(widget.manifest, locale);
     final updateState = ref.watch(updateProvider);
     final isLaunching = updateState.status == UpdateFlowStatus.launching;
+    final isDownloading = updateState.status == UpdateFlowStatus.downloading ||
+        updateState.status == UpdateFlowStatus.installing;
+    final session = ref.watch(appAccountSessionProvider);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -265,45 +268,57 @@ class _OptionalUpdateDialogState extends ConsumerState<_OptionalUpdateDialog> {
 
                     const SizedBox(height: 24),
 
-                    // Action buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionButton(
-                            focusNode: _laterFocusNode,
-                            label: l10n.updateLater,
-                            isPrimary: false,
-                            onPressed: () async {
-                              await ref
-                                  .read(updateProvider.notifier)
-                                  .skipOptionalUpdate();
-                              if (context.mounted) {
-                                Navigator.of(context).pop();
-                              }
-                            },
+                    // Action buttons or Download progress
+                    if (isDownloading)
+                      _DownloadProgressWidget(
+                        progress: updateState.downloadProgress,
+                        statusMessage: updateState.statusMessage ?? 'Downloading update...',
+                        receivedBytes: updateState.receivedBytes,
+                        totalBytes: updateState.totalBytes,
+                        onCancel: () {
+                          ref.read(updateProvider.notifier).cancelDownload();
+                        },
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionButton(
+                              focusNode: _laterFocusNode,
+                              label: l10n.updateLater,
+                              isPrimary: false,
+                              onPressed: () async {
+                                await ref
+                                    .read(updateProvider.notifier)
+                                    .skipOptionalUpdate();
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              },
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: _ActionButton(
-                            focusNode: _downloadFocusNode,
-                            autofocus: true,
-                            label: l10n.updateDownload,
-                            icon: HugeIcons.strokeRoundedDownload01,
-                            isPrimary: true,
-                            isLoading: isLaunching,
-                            onPressed: isLaunching
-                                ? null
-                                : () => _launchDownload(
-                                      context,
-                                      ref,
-                                      manifest: widget.manifest,
-                                    ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: _ActionButton(
+                              focusNode: _downloadFocusNode,
+                              autofocus: true,
+                              label: l10n.updateDownload,
+                              icon: HugeIcons.strokeRoundedDownload01,
+                              isPrimary: true,
+                              isLoading: isLaunching,
+                              onPressed: isLaunching
+                                  ? null
+                                  : () => ref
+                                        .read(updateProvider.notifier)
+                                        .startDownloadAndInstall(
+                                          isSignedIn: session.isSignedIn,
+                                          manifestOverride: widget.manifest,
+                                        ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -347,6 +362,9 @@ class _MandatoryUpdateScreenState
     final notes = _releaseNotes(widget.manifest, locale);
     final updateState = ref.watch(updateProvider);
     final isLaunching = updateState.status == UpdateFlowStatus.launching;
+    final isDownloading = updateState.status == UpdateFlowStatus.downloading ||
+        updateState.status == UpdateFlowStatus.installing;
+    final session = ref.watch(appAccountSessionProvider);
 
     return PopScope(
       canPop: false,
@@ -511,22 +529,34 @@ class _MandatoryUpdateScreenState
 
                       const SizedBox(height: 28),
 
-                      // Action Buttons
-                      _ActionButton(
-                        focusNode: _primaryFocusNode,
-                        autofocus: true,
-                        label: l10n.updateDownload,
-                        icon: HugeIcons.strokeRoundedDownload01,
-                        isPrimary: true,
-                        isLoading: isLaunching,
-                        onPressed: isLaunching
-                            ? null
-                            : () => _launchDownload(
-                                  context,
-                                  ref,
-                                  manifest: widget.manifest,
-                                ),
-                      ),
+                      // Action Buttons or Download progress
+                      if (isDownloading)
+                        _DownloadProgressWidget(
+                          progress: updateState.downloadProgress,
+                          statusMessage: updateState.statusMessage ?? 'Downloading update...',
+                          receivedBytes: updateState.receivedBytes,
+                          totalBytes: updateState.totalBytes,
+                          onCancel: () {
+                            ref.read(updateProvider.notifier).cancelDownload();
+                          },
+                        )
+                      else
+                        _ActionButton(
+                          focusNode: _primaryFocusNode,
+                          autofocus: true,
+                          label: l10n.updateDownload,
+                          icon: HugeIcons.strokeRoundedDownload01,
+                          isPrimary: true,
+                          isLoading: isLaunching,
+                          onPressed: isLaunching
+                              ? null
+                              : () => ref
+                                    .read(updateProvider.notifier)
+                                    .startDownloadAndInstall(
+                                      isSignedIn: session.isSignedIn,
+                                      manifestOverride: widget.manifest,
+                                    ),
+                        ),
 
                       const SizedBox(height: 10),
 
@@ -835,6 +865,102 @@ class _ActionButtonState extends State<_ActionButton> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DownloadProgressWidget extends StatelessWidget {
+  const _DownloadProgressWidget({
+    required this.progress,
+    required this.statusMessage,
+    required this.receivedBytes,
+    required this.totalBytes,
+    required this.onCancel,
+  });
+
+  final double progress;
+  final String statusMessage;
+  final int receivedBytes;
+  final int totalBytes;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (progress * 100).clamp(0, 100).toInt();
+    final recMb = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
+    final totMb = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
+    final bytesText = totalBytes > 0 ? '$recMb MB / $totMb MB' : '';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.bg2,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                statusMessage,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '$percent%',
+                style: const TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progress > 0 ? progress : null,
+              backgroundColor: AppColors.bg2,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                bytesText,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              TextButton(
+                onPressed: onCancel,
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -44,6 +44,8 @@ String _updateStatusLabel(BuildContext context, UpdateState state) {
     case UpdateFlowStatus.idle:
       return l10n.updateStatusReady;
     case UpdateFlowStatus.launching:
+    case UpdateFlowStatus.downloading:
+    case UpdateFlowStatus.installing:
       return state.updateAvailable
           ? l10n.updateStatusAvailable
           : l10n.updateStatusUpToDate;
