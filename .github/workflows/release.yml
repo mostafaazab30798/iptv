@@ -200,6 +200,8 @@ jobs:
           PORTAL="${PORTAL_ORIGIN:-$DEFAULT_PORTAL_ORIGIN}"
           ENTITLEMENT_KEYS="${ENTITLEMENT_PUBLIC_KEYS_JSON:-$DEFAULT_ENTITLEMENT_PUBLIC_KEYS_JSON}"
 
+          rm -f build/app/outputs/flutter-apk/app-release.apk
+
           TV_BUILD_ARGS=(
             --release
             --target-platform android-arm,android-arm64
@@ -208,7 +210,6 @@ jobs:
             "--dart-define=PORTAL_ORIGIN=${PORTAL}"
             "--dart-define=ENTITLEMENT_PUBLIC_KEYS_JSON=${ENTITLEMENT_KEYS}"
             "--dart-define=RELEASE_PUBLIC_KEYS_JSON=${RELEASE_PUBLIC_KEYS_JSON}"
-            --
             -PtvBuild=true
           )
 

@@ -69,7 +69,6 @@ if ($SeparatePackageId) {
 }
 
 if ($gradleArgs.Count -gt 0) {
-    $flutterArgs += "--"
     $flutterArgs += $gradleArgs
 }
 
