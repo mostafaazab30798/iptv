@@ -5,10 +5,10 @@
     "team_away": "نادي هيجان",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/18/12024_8_18_17_45.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/9/Heegan SC12026_8_9_19_27.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "16:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "بورنموث",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/NewcastleUnited2018_7_29_15_27.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Bournemouth2018_7_29_15_32.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "2",
     "time": "14:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "بى ان سبورت 1HD"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "كوفنتري سيتي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/ManchesterCity2018_7_29_15_27.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/teamlogo/476px-Coventry_City4517-1-2014-21-55-44.png",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "استراحة",
     "channel": "بى ان سبورت 1HD"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "سندرلاند",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/24/Brentford2018_9_24_13_3.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2015/3/23/Sunderland2015_3_23_13_59.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 5 HD"
   },
   {
@@ -53,10 +53,10 @@
     "team_away": "كريستال بالاس",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Fulham2018_7_29_15_26.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/8/19/CrystalPalace2021_8_19_15_7.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "1",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 4 HD"
   },
   {
@@ -65,10 +65,10 @@
     "team_away": "توتنهام هوتسبر",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/24/NottinghamForest2018_9_24_13_1.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/19/1482024_8_19_21_30.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "استراحة",
     "channel": "بى ان سبورت 2 HD"
   },
   {
@@ -77,10 +77,10 @@
     "team_away": "ليدز يونايتد",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Brighton2018_7_29_15_31.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/1/20/LeedsUnited2019_1_20_14_7.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "استراحة",
     "channel": "بى ان سبورت 3 HD"
   },
   {
@@ -101,10 +101,10 @@
     "team_away": "اتلتيكو مدريد",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/AthleticBilbao2018_7_29_14_44.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/11/132024_8_11_20_56.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "17:15",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 6 HD"
   },
   {
@@ -134,13 +134,13 @@
   {
     "league": "الدوري التركي",
     "team_home": "إيرزوروم سبور",
-    "team_away": "قونيا سبور",
+    "team_away": "كونيا سبور",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Erzurumspor2021_7_15_16_2.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Konyaspor2021_7_15_15_34.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "استراحة",
     "channel": "Not Available"
   },
   {
@@ -197,10 +197,10 @@
     "team_away": "تورينو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/Screenshot 2026-08-05 1746362026_8_5_17_45.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Torino2018_7_29_15_6.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "2",
     "time": "16:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Starz Play App"
   },
   {
@@ -233,10 +233,10 @@
     "team_away": "لايبزيج",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/WerderBremen2018_7_29_16_2.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Leipzig2018_7_29_16_8.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   },
   {
@@ -245,10 +245,10 @@
     "team_away": "فرايبورج",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Paderborn2018_9_12_13_11.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Freiburg2018_7_29_16_7.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   },
   {
@@ -257,10 +257,10 @@
     "team_away": "بروسيا دورتموند",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Hoffenheim2018_7_29_16_6.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/BorussiaDortmund2018_7_29_16_4.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "2",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   },
   {
@@ -269,10 +269,10 @@
     "team_away": "إس في إلفيرسبيرج",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Monchengladbach2018_7_29_16_7.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/Screenshot 2026-08-02 1929152026_8_2_19_28.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "2",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   },
   {
@@ -281,10 +281,10 @@
     "team_away": "يونيون برلين",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/BayerLeverkusen2018_7_29_16_6.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/UnionBerlin2018_9_12_13_37.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "4",
+    "score_away": "0",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   },
   {
@@ -305,10 +305,10 @@
     "team_away": "فاماليكاو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/11/22/72023_11_22_18_57.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2020/3/16/Famalicao12020_3_16_19_44.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "17:30",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   },
   {
@@ -389,10 +389,10 @@
     "team_away": "حتا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/BaniYas2018_7_26_11_52.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/logoL_1374551152026_8_2_20_26.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "16:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "أبوظبي الرياضية - HD1"
   },
   {
@@ -401,10 +401,10 @@
     "team_away": "يونايتد اف سي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/logoL_14632647842026_8_2_20_22.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/527001955_122093570684972004_1405618893921874169_n2026_8_2_20_36.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "2",
     "time": "16:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "أبوظبي الرياضية - HD 2"
   },
   {
@@ -425,10 +425,10 @@
     "team_away": "الدحيل",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/12026_8_5_22_58.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/AlDuhail2018_7_26_12_12.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "استراحة",
     "channel": "Not Available"
   },
   {
