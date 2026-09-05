@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,7 @@ import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/scroll/desktop_smooth_scroll.dart';
 import 'package:iptv/shared/layouts/responsive_builder.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
@@ -70,12 +72,21 @@ class _HomeContent extends ConsumerStatefulWidget {
 }
 
 class _HomeContentState extends ConsumerState<_HomeContent> {
-  bool _heroAutoPlay = true;
+  final ValueNotifier<bool> _heroAutoPlayNotifier = ValueNotifier<bool>(true);
+  late final ScrollController _scrollController;
   Timer? _resumeHeroTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = DesktopSmoothScrollController();
+  }
 
   @override
   void dispose() {
     _resumeHeroTimer?.cancel();
+    _heroAutoPlayNotifier.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -87,14 +98,14 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     if (notification is ScrollStartNotification ||
         notification is ScrollUpdateNotification) {
       _resumeHeroTimer?.cancel();
-      if (_heroAutoPlay) {
-        setState(() => _heroAutoPlay = false);
+      if (_heroAutoPlayNotifier.value) {
+        _heroAutoPlayNotifier.value = false;
       }
     } else if (notification is ScrollEndNotification) {
       _resumeHeroTimer?.cancel();
       _resumeHeroTimer = Timer(const Duration(milliseconds: 700), () {
-        if (mounted && !_heroAutoPlay) {
-          setState(() => _heroAutoPlay = true);
+        if (mounted && !_heroAutoPlayNotifier.value) {
+          _heroAutoPlayNotifier.value = true;
         }
       });
     }
@@ -207,22 +218,26 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
           child: MediaQuery.removePadding(
             context: context,
             removeTop: true,
-            child: CustomScrollView(
-              // Platform-default physics; AlwaysScrollable enables pull-to-refresh.
-              physics: const AlwaysScrollableScrollPhysics(),
-              cacheExtent: 160,
-              slivers: [
-                _HomeHeroSliver(autoPlay: _heroAutoPlay),
-                const _HomeContinueWatchingSliver(),
-                const _HomeFeaturedMoviesSliver(),
-                const _HomePopularSeriesSliver(),
-                const _HomeSportsChannelsSliver(),
-                const _HomeNewsChannelsSliver(),
-                const _HomeFavoritesSliver(),
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppSpacing.xxl),
-                ),
-              ],
+            child: DesktopSmoothScrollView(
+              controller: _scrollController,
+              child: CustomScrollView(
+                controller: _scrollController,
+                // Platform-default physics; AlwaysScrollable enables pull-to-refresh.
+                physics: const AlwaysScrollableScrollPhysics(),
+                cacheExtent: 240,
+                slivers: [
+                  _HomeHeroSliver(autoPlayNotifier: _heroAutoPlayNotifier),
+                  const _HomeContinueWatchingSliver(),
+                  const _HomeFeaturedMoviesSliver(),
+                  const _HomePopularSeriesSliver(),
+                  const _HomeSportsChannelsSliver(),
+                  const _HomeNewsChannelsSliver(),
+                  const _HomeFavoritesSliver(),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: AppSpacing.xxl),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -232,9 +247,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
 }
 
 class _HomeHeroSliver extends ConsumerWidget {
-  const _HomeHeroSliver({required this.autoPlay});
+  const _HomeHeroSliver({required this.autoPlayNotifier});
 
-  final bool autoPlay;
+  final ValueListenable<bool> autoPlayNotifier;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -253,14 +268,19 @@ class _HomeHeroSliver extends ConsumerWidget {
     return SliverToBoxAdapter(
       child: RepaintBoundary(
         key: const ValueKey('home-hero'),
-        child: HomeHeroBanner(
-          item: hero.item,
-          items: hero.items,
-          autoPlay: autoPlay,
-          onPlay: (item) => _HomePlayback.playHero(context, ref, item),
-          onRefresh: () => ref
-              .read(homeControllerProvider.notifier)
-              .loadData(forceRefresh: true),
+        child: ValueListenableBuilder<bool>(
+          valueListenable: autoPlayNotifier,
+          builder: (context, autoPlay, _) {
+            return HomeHeroBanner(
+              item: hero.item,
+              items: hero.items,
+              autoPlay: autoPlay,
+              onPlay: (item) => _HomePlayback.playHero(context, ref, item),
+              onRefresh: () => ref
+                  .read(homeControllerProvider.notifier)
+                  .loadData(forceRefresh: true),
+            );
+          },
         ),
       ),
     );

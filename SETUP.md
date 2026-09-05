@@ -72,11 +72,32 @@ flutter run -d <android-device-id>
 
 ### 3. Android TV / Google TV
 Ensure your Android TV device is connected via ADB over Wi-Fi or USB:
+
+**A. Run from command line or scripts:**
 ```bash
+# Connect over Wi-Fi
 adb connect <tv-ip-address>:5555
-flutter run -d <tv-device-id>
+
+# Run directly on TV
+flutter run -d <tv-device-id> --dart-define-from-file=.env.local
 ```
-*Tip: Test navigation using the TV D-pad or keyboard arrow keys.*
+
+**B. Build dedicated TV APK:**
+```powershell
+# Standard TV APK (same package ID)
+.\scripts\android\build_tv_apk.ps1
+
+# Dedicated TV package ID (com.hopetv.iptvplayer.tv) for side-by-side installs
+.\scripts\android\build_tv_apk.ps1 -SeparatePackageId
+
+# Install directly to your connected TV:
+.\scripts\android\install_tv.ps1 -DeviceIp <tv-ip-address>
+```
+
+**C. VS Code:**
+Select **HOPE TV Android TV (configured)** or **HOPE TV Android TV (Focus Inspector)** from the Run & Debug menu.
+
+*Tip: Test navigation using the TV remote D-pad (directional arrows, OK, and Back).*
 
 ### 4. Web
 ```bash

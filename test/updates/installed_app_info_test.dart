@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/app/providers.dart';
+import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/core/releases/installed_app_info.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 void main() {
   group('UpdatePlatformTarget', () {
@@ -48,6 +50,36 @@ void main() {
     test('rejects invalid build numbers', () async {
       final info = FakeInstalledAppInfo(version: '1.0.0', buildNumber: null);
       expect(await info.getBuildNumber(), isNull);
+    });
+  });
+
+  group('PackageInfoInstalledAppInfo', () {
+    test('falls back to AppConstants on empty buildNumber and version', () async {
+      final info = PackageInfoInstalledAppInfo(
+        packageInfo: PackageInfo(
+          appName: 'HOPE IPTV',
+          packageName: 'com.hopetv.iptv',
+          version: '',
+          buildNumber: '',
+          buildSignature: '',
+        ),
+      );
+      expect(await info.getVersion(), AppConstants.appVersion);
+      expect(await info.getBuildNumber(), AppConstants.appBuildNumber);
+    });
+
+    test('uses real values when packageInfo is valid', () async {
+      final info = PackageInfoInstalledAppInfo(
+        packageInfo: PackageInfo(
+          appName: 'HOPE IPTV',
+          packageName: 'com.hopetv.iptv',
+          version: '3.0.0',
+          buildNumber: '99',
+          buildSignature: '',
+        ),
+      );
+      expect(await info.getVersion(), '3.0.0');
+      expect(await info.getBuildNumber(), 99);
     });
   });
 

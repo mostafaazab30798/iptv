@@ -18,7 +18,7 @@ enum PlayerErrorType {
         PlayerErrorType.playbackFailure => true,
         PlayerErrorType.unauthorized => false,
         PlayerErrorType.invalidSource => false,
-        PlayerErrorType.unsupportedFormat => false,
+        PlayerErrorType.unsupportedFormat => true,
         PlayerErrorType.codecError => false,
         PlayerErrorType.unknown => true,
       };

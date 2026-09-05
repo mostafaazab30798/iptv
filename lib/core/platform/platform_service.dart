@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
 import 'package:iptv/core/platform/platform_io.dart'
     if (dart.library.html) 'package:iptv/core/platform/platform_web.dart'
     as plat;
@@ -37,18 +37,26 @@ class PlatformService {
       _platformType = PlatformType.androidTv;
     }
     await plat.initPlatformWindow();
+    final initialFull = await plat.isPlatformFullScreen();
+    isFullScreenNotifier.value = initialFull;
   }
 
   PlatformType get platformType => _platformType;
 
+  /// Observable notifier for fullscreen state.
+  final ValueNotifier<bool> isFullScreenNotifier = ValueNotifier<bool>(false);
+
   /// Sets true borderless fullscreen mode on Windows/macOS/Linux, Web, and Android/iOS.
   Future<void> setFullScreen(bool isFullScreen) async {
     await plat.setPlatformFullScreen(isFullScreen);
+    isFullScreenNotifier.value = isFullScreen;
   }
 
   /// Checks if true fullscreen mode is currently active.
-  Future<bool> isFullScreen() {
-    return plat.isPlatformFullScreen();
+  Future<bool> isFullScreen() async {
+    final full = await plat.isPlatformFullScreen();
+    isFullScreenNotifier.value = full;
+    return full;
   }
 
   // ---------------------------------------------------------------------------
@@ -72,6 +80,10 @@ class PlatformService {
   bool get supportsPip => isAndroid || isWindows;
   bool get supportsNativePlayer => isAndroid || isWindows;
   bool get supportsMouse => isWindows || isWeb;
+
+  Future<void> minimizeWindow() => plat.minimizePlatformWindow();
+
+  void exitApp() => plat.exitPlatformApp();
 
   // ---------------------------------------------------------------------------
   // Internal helpers

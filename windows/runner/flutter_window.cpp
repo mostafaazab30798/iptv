@@ -27,6 +27,33 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  // Register the custom platform channel for true borderless immersion fullscreen.
+  platform_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(),
+      "com.hopetv.iptvplayer/platform",
+      &flutter::StandardMethodCodec::GetInstance());
+
+  platform_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == "setFullScreen") {
+          bool is_fullscreen = false;
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args) {
+            auto it = args->find(flutter::EncodableValue("isFullScreen"));
+            if (it != args->end() && std::holds_alternative<bool>(it->second)) {
+              is_fullscreen = std::get<bool>(it->second);
+            }
+          }
+          this->SetFullScreen(is_fullscreen);
+          result->Success();
+        } else if (call.method_name() == "isFullScreen") {
+          result->Success(flutter::EncodableValue(this->IsFullScreen()));
+        } else {
+          result->NotImplemented();
+        }
+      });
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -40,6 +67,10 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  if (platform_channel_) {
+    platform_channel_->SetMethodCallHandler(nullptr);
+    platform_channel_ = nullptr;
+  }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }

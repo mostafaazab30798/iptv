@@ -107,6 +107,18 @@ class LiveController extends StateNotifier<LiveState> {
         err: (_) => <Category>[],
       );
 
+      final names = <int, String>{};
+      for (final cat in categories) {
+        names[cat.id] = cat.name;
+      }
+
+      // Immediately render categories so the screen is never stuck blank
+      state = state.copyWith(
+        categories: categories,
+        categoryNames: names,
+        isLoading: false,
+      );
+
       final chanResult = await repo.getChannels(
         categoryId: null,
         forceRefresh: forceRefresh,
@@ -130,11 +142,6 @@ class LiveController extends StateNotifier<LiveState> {
         }
       }
 
-      final names = <int, String>{};
-      for (final cat in categories) {
-        names[cat.id] = cat.name;
-      }
-
       final selectedId = state.selectedCategoryId;
       final List<Channel> visible;
       if (state.filteredChannels.isNotEmpty || selectedId != null) {
@@ -148,13 +155,10 @@ class LiveController extends StateNotifier<LiveState> {
 
       if (!mounted) return;
       state = state.copyWith(
-        categories: categories,
         filteredChannels: visible,
         totalChannelCount: channels.length,
         categoryCounts: counts,
         categoryLeadingChannels: leading,
-        categoryNames: names,
-        isLoading: false,
       );
     } catch (e) {
       if (!mounted) return;
@@ -165,12 +169,32 @@ class LiveController extends StateNotifier<LiveState> {
   /// Open a single category page (scoped list only).
   void selectCategory(int categoryId) {
     _searchDebounce?.cancel();
+    if (_catalog.isEmpty) {
+      state = state.copyWith(
+        selectedCategoryId: categoryId,
+        searchQuery: '',
+        filteredChannels: const [],
+      );
+      _loadCategoryChannelsOnDemand(categoryId);
+      return;
+    }
     final filtered = _catalog.where((c) => c.categoryId == categoryId).toList();
     state = state.copyWith(
       selectedCategoryId: categoryId,
       searchQuery: '',
       filteredChannels: filtered,
     );
+  }
+
+  Future<void> _loadCategoryChannelsOnDemand(int categoryId) async {
+    final repo = _liveRepo;
+    if (repo == null) return;
+    try {
+      final res = await repo.getChannels(categoryId: categoryId);
+      if (!mounted || state.selectedCategoryId != categoryId) return;
+      final channels = res.when(ok: (c) => c, err: (_) => <Channel>[]);
+      state = state.copyWith(filteredChannels: channels);
+    } catch (_) {}
   }
 
   /// "All channels" — one visible page over the shared catalog reference.

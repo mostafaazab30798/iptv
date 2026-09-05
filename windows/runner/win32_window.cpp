@@ -150,7 +150,7 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  return ShowWindow(window_handle_, is_fullscreen_ ? SW_SHOW : SW_SHOWNORMAL);
 }
 
 // static
@@ -257,6 +257,91 @@ RECT Win32Window::GetClientArea() {
 
 HWND Win32Window::GetHandle() {
   return window_handle_;
+}
+
+void Win32Window::SetFullScreen(bool fullscreen) {
+  if (is_fullscreen_ == fullscreen) {
+    return;
+  }
+
+  HWND hwnd = GetHandle();
+  if (!hwnd) return;
+
+  if (fullscreen) {
+    wp_prev_.length = sizeof(WINDOWPLACEMENT);
+    ::GetWindowPlacement(hwnd, &wp_prev_);
+
+    style_prev_ = ::GetWindowLong(hwnd, GWL_STYLE);
+    ex_style_prev_ = ::GetWindowLong(hwnd, GWL_EXSTYLE);
+
+    if (style_prev_ == 0) {
+      style_prev_ = WS_OVERLAPPEDWINDOW;
+    }
+
+    if (wp_prev_.showCmd == SW_HIDE || wp_prev_.showCmd == 0) {
+      wp_prev_.showCmd = SW_SHOWNORMAL;
+    }
+    if (wp_prev_.rcNormalPosition.right <= wp_prev_.rcNormalPosition.left ||
+        wp_prev_.rcNormalPosition.bottom <= wp_prev_.rcNormalPosition.top) {
+      wp_prev_.rcNormalPosition.left = 100;
+      wp_prev_.rcNormalPosition.top = 100;
+      wp_prev_.rcNormalPosition.right = 1380;
+      wp_prev_.rcNormalPosition.bottom = 820;
+    }
+
+    HMONITOR monitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi = { sizeof(mi) };
+    if (!::GetMonitorInfo(monitor, &mi)) {
+      return;
+    }
+
+    // Strip caption (titlebar), borders, sizing frame, system menu, and maximize/minimize buttons
+    DWORD style = style_prev_;
+    style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_MAXIMIZE);
+    ::SetWindowLongPtr(hwnd, GWL_STYLE, style);
+
+    DWORD ex_style = ex_style_prev_;
+    ex_style &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE | WS_EX_WINDOWEDGE);
+    ::SetWindowLongPtr(hwnd, GWL_EXSTYLE, ex_style);
+
+    // Cover the entire monitor rectangle, on top of the taskbar
+    ::SetWindowPos(hwnd, HWND_TOP,
+                   mi.rcMonitor.left, mi.rcMonitor.top,
+                   mi.rcMonitor.right - mi.rcMonitor.left,
+                   mi.rcMonitor.bottom - mi.rcMonitor.top,
+                   SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+
+    is_fullscreen_ = true;
+  } else {
+    DWORD target_style = style_prev_ != 0 ? style_prev_ : WS_OVERLAPPEDWINDOW;
+    ::SetWindowLongPtr(hwnd, GWL_STYLE, target_style);
+    ::SetWindowLongPtr(hwnd, GWL_EXSTYLE, ex_style_prev_);
+
+    if (wp_prev_.showCmd == SW_HIDE || wp_prev_.showCmd == 0) {
+      wp_prev_.showCmd = SW_SHOWNORMAL;
+    }
+    if (wp_prev_.rcNormalPosition.right <= wp_prev_.rcNormalPosition.left ||
+        wp_prev_.rcNormalPosition.bottom <= wp_prev_.rcNormalPosition.top) {
+      wp_prev_.rcNormalPosition.left = 100;
+      wp_prev_.rcNormalPosition.top = 100;
+      wp_prev_.rcNormalPosition.right = 1380;
+      wp_prev_.rcNormalPosition.bottom = 820;
+    }
+
+    ::SetWindowPlacement(hwnd, &wp_prev_);
+
+    int show_cmd = (wp_prev_.showCmd == SW_SHOWMAXIMIZED) ? SW_MAXIMIZE : SW_SHOWNORMAL;
+    ::ShowWindow(hwnd, show_cmd);
+
+    ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+
+    is_fullscreen_ = false;
+  }
+}
+
+bool Win32Window::IsFullScreen() const {
+  return is_fullscreen_;
 }
 
 void Win32Window::SetQuitOnClose(bool quit_on_close) {

@@ -30,3 +30,7 @@ Future<bool> isPlatformFullScreen() async {
     return false;
   }
 }
+
+Future<void> minimizePlatformWindow() async {}
+
+void exitPlatformApp() {}

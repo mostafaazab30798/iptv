@@ -29,12 +29,16 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    val isTvBuild = project.hasProperty("tvBuild") || project.findProperty("appSuffix") == "tv"
+    val appIdSuffix = if (isTvBuild) ".tv" else ""
+
     defaultConfig {
-        applicationId = "com.hopetv.iptvplayer"
+        applicationId = "com.hopetv.iptvplayer$appIdSuffix"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appLabel"] = if (isTvBuild) "HOPE TV" else "HOPE IPTV"
     }
 
     signingConfigs {

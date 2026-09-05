@@ -102,6 +102,18 @@ class SeriesController extends StateNotifier<SeriesState> {
         err: (_) => <Category>[],
       );
 
+      final names = <int, String>{};
+      for (final cat in categories) {
+        names[cat.id] = cat.name;
+      }
+
+      // Immediately render categories so the screen is never stuck blank
+      state = state.copyWith(
+        categories: categories,
+        categoryNames: names,
+        isLoading: false,
+      );
+
       final seriesResult = await repo.getSeries(
         categoryId: null,
         forceRefresh: forceRefresh,
@@ -126,11 +138,6 @@ class SeriesController extends StateNotifier<SeriesState> {
         }
       }
 
-      final names = <int, String>{};
-      for (final cat in categories) {
-        names[cat.id] = cat.name;
-      }
-
       final selectedId = state.selectedCategoryId;
       final List<Series> visible;
       if (state.filteredSeries.isNotEmpty || selectedId != null) {
@@ -143,13 +150,10 @@ class SeriesController extends StateNotifier<SeriesState> {
 
       if (!mounted) return;
       state = state.copyWith(
-        categories: categories,
         filteredSeries: visible,
         totalSeriesCount: list.length,
         categoryCounts: counts,
         categoryLeadingCovers: leadingCovers,
-        categoryNames: names,
-        isLoading: false,
       );
     } catch (e) {
       if (!mounted) return;
@@ -164,14 +168,37 @@ class SeriesController extends StateNotifier<SeriesState> {
       return;
     }
 
+    final cached = _catalog
+        .where((s) => s.categoryId == categoryId)
+        .toList();
+    if (cached.isNotEmpty || _seriesRepo == null) {
+      state = state.copyWith(
+        selectedCategoryId: categoryId,
+        searchQuery: '',
+        filteredSeries: cached,
+        isLoading: false,
+      );
+      return;
+    }
+
     state = state.copyWith(
       selectedCategoryId: categoryId,
       searchQuery: '',
-      filteredSeries: _catalog
-          .where((s) => s.categoryId == categoryId)
-          .toList(),
-      isLoading: false,
+      filteredSeries: const [],
+      isLoading: true,
     );
+
+    try {
+      final res = await _seriesRepo.getSeries(categoryId: categoryId);
+      if (!mounted || state.selectedCategoryId != categoryId) return;
+      final seriesList = res.when(ok: (s) => s, err: (_) => <Series>[]);
+      state = state.copyWith(
+        filteredSeries: seriesList,
+        isLoading: false,
+      );
+    } catch (_) {
+      if (mounted) state = state.copyWith(isLoading: false);
+    }
   }
 
   void showAllSeries() {

@@ -143,7 +143,7 @@ jobs:
             echo "storeFile=../keystore/hope-tv-release.jks"
           } > android/key.properties
 
-      - name: Build arm64 release APK
+      - name: Build Android mobile release APK (arm64-v8a)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -178,23 +178,60 @@ jobs:
 
           flutter build apk "${BUILD_ARGS[@]}"
 
-      - name: Prepare Android artifact metadata
-        id: artifact
-        run: |
-          set -euo pipefail
           mkdir -p dist/android
-          TARGET_FILE="dist/android/HOPE_IPTV.apk"
           if [ -f build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ]; then
-            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$TARGET_FILE"
+            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "dist/android/HOPE_IPTV.apk"
           elif [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
-            cp build/app/outputs/flutter-apk/app-release.apk "$TARGET_FILE"
+            cp build/app/outputs/flutter-apk/app-release.apk "dist/android/HOPE_IPTV.apk"
           else
             echo "::error::No generated release APK found."
             exit 1
           fi
 
+      - name: Build Android TV release APK (Universal TV)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PORTAL_ORIGIN: ${{ secrets.PORTAL_ORIGIN }}
+          ENTITLEMENT_PUBLIC_KEYS_JSON: ${{ secrets.ENTITLEMENT_PUBLIC_KEYS_JSON }}
+          RELEASE_PUBLIC_KEYS_JSON: ${{ secrets.RELEASE_PUBLIC_KEYS_JSON }}
+        run: |
+          set -euo pipefail
+          PORTAL="${PORTAL_ORIGIN:-$DEFAULT_PORTAL_ORIGIN}"
+          ENTITLEMENT_KEYS="${ENTITLEMENT_PUBLIC_KEYS_JSON:-$DEFAULT_ENTITLEMENT_PUBLIC_KEYS_JSON}"
+
+          TV_BUILD_ARGS=(
+            --release
+            --target-platform android-arm,android-arm64
+            "--dart-define=SUPABASE_URL=${SUPABASE_URL}"
+            "--dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+            "--dart-define=PORTAL_ORIGIN=${PORTAL}"
+            "--dart-define=ENTITLEMENT_PUBLIC_KEYS_JSON=${ENTITLEMENT_KEYS}"
+            "--dart-define=RELEASE_PUBLIC_KEYS_JSON=${RELEASE_PUBLIC_KEYS_JSON}"
+            --
+            -PtvBuild=true
+          )
+
+          flutter build apk "${TV_BUILD_ARGS[@]}"
+
+          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-release.apk "dist/android/HOPE_TV_Android_TV.apk"
+          else
+            echo "::error::No generated Android TV release APK found."
+            exit 1
+          fi
+
+      - name: Prepare Android artifact metadata
+        id: artifact
+        run: |
+          set -euo pipefail
+          TARGET_FILE="dist/android/HOPE_IPTV.apk"
+          TV_TARGET_FILE="dist/android/HOPE_TV_Android_TV.apk"
+
           FILE_SIZE=$(stat -c%s "$TARGET_FILE")
           SHA256_HASH=$(sha256sum "$TARGET_FILE" | awk '{print $1}')
+          TV_FILE_SIZE=$(stat -c%s "$TV_TARGET_FILE")
+          TV_SHA256_HASH=$(sha256sum "$TV_TARGET_FILE" | awk '{print $1}')
 
           AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -name aapt 2>/dev/null | sort -V | tail -1 || true)
           ANDROID_BUILD_NUM=""
@@ -210,12 +247,16 @@ jobs:
           echo "file_path=${TARGET_FILE}" >> "$GITHUB_OUTPUT"
           echo "file_size=${FILE_SIZE}" >> "$GITHUB_OUTPUT"
           echo "sha256=${SHA256_HASH}" >> "$GITHUB_OUTPUT"
+          echo "tv_file_name=HOPE_TV_Android_TV.apk" >> "$GITHUB_OUTPUT"
+          echo "tv_file_path=${TV_TARGET_FILE}" >> "$GITHUB_OUTPUT"
+          echo "tv_file_size=${TV_FILE_SIZE}" >> "$GITHUB_OUTPUT"
+          echo "tv_sha256=${TV_SHA256_HASH}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload Android artifact
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-release
-          path: dist/android/HOPE_IPTV.apk
+          path: dist/android/
           if-no-files-found: error
 
   build-windows:
@@ -332,17 +373,22 @@ jobs:
         run: |
           set -euo pipefail
           ANDROID_FILE="dist/android/HOPE_IPTV.apk"
+          ANDROID_TV_FILE="dist/android/HOPE_TV_Android_TV.apk"
           WINDOWS_FILE="dist/windows/HOPE_IPTV_Setup.exe"
           ANDROID_SIZE=$(stat -c%s "$ANDROID_FILE")
           ANDROID_SHA=$(sha256sum "$ANDROID_FILE" | awk '{print $1}')
+          ANDROID_TV_SIZE=$(stat -c%s "$ANDROID_TV_FILE")
+          ANDROID_TV_SHA=$(sha256sum "$ANDROID_TV_FILE" | awk '{print $1}')
           WINDOWS_SIZE=$(stat -c%s "$WINDOWS_FILE")
           WINDOWS_SHA=$(sha256sum "$WINDOWS_FILE" | awk '{print $1}')
           echo "android_size=${ANDROID_SIZE}" >> "$GITHUB_OUTPUT"
           echo "android_sha=${ANDROID_SHA}" >> "$GITHUB_OUTPUT"
+          echo "android_tv_size=${ANDROID_TV_SIZE}" >> "$GITHUB_OUTPUT"
+          echo "android_tv_sha=${ANDROID_TV_SHA}" >> "$GITHUB_OUTPUT"
           echo "windows_size=${WINDOWS_SIZE}" >> "$GITHUB_OUTPUT"
           echo "windows_sha=${WINDOWS_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release with both assets
+      - name: Create GitHub Release with all assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version.outputs.tag_name }}
@@ -357,12 +403,15 @@ jobs:
             - **Commit**: `${{ github.sha }}`
 
             ### Artifacts
-            - **Android APK (arm64-v8a)**: `HOPE_IPTV.apk`
+            - **Android Mobile APK (arm64-v8a)**: `HOPE_IPTV.apk`
               - SHA-256: `${{ steps.meta.outputs.android_sha }}`
+            - **Android TV APK (Universal arm/arm64)**: `HOPE_TV_Android_TV.apk`
+              - SHA-256: `${{ steps.meta.outputs.android_tv_sha }}`
             - **Windows installer (x64)**: `HOPE_IPTV_Setup.exe`
               - SHA-256: `${{ steps.meta.outputs.windows_sha }}`
           files: |
             dist/android/HOPE_IPTV.apk
+            dist/android/HOPE_TV_Android_TV.apk
             dist/windows/HOPE_IPTV_Setup.exe
           fail_on_unmatched_files: true
 

@@ -19,6 +19,25 @@
       "toolArgs": [
         "--dart-define-from-file=.env.local"
       ]
+    },
+    {
+      "name": "HOPE TV Android TV (configured)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--dart-define-from-file=.env.local"
+      ]
+    },
+    {
+      "name": "HOPE TV Android TV (Focus Inspector)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--dart-define-from-file=.env.local",
+        "--dart-define=TV_FOCUS_INSPECTOR=true"
+      ]
     }
   ]
 }

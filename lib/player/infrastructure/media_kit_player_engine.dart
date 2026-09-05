@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
+import 'package:iptv/core/constants/api_constants.dart';
 import 'package:iptv/player/domain/entities/player_metrics.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
@@ -171,36 +172,33 @@ class MediaKitPlayerEngine implements PlayerEngine {
     await _setProperty('deinterlace', 'no');
 
     // ── Hardware decoding & multithreading ────────────────────────────────────
-    // Android stays on media_kit's auto-safe path (mediacodec-copy). Overriding
-    // to hwdec=auto enables zero-copy Surfaces that fight Flutter Impeller and
-    // spam Huawei/Honor GLES_DRAW "viewport prepare failed" logs.
+    // auto-safe ensures safe copy-back hwdec methods and clean software fallback
+    // if hardware decoding is unavailable or unsupported for the stream's format.
     if (enableHardwareAcceleration && !_isAndroidHost) {
-      await _setProperty('hwdec', 'auto');
+      await _setProperty('hwdec', 'auto-safe');
       await _setProperty('hwdec-codecs', 'all');
     }
     // Full-quality lavc path: never enable vd-lavc-fast (it skips deblocking and
-    // produces visible macroblocking on IPTV H.264). Error concealment softens
-    // mid-GOP packet loss until the next keyframe.
+    // produces visible macroblocking on IPTV H.264).
     await _setProperty('vd-lavc-fast', 'no');
-    await _setProperty('vd-lavc-o', 'ec=deblock+favor_inter');
     await _setProperty('vd-lavc-threads', '0'); // Auto-detect CPU core count
     await _setProperty('demuxer-thread', 'yes'); // Demux on separate thread
 
-    // ── Stream probing: fast startup ─────────────────────────────────────────
+    // ── Stream probing: reliable detection for IPTV MPEG-TS / HLS ─────────────
     await _setProperty('demuxer-lavf-o', 'fflags=+genpts+discardcorrupt');
-    await _setProperty('demuxer-lavf-probesize', '1048576'); // 1MB probe
-    await _setProperty('demuxer-lavf-analyzeduration', '0.5');
-    await _setProperty('demuxer-lavf-buffersize', '1048576'); // 1MB network chunk buffer
+    await _setProperty('demuxer-lavf-probesize', '8388608'); // 8MB probe buffer for live MPEG-TS
+    await _setProperty('demuxer-lavf-analyzeduration', '3.0'); // 3s analysis duration (not 0.5s)
+    await _setProperty('demuxer-lavf-buffersize', '2097152'); // 2MB chunk buffer
 
     // ── Buffer sizing per active mode ─────────────────────────────────────────
     await _applyBufferModeProperties(_bufferMode);
     await _applyCachePausePolicy(isLive: false);
 
-    // ── Network: persistent connections, best quality ABR ────────────────────
-    await _setProperty('network-timeout', '10'); // Fail fast on dead streams
-    await _setProperty('http-header-fields', 'Connection: keep-alive');
-    await _setProperty('tls-verify', 'no'); // Some IPTV providers use self-signed certs
+    // ── Network: persistent connections, best quality ABR & IPTV headers ─────
+    await _setProperty('network-timeout', '15'); // 15s network timeout
+    await _setProperty('tls-verify', 'no'); // IPTV servers often use self-signed certs
     await _setProperty('hls-bitrate', 'max');
+    await _setProperty('user-agent', ApiConstants.defaultUserAgent);
   }
 
   Future<void> _applyBufferModeProperties(PlaybackBufferMode mode) async {
@@ -224,10 +222,13 @@ class MediaKitPlayerEngine implements PlayerEngine {
   }
 
   Future<void> _setProperty(String name, String value) async {
+    if (kIsWeb) return;
     try {
       final platform = _player?.platform;
       if (platform != null) {
-        await (platform as dynamic).setProperty(name, value);
+        final dynamic nativePlatform = platform;
+        // ignore: avoid_dynamic_calls
+        await nativePlatform.setProperty(name, value);
       }
     } catch (_) {
       // Platform doesn't support direct setProperty (e.g. non-native or test mock)
@@ -414,18 +415,25 @@ class MediaKitPlayerEngine implements PlayerEngine {
     if (_player == null || _status == PlayerStatus.disposed || _status == PlayerStatus.idle) return;
 
     try {
+      if (kIsWeb) return;
       final platform = _player?.platform;
       if (platform is! mk.NativePlayer) return;
+      final dynamic nativePlatform = platform;
 
       // Keep release polling lean: these signals drive network-buffer and
       // software-decoder adaptation. Reads are concurrent to avoid serial
       // platform-channel latency on Android TV and lower-powered devices.
+      Future<dynamic> getProp(String name) {
+        // ignore: avoid_dynamic_calls
+        return nativePlatform.getProperty(name) as Future<dynamic>;
+      }
+
       final adaptiveResults = await Future.wait<dynamic>([
-        platform.getProperty('demuxer-cache-duration'),
-        platform.getProperty('cache-buffering-state'),
-        platform.getProperty('frame-drop-count'),
-        platform.getProperty('decoder-frame-drop-count'),
-        platform.getProperty('hwdec-current'),
+        getProp('demuxer-cache-duration'),
+        getProp('cache-buffering-state'),
+        getProp('frame-drop-count'),
+        getProp('decoder-frame-drop-count'),
+        getProp('hwdec-current'),
       ]);
 
       if (_status == PlayerStatus.disposed || _player == null) return;
@@ -442,10 +450,10 @@ class MediaKitPlayerEngine implements PlayerEngine {
       dynamic pixelFormatStr;
       if (kDebugMode) {
         final diagnosticsResults = await Future.wait<dynamic>([
-          platform.getProperty('estimated-vf-fps'),
-          platform.getProperty('video-bitrate'),
-          platform.getProperty('video-codec'),
-          platform.getProperty('video-params/pixelformat'),
+          getProp('estimated-vf-fps'),
+          getProp('video-bitrate'),
+          getProp('video-codec'),
+          getProp('video-params/pixelformat'),
         ]);
         if (_status == PlayerStatus.disposed || _player == null) return;
         fpsStr = diagnosticsResults[0];
@@ -528,23 +536,35 @@ class MediaKitPlayerEngine implements PlayerEngine {
       }
       if (epoch != _operationEpoch) return;
 
-      _currentSource = source;
+      final effectiveHeaders = <String, String>{
+        ApiConstants.userAgentHeader: ApiConstants.defaultUserAgent,
+        'Connection': 'keep-alive',
+        ...source.headers,
+      };
+      final effectiveSource = source.copyWith(headers: effectiveHeaders);
+      _currentSource = effectiveSource;
       _firstFrameReceived = false;
       _openStartTime = DateTime.now();
       _updateStatus(PlayerStatus.loading);
 
-      PlayerLogger.open(source.title, streamType: source.streamType.name);
+      PlayerLogger.open(effectiveSource.title, streamType: effectiveSource.streamType.name);
 
       try {
         // Re-apply buffer + cache-pause policy every open so live sports stay
         // near the edge even after prior VOD / mode changes on the same engine.
         await _applyBufferModeProperties(_bufferMode);
-        await _applyCachePausePolicy(isLive: source.profile.isLive);
+        await _applyCachePausePolicy(isLive: effectiveSource.profile.isLive);
         if (epoch != _operationEpoch) return;
+
+        // Set user-agent on mpv context for sub-segment / playlist fetches
+        final ua = effectiveHeaders[ApiConstants.userAgentHeader] ??
+            effectiveHeaders['user-agent'] ??
+            ApiConstants.defaultUserAgent;
+        await _setProperty('user-agent', ua);
 
         // For live streams or reconnects, cleanly stop previous stalled engine pipeline
         // so mpv tears down the stalled socket and immediately catches up with the fresh live edge.
-        if (source.profile.isLive) {
+        if (effectiveSource.profile.isLive) {
           try {
             await _player?.stop();
           } catch (_) {}
@@ -552,9 +572,9 @@ class MediaKitPlayerEngine implements PlayerEngine {
         if (epoch != _operationEpoch) return;
 
         final media = mk.Media(
-          source.url,
-          httpHeaders: source.headers.isNotEmpty ? source.headers : null,
-          start: source.profile.isLive ? null : source.startAt,
+          effectiveSource.url,
+          httpHeaders: effectiveHeaders,
+          start: effectiveSource.profile.isLive ? null : effectiveSource.startAt,
         );
 
         await _player?.open(media, play: true);
@@ -773,13 +793,32 @@ class MediaKitPlayerEngine implements PlayerEngine {
         lower.contains('ignoring option') ||
         lower.contains('unsupported parameter') ||
         lower.contains('skipping packet') ||
-        lower.contains('pts without');
+        lower.contains('pts without') ||
+        lower.contains('_setproperty') ||
+        lower.contains('property format unsupported') ||
+        lower.contains('property not found') ||
+        lower.contains('falling back to software') ||
+        lower.contains('hardware decoder') ||
+        lower.contains('hwdec') ||
+        lower.contains('missing marker bit') ||
+        lower.contains('invalid nal unit') ||
+        lower.contains('non-monotonous') ||
+        lower.contains('error while decoding frame') ||
+        lower.contains('sub') ||
+        lower.contains('subtitle') ||
+        lower.contains('track');
   }
 
   void _handleBackendError(String rawError) {
     final safeError = PlayerLogger.sanitizeMessage(rawError);
     if (_isNonFatalMessage(rawError)) {
       PlayerLogger.note('MediaKit non-fatal note: $safeError');
+      return;
+    }
+
+    // Active playback should not be interrupted by background decoder/stream warnings
+    if (_status == PlayerStatus.playing && _firstFrameReceived) {
+      PlayerLogger.note('MediaKit in-playback warning (ignored): $safeError');
       return;
     }
 
@@ -807,10 +846,15 @@ class MediaKitPlayerEngine implements PlayerEngine {
     if (lower.contains('network') || lower.contains('connection refused') || lower.contains('host')) {
       return PlayerErrorType.networkUnavailable;
     }
-    if (lower.contains('codec') || lower.contains('decoder')) {
+    if (lower.contains('could not find codec') ||
+        lower.contains('codec not supported') ||
+        lower.contains('decoder not found')) {
       return PlayerErrorType.codecError;
     }
-    if (lower.contains('format') || lower.contains('demux')) {
+    if (lower.contains('failed to recognize file format') ||
+        lower.contains('could not determine format') ||
+        lower.contains('unsupported container format') ||
+        lower.contains('demux: no format found')) {
       return PlayerErrorType.unsupportedFormat;
     }
     return PlayerErrorType.playbackFailure;

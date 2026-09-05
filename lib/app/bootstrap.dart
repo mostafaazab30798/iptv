@@ -30,7 +30,12 @@ Future<void> _initializeAfterFirstFrame() async {
     feature: 'bootstrap',
   );
 
-  if (platform.isAndroid) {
+  if (platform.isAndroidTv) {
+    await SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  } else if (platform.isAndroid) {
     await SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -41,6 +46,8 @@ Future<void> _initializeAfterFirstFrame() async {
 
   if (platform.isAndroid || platform.isAndroidTv) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  } else if (platform.isWindows) {
+    await platform.setFullScreen(true);
   }
 
   AppLogger.info('Post-frame initialization complete', feature: 'bootstrap');
@@ -76,15 +83,30 @@ Future<void> bootstrap() async {
     ),
   );
 
-  // Cap decoded image RAM — unbounded cache is a major low-spec pressure source.
+  // Cap decoded image RAM — desktop monitors display large 1080p artwork and have
+  // ample RAM, while low-spec mobile/TV devices need tight constraints.
+  final isDesktop = !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS);
   final lowRam = DeviceMemory.isLowRamDevice;
   final imageCache = PaintingBinding.instance.imageCache;
-  imageCache.maximumSizeBytes = lowRam ? 32 * 1024 * 1024 : 48 * 1024 * 1024;
-  imageCache.maximumSize = lowRam ? 80 : 120;
+  if (isDesktop) {
+    // 384 MB / 400 images prevents constantly evicting and re-decoding hero/row artwork
+    // during fast scrolling on PC.
+    imageCache.maximumSizeBytes = 384 * 1024 * 1024;
+    imageCache.maximumSize = 400;
+  } else {
+    imageCache.maximumSizeBytes = lowRam ? 32 * 1024 * 1024 : 48 * 1024 * 1024;
+    imageCache.maximumSize = lowRam ? 80 : 120;
+  }
 
   // Logging first — so everything below can log.
   AppLogger.initialize(verbose: kDebugMode);
   AppLogger.info('Bootstrap starting', feature: 'bootstrap');
+
+  // Initialize preferences so providers and secure storage can safely access them immediately.
+  await PreferencesStorage.initialize();
 
   // Open database — isolated so crash is caught before UI renders.
   final db = AppDatabase();

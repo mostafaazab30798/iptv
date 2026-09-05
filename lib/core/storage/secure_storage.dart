@@ -71,11 +71,14 @@ class SecureStorage {
 
     // Mirror non-sensitive identity only; always clear legacy Base64 password.
     try {
-      await PreferencesStorage.instance.saveAuthIdentity(
-        serverUrl: serverUrl,
-        username: username,
-      );
-      AppLogger.info('Credentials saved to secure storage', feature: 'storage');
+      final prefs = PreferencesStorage.maybeInstance;
+      if (prefs != null) {
+        await prefs.saveAuthIdentity(
+          serverUrl: serverUrl,
+          username: username,
+        );
+        AppLogger.info('Credentials saved to secure storage', feature: 'storage');
+      }
     } catch (e) {
       AppLogger.error(
         'Failed to save auth identity prefs: $e',
@@ -120,11 +123,18 @@ class SecureStorage {
         username.isNotEmpty &&
         password != null &&
         password.isNotEmpty) {
-      unawaited(
-        PreferencesStorage.instance
-            .saveAuthIdentity(serverUrl: serverUrl, username: username)
-            .catchError((_) {}),
-      );
+      try {
+        final prefs = PreferencesStorage.maybeInstance;
+        if (prefs != null) {
+          unawaited(
+            prefs
+                .saveAuthIdentity(serverUrl: serverUrl, username: username)
+                .catchError((_) {}),
+          );
+        }
+      } catch (e) {
+        AppLogger.warning('Could not save auth identity: $e', feature: 'storage');
+      }
       return (
         serverUrl: serverUrl,
         username: username,
@@ -135,29 +145,32 @@ class SecureStorage {
 
     // 2. One-time migrate legacy Base64 password from preferences, then clear it.
     try {
-      final prefUrl = PreferencesStorage.instance.authServerUrl;
-      final prefUser = PreferencesStorage.instance.authUsername;
-      final prefPassEnc = PreferencesStorage.instance.authPasswordEnc;
+      final prefs = PreferencesStorage.maybeInstance;
+      if (prefs != null) {
+        final prefUrl = prefs.authServerUrl;
+        final prefUser = prefs.authUsername;
+        final prefPassEnc = prefs.authPasswordEnc;
 
-      if (prefUrl != null &&
-          prefUrl.isNotEmpty &&
-          prefUser != null &&
-          prefUser.isNotEmpty &&
-          prefPassEnc != null &&
-          prefPassEnc.isNotEmpty) {
-        final decodedPass = _decodeString(prefPassEnc);
-        if (decodedPass != null && decodedPass.isNotEmpty) {
-          await saveCredentials(
-            serverUrl: prefUrl,
-            username: prefUser,
-            password: decodedPass,
-          );
-          return (
-            serverUrl: prefUrl,
-            username: prefUser,
-            password: decodedPass,
-            serverExpiresAt: null,
-          );
+        if (prefUrl != null &&
+            prefUrl.isNotEmpty &&
+            prefUser != null &&
+            prefUser.isNotEmpty &&
+            prefPassEnc != null &&
+            prefPassEnc.isNotEmpty) {
+          final decodedPass = _decodeString(prefPassEnc);
+          if (decodedPass != null && decodedPass.isNotEmpty) {
+            await saveCredentials(
+              serverUrl: prefUrl,
+              username: prefUser,
+              password: decodedPass,
+            );
+            return (
+              serverUrl: prefUrl,
+              username: prefUser,
+              password: decodedPass,
+              serverExpiresAt: null,
+            );
+          }
         }
       }
     } catch (_) {}
@@ -178,7 +191,10 @@ class SecureStorage {
     }
 
     try {
-      await PreferencesStorage.instance.clearAuthCredentials();
+      final prefs = PreferencesStorage.maybeInstance;
+      if (prefs != null) {
+        await prefs.clearAuthCredentials();
+      }
     } catch (e) {
       AppLogger.error(
         'Failed to clear auth identity prefs: $e',

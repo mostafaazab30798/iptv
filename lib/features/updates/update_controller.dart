@@ -353,7 +353,7 @@ class UpdateController extends StateNotifier<UpdateState> {
       url = manifest.directDownloadUrl;
     }
 
-    if (url == null || url.isEmpty || !UpdateUrlValidator.isAllowedDownloadUrl(url)) {
+    if (url.isEmpty || !UpdateUrlValidator.isAllowedDownloadUrl(url)) {
       state = state.copyWith(
         status: UpdateFlowStatus.error,
         errorMessage: 'Could not resolve a valid download URL.',
@@ -393,7 +393,9 @@ class UpdateController extends StateNotifier<UpdateState> {
         state = state.copyWith(
           status: UpdateFlowStatus.installing,
           downloadProgress: 1.0,
-          statusMessage: 'Opening installer...',
+          statusMessage: isWindows
+              ? 'Installer launched. Please close HOPE IPTV to complete installation.'
+              : 'Opening installer...',
         );
       } catch (e, st) {
         AppLogger.error('In-app update download failed: $e', error: e, stackTrace: st, feature: 'updates');
@@ -420,6 +422,10 @@ class UpdateController extends StateNotifier<UpdateState> {
 
   void clearPendingDownloadAfterSignIn() {
     state = state.copyWith(pendingDownloadAfterSignIn: false);
+  }
+
+  void exitAppForInstall() {
+    PlatformService.instance.exitApp();
   }
 
   Future<ReleaseManifest?> _loadCachedMandatoryManifest() async {

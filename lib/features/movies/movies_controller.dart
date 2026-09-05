@@ -102,6 +102,18 @@ class MoviesController extends StateNotifier<MoviesState> {
         err: (_) => <Category>[],
       );
 
+      final names = <int, String>{};
+      for (final cat in categories) {
+        names[cat.id] = cat.name;
+      }
+
+      // Immediately render categories so the screen is never stuck blank
+      state = state.copyWith(
+        categories: categories,
+        categoryNames: names,
+        isLoading: false,
+      );
+
       final movieResult = await repo.getMovies(
         categoryId: null,
         forceRefresh: forceRefresh,
@@ -126,11 +138,6 @@ class MoviesController extends StateNotifier<MoviesState> {
         }
       }
 
-      final names = <int, String>{};
-      for (final cat in categories) {
-        names[cat.id] = cat.name;
-      }
-
       final selectedId = state.selectedCategoryId;
       final List<Movie> visible;
       if (state.filteredMovies.isNotEmpty || selectedId != null) {
@@ -143,13 +150,10 @@ class MoviesController extends StateNotifier<MoviesState> {
 
       if (!mounted) return;
       state = state.copyWith(
-        categories: categories,
         filteredMovies: visible,
         totalMovieCount: movies.length,
         categoryCounts: counts,
         categoryLeadingLogos: leadingLogos,
-        categoryNames: names,
-        isLoading: false,
       );
     } catch (e) {
       if (!mounted) return;

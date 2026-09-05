@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:iptv/core/constants/api_constants.dart';
 import 'package:iptv/core/network/api_client.dart';
 import 'package:iptv/core/network/url_helpers.dart';
@@ -153,10 +154,11 @@ class XtreamRemoteDataSource {
     required String username,
     required String password,
     required int streamId,
-    String extension = 'ts',
+    String? extension,
   }) {
+    final ext = extension ?? (kIsWeb ? 'm3u8' : 'ts');
     final base = UrlHelpers.normalizeServerUrl(serverUrl);
-    final raw = '$base/live/$username/$password/$streamId.$extension';
+    final raw = '$base/live/$username/$password/$streamId.$ext';
     return UrlHelpers.wrapWebProxy(raw);
   }
 

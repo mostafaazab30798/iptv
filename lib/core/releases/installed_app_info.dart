@@ -1,3 +1,4 @@
+import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/core/logging/app_logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -19,27 +20,32 @@ class PackageInfoInstalledAppInfo implements InstalledAppInfo {
 
   @override
   Future<String> getVersion() async {
-    final info = await _load();
-    return info.version;
+    try {
+      final info = await _load();
+      if (info.version.trim().isNotEmpty) {
+        return info.version.trim();
+      }
+    } catch (e) {
+      AppLogger.warning('Failed reading package version: $e', feature: 'updates');
+    }
+    return AppConstants.appVersion;
   }
 
   @override
   Future<int?> getBuildNumber() async {
-    final info = await _load();
-    final raw = info.buildNumber.trim();
-    if (raw.isEmpty) {
-      AppLogger.error('Installed build number is empty.', feature: 'updates');
-      return null;
+    try {
+      final info = await _load();
+      final raw = info.buildNumber.trim();
+      if (raw.isNotEmpty) {
+        final parsed = int.tryParse(raw);
+        if (parsed != null && parsed > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Failed reading package build number: $e', feature: 'updates');
     }
-    final parsed = int.tryParse(raw);
-    if (parsed == null || parsed <= 0) {
-      AppLogger.error(
-        'Invalid installed build number: $raw',
-        feature: 'updates',
-      );
-      return null;
-    }
-    return parsed;
+    return AppConstants.appBuildNumber;
   }
 }
 

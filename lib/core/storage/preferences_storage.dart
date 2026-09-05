@@ -10,6 +10,7 @@ class PreferencesStorage {
   final SharedPreferences _prefs;
 
   static Future<PreferencesStorage> initialize() async {
+    if (_instance != null) return _instance!;
     final prefs = await SharedPreferences.getInstance();
     final instance = PreferencesStorage._(prefs);
     _instance = instance;
@@ -17,8 +18,17 @@ class PreferencesStorage {
     return instance;
   }
 
+  static bool get isInitialized => _instance != null;
+
+  static PreferencesStorage? get maybeInstance => _instance;
+
   static PreferencesStorage get instance {
-    assert(_instance != null, 'PreferencesStorage.initialize() not called');
+    if (_instance == null) {
+      AppLogger.warning(
+        'PreferencesStorage.instance accessed before initialize() completed',
+        feature: 'storage',
+      );
+    }
     return _instance!;
   }
 

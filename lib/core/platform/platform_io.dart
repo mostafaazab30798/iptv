@@ -1,4 +1,4 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, exit;
 
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -28,6 +28,17 @@ Future<void> initPlatformWindow() async {
 }
 
 Future<void> setPlatformFullScreen(bool isFullScreen) async {
+  if (Platform.isWindows) {
+    try {
+      await _platformChannel.invokeMethod<void>('setFullScreen', {
+        'isFullScreen': isFullScreen,
+      });
+      return;
+    } catch (_) {
+      // Fall through to windowManager fallback if platform channel fails
+    }
+  }
+
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     try {
       await windowManager.ensureInitialized();
@@ -51,6 +62,13 @@ Future<void> setPlatformFullScreen(bool isFullScreen) async {
 }
 
 Future<bool> isPlatformFullScreen() async {
+  if (Platform.isWindows) {
+    try {
+      final res = await _platformChannel.invokeMethod<bool>('isFullScreen');
+      if (res != null) return res;
+    } catch (_) {}
+  }
+
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     try {
       return await windowManager.isFullScreen();
@@ -59,4 +77,21 @@ Future<bool> isPlatformFullScreen() async {
     }
   }
   return false;
+}
+
+Future<void> minimizePlatformWindow() async {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    try {
+      await windowManager.ensureInitialized();
+      await windowManager.minimize();
+    } catch (_) {}
+  }
+}
+
+void exitPlatformApp() {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    exit(0);
+  } else {
+    SystemNavigator.pop();
+  }
 }

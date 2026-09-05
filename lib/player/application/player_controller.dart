@@ -17,6 +17,7 @@ import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
 import 'package:iptv/player/domain/enums/playback_profile.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
+import 'package:iptv/player/domain/enums/stream_type.dart';
 import 'package:iptv/player/domain/interfaces/player_engine.dart';
 import 'package:iptv/player/handoff/application/audio_handoff_server_controller.dart';
 import 'package:iptv/player/infrastructure/media_kit_player_engine.dart';
@@ -775,8 +776,31 @@ class PlayerController extends StateNotifier<PlayerState> {
   }
 
   Future<void> retry() async {
-    if (state.source != null) {
-      await load(state.source!);
+    final current = state.source;
+    if (current != null) {
+      var retrySource = current;
+      if (current.isLive) {
+        final uri = Uri.tryParse(current.url);
+        if (uri != null && uri.pathSegments.isNotEmpty) {
+          final lastSegment = uri.pathSegments.last;
+          if (lastSegment.endsWith('.ts')) {
+            final basePath = uri.path.substring(0, uri.path.length - 3);
+            final newUrl = uri.replace(path: '$basePath.m3u8').toString();
+            retrySource = current.copyWith(
+              url: newUrl,
+              streamType: StreamType.hls,
+            );
+          } else if (lastSegment.endsWith('.m3u8')) {
+            final basePath = uri.path.substring(0, uri.path.length - 5);
+            final newUrl = uri.replace(path: '$basePath.ts').toString();
+            retrySource = current.copyWith(
+              url: newUrl,
+              streamType: StreamType.mpegTs,
+            );
+          }
+        }
+      }
+      await load(retrySource);
     }
   }
 

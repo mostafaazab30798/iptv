@@ -55,6 +55,13 @@ class Win32Window {
   // Return a RECT representing the bounds of the current client area.
   RECT GetClientArea();
 
+  // Toggles or sets true immersion fullscreen (covering the entire screen,
+  // removing title bar / actions bar and covering the taskbar).
+  void SetFullScreen(bool fullscreen);
+
+  // Returns true if the window is currently in fullscreen mode.
+  bool IsFullScreen() const;
+
  protected:
   // Processes and route salient window messages for mouse handling,
   // size change and DPI. Delegates handling of these to member overloads that
@@ -97,6 +104,12 @@ class Win32Window {
 
   // window handle for hosted content.
   HWND child_content_ = nullptr;
+
+  // Fullscreen tracking state
+  bool is_fullscreen_ = false;
+  WINDOWPLACEMENT wp_prev_ = { sizeof(WINDOWPLACEMENT) };
+  DWORD style_prev_ = 0;
+  DWORD ex_style_prev_ = 0;
 };
 
 #endif  // RUNNER_WIN32_WINDOW_H_

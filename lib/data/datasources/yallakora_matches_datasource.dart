@@ -19,9 +19,9 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
                 connectTimeout: const Duration(seconds: 20),
                 receiveTimeout: const Duration(seconds: 20),
                 responseType: ResponseType.json,
-                headers: const {
+                headers: {
                   'Accept': 'application/json',
-                  'User-Agent': 'HOPE-IPTV-App/1.0',
+                  if (!kIsWeb) 'User-Agent': 'HOPE-IPTV-App/1.0',
                 },
               ),
             ),

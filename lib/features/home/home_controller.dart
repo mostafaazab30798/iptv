@@ -339,7 +339,8 @@ class HomeController extends StateNotifier<HomeState> {
   List<HomeHeroItem> _computeHeroItems(List<Movie> movies) {
     if (movies.isEmpty) return const [];
 
-    final validMovies = movies.where((m) => m.name.isNotEmpty).toList();
+    final validMovies =
+        movies.where((m) => m.name.isNotEmpty).take(150).toList();
 
     // Sort by top rating & latest release year to pick top 3
     validMovies.sort((a, b) {
@@ -406,17 +407,12 @@ class HomeController extends StateNotifier<HomeState> {
 
   void _maybeApplyMovieHero(List<Movie> movies) {
     if (!mounted || _hasLiveMatchHero) return;
-    if (!_matchHeroResolved) {
-      _pendingHeroMovies = movies;
-      return;
-    }
-    _pendingHeroMovies = null;
     final items = _computeHeroItems(movies);
     if (items.isEmpty || !mounted || _hasLiveMatchHero) return;
     state = state.copyWith(
       heroItem: items.first,
       heroItems: items,
-      isHeroPending: false,
+      isHeroPending: !_matchHeroResolved,
     );
   }
 
@@ -431,7 +427,7 @@ class HomeController extends StateNotifier<HomeState> {
       }
       return;
     }
-    if (pending != null) {
+    if (pending != null && state.heroItem == null) {
       _maybeApplyMovieHero(pending);
       return;
     }

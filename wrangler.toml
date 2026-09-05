@@ -1,13 +1,13 @@
-name = "hope-tv-site"
+name = "hope-tv"
 main = "worker.js"
 compatibility_date = "2024-09-23"
+workers_dev = true
 
-# Production custom domains. Cloudflare can activate these routes only after
-# hope-tv.site is added as a zone and its registrar nameservers are delegated.
-routes = [
-  { pattern = "hope-tv.site", custom_domain = true },
-  { pattern = "www.hope-tv.site", custom_domain = true },
-]
+# Production custom domains. Activate after hope-tv.site DNS records are delegated.
+# routes = [
+#   { pattern = "hope-tv.site", custom_domain = true },
+#   { pattern = "www.hope-tv.site", custom_domain = true },
+# ]
 
 [assets]
 directory = "./build/web"

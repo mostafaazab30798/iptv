@@ -460,6 +460,11 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
         _focusNode.requestFocus();
         return KeyEventResult.handled;
       }
+      // On desktop / PC, pressing Escape while in fullscreen exits fullscreen first.
+      if (key == LogicalKeyboardKey.escape && widget.playerState.isFullscreen) {
+        widget.onToggleFullscreen();
+        return KeyEventResult.handled;
+      }
       widget.onClose();
       return KeyEventResult.handled;
     }

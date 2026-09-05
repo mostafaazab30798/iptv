@@ -72,6 +72,7 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
   late final PageController _pageController;
   late final ValueNotifier<int> _currentPage;
   Timer? _autoScrollTimer;
+  bool _isHovered = false;
 
   List<HomeHeroItem> get _effectiveItems {
     if (widget.items.isNotEmpty) return widget.items;
@@ -130,7 +131,6 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
   void _goToPage(int page) {
     if (!_pageController.hasClients) return;
     _currentPage.value = page;
-    setState(() {});
     _pageController.animateToPage(
       page,
       duration: const Duration(milliseconds: 400),
@@ -189,8 +189,14 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
     );
 
     return MouseRegion(
-      onEnter: (_) => _pauseAutoScroll(),
-      onExit: (_) => _resumeAutoScroll(),
+      onEnter: (_) {
+        if (!_isHovered && mounted) setState(() => _isHovered = true);
+        _pauseAutoScroll();
+      },
+      onExit: (_) {
+        if (_isHovered && mounted) setState(() => _isHovered = false);
+        _resumeAutoScroll();
+      },
       child: SizedBox(
         width: double.infinity,
         height: bannerHeight,
@@ -217,17 +223,18 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
                     allowImplicitScrolling: true,
                     onPageChanged: (index) {
                       _currentPage.value = index;
-                      setState(() {});
                     },
                     itemBuilder: (context, index) {
                       final currentItem = items[index];
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => widget.onPlay(currentItem),
-                        child: _HeroCardSlide(
-                          item: currentItem,
-                          bannerHeight: bannerHeight,
-                          showWideLayout: !isPortrait,
+                      return RepaintBoundary(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => widget.onPlay(currentItem),
+                          child: _HeroCardSlide(
+                            item: currentItem,
+                            bannerHeight: bannerHeight,
+                            showWideLayout: !isPortrait,
+                          ),
                         ),
                       );
                     },
@@ -362,6 +369,38 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
                       }),
                     );
                   },
+                ),
+              ),
+            ],
+
+            // Desktop / PC hover navigation arrows for seamless card transitions
+            if (!isPortrait && items.length > 1) ...[
+              Positioned(
+                left: 16,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _HeroNavChevron(
+                    icon: Icons.chevron_left_rounded,
+                    visible: _isHovered,
+                    onTap: () => _goToPage(
+                      (_currentPage.value - 1 + items.length) % items.length,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 16,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _HeroNavChevron(
+                    icon: Icons.chevron_right_rounded,
+                    visible: _isHovered,
+                    onTap: () => _goToPage(
+                      (_currentPage.value + 1) % items.length,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1077,12 +1116,13 @@ class _MatchGlossOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
+    return const IgnorePointer(
+      child: RepaintBoundary(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
           // Soft top rim highlight (stadium floodlight feel).
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -1097,7 +1137,7 @@ class _MatchGlossOverlay extends StatelessWidget {
             ),
           ),
           // Diagonal specular sheen.
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment(-0.95, -1.0),
@@ -1117,20 +1157,20 @@ class _MatchGlossOverlay extends StatelessWidget {
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: const Alignment(-1.0, -0.4),
-                end: const Alignment(0.6, 0.9),
-                stops: const [0.0, 0.35, 0.55, 1.0],
+                begin: Alignment(-1.0, -0.4),
+                end: Alignment(0.6, 0.9),
+                stops: [0.0, 0.35, 0.55, 1.0],
                 colors: [
                   Colors.transparent,
-                  AppColors.accent.withValues(alpha: 0.07),
-                  AppColors.accent.withValues(alpha: 0.03),
+                  Color(0x1200C2FF),
+                  Color(0x0800C2FF),
                   Colors.transparent,
                 ],
               ),
             ),
           ),
           // Bottom glass reflection fade into app bg.
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
@@ -1145,6 +1185,7 @@ class _MatchGlossOverlay extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -1261,6 +1302,7 @@ class MatchPosterCard extends StatelessWidget {
       child: SilverGlassCapsule(
         borderRadius: outerRadius,
         padding: EdgeInsets.zero,
+        enableBlur: false,
         sigma: 24,
         highlightHeight: isExpanded ? 36 : 28,
         boxShadow: [
@@ -2707,6 +2749,76 @@ class _SpinningReloadButtonState extends State<_SpinningReloadButton>
                   icon: AppIcons.refresh,
                   size: 19,
                   color: _hovered ? AppColors.accent : Colors.white70,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroNavChevron extends StatefulWidget {
+  const _HeroNavChevron({
+    required this.icon,
+    required this.visible,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool visible;
+  final VoidCallback onTap;
+
+  @override
+  State<_HeroNavChevron> createState() => _HeroNavChevronState();
+}
+
+class _HeroNavChevronState extends State<_HeroNavChevron> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: widget.visible ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 200),
+      child: IgnorePointer(
+        ignoring: !widget.visible,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _isHovered
+                    ? Colors.black.withValues(alpha: 0.75)
+                    : Colors.black.withValues(alpha: 0.45),
+                border: Border.all(
+                  color: _isHovered
+                      ? AppColors.accent
+                      : Colors.white.withValues(alpha: 0.22),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  widget.icon,
+                  color: _isHovered ? AppColors.accent : Colors.white,
+                  size: 26,
                 ),
               ),
             ),

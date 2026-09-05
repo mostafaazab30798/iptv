@@ -236,7 +236,7 @@ class _OptionalUpdateDialogState extends ConsumerState<_OptionalUpdateDialog> {
                     if (updateState.errorMessage != null) ...[
                       const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: AppColors.error.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -244,20 +244,49 @@ class _OptionalUpdateDialogState extends ConsumerState<_OptionalUpdateDialog> {
                             color: AppColors.error.withValues(alpha: 0.3),
                           ),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const HugeIcon(
-                              icon: HugeIcons.strokeRoundedAlertCircle,
-                              color: AppColors.error,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                updateState.errorMessage!,
-                                style: const TextStyle(
+                            Row(
+                              children: [
+                                const HugeIcon(
+                                  icon: HugeIcons.strokeRoundedAlertCircle,
                                   color: AppColors.error,
-                                  fontSize: 12,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    updateState.errorMessage!,
+                                    style: const TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () => _launchDownload(
+                                  context,
+                                  ref,
+                                  manifest: widget.manifest,
+                                ),
+                                icon: const HugeIcon(
+                                  icon: HugeIcons.strokeRoundedGlobe02,
+                                  color: AppColors.accent,
+                                  size: 14,
+                                ),
+                                label: const Text(
+                                  'Download via Browser',
+                                  style: TextStyle(
+                                    color: AppColors.accent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
@@ -275,6 +304,9 @@ class _OptionalUpdateDialogState extends ConsumerState<_OptionalUpdateDialog> {
                         statusMessage: updateState.statusMessage ?? 'Downloading update...',
                         receivedBytes: updateState.receivedBytes,
                         totalBytes: updateState.totalBytes,
+                        isInstalling: updateState.status == UpdateFlowStatus.installing,
+                        onExitApp: () => PlatformService.instance.exitApp(),
+                        onMinimize: () => PlatformService.instance.minimizeWindow(),
                         onCancel: () {
                           ref.read(updateProvider.notifier).cancelDownload();
                         },
@@ -505,20 +537,49 @@ class _MandatoryUpdateScreenState
                               color: AppColors.error.withValues(alpha: 0.3),
                             ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const HugeIcon(
-                                icon: HugeIcons.strokeRoundedAlertCircle,
-                                color: AppColors.error,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  updateState.errorMessage!,
-                                  style: const TextStyle(
+                              Row(
+                                children: [
+                                  const HugeIcon(
+                                    icon: HugeIcons.strokeRoundedAlertCircle,
                                     color: AppColors.error,
-                                    fontSize: 13,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      updateState.errorMessage!,
+                                      style: const TextStyle(
+                                        color: AppColors.error,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () => _launchDownload(
+                                    context,
+                                    ref,
+                                    manifest: widget.manifest,
+                                  ),
+                                  icon: const HugeIcon(
+                                    icon: HugeIcons.strokeRoundedGlobe02,
+                                    color: AppColors.accent,
+                                    size: 14,
+                                  ),
+                                  label: const Text(
+                                    'Download via Browser',
+                                    style: TextStyle(
+                                      color: AppColors.accent,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -536,6 +597,9 @@ class _MandatoryUpdateScreenState
                           statusMessage: updateState.statusMessage ?? 'Downloading update...',
                           receivedBytes: updateState.receivedBytes,
                           totalBytes: updateState.totalBytes,
+                          isInstalling: updateState.status == UpdateFlowStatus.installing,
+                          onExitApp: () => PlatformService.instance.exitApp(),
+                          onMinimize: () => PlatformService.instance.minimizeWindow(),
                           onCancel: () {
                             ref.read(updateProvider.notifier).cancelDownload();
                           },
@@ -877,6 +941,9 @@ class _DownloadProgressWidget extends StatelessWidget {
     required this.receivedBytes,
     required this.totalBytes,
     required this.onCancel,
+    this.isInstalling = false,
+    this.onExitApp,
+    this.onMinimize,
   });
 
   final double progress;
@@ -884,9 +951,129 @@ class _DownloadProgressWidget extends StatelessWidget {
   final int receivedBytes;
   final int totalBytes;
   final VoidCallback onCancel;
+  final bool isInstalling;
+  final VoidCallback? onExitApp;
+  final VoidCallback? onMinimize;
 
   @override
   Widget build(BuildContext context) {
+    if (isInstalling) {
+      final isDesktop = PlatformService.instance.isWindows;
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.bg2,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: AppColors.accent.withValues(alpha: 0.4),
+            width: 1.2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                    color: AppColors.accent,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Installer Ready',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        statusMessage,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (isDesktop) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  if (onMinimize != null) ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onMinimize,
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedMinusSign,
+                          color: AppColors.textPrimary,
+                          size: 16,
+                        ),
+                        label: const Text(
+                          'Minimize',
+                          style: TextStyle(color: AppColors.textPrimary),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  if (onExitApp != null)
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: onExitApp,
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedLogout01,
+                          color: Colors.black,
+                          size: 16,
+                        ),
+                        label: const Text(
+                          'Exit App to Install',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     final percent = (progress * 100).clamp(0, 100).toInt();
     final recMb = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
     final totMb = (totalBytes / (1024 * 1024)).toStringAsFixed(1);

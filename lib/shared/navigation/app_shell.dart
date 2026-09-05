@@ -10,6 +10,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_motion.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/constants/app_constants.dart';
+import 'package:iptv/core/platform/platform_service.dart';
 
 import 'package:iptv/features/favorites/favorite_channel_ids.dart';
 import 'package:iptv/features/favorites/favorite_ids.dart';
@@ -331,6 +332,10 @@ class _ShellTopNav extends StatelessWidget {
                       tooltip: context.l10n.navSettings,
                       onTap: () => context.go(Routes.settings),
                     ),
+                    if (PlatformService.instance.supportsFullscreen) ...[
+                      const SizedBox(width: 3),
+                      const _FullscreenToggleButton(),
+                    ],
                   ],
                 ),
               ),
@@ -436,6 +441,10 @@ class _ShellTopNav extends StatelessWidget {
                         tooltip: context.l10n.navSettings,
                         onTap: () => context.go(Routes.settings),
                       ),
+                      if (PlatformService.instance.supportsFullscreen) ...[
+                        const SizedBox(width: 4),
+                        const _FullscreenToggleButton(),
+                      ],
                     ],
                   ),
                 ),
@@ -444,6 +453,29 @@ class _ShellTopNav extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FullscreenToggleButton extends StatelessWidget {
+  const _FullscreenToggleButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: PlatformService.instance.isFullScreenNotifier,
+      builder: (context, isFullScreen, _) {
+        return _GlassActionButton(
+          icon: isFullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
+          activeIcon: isFullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
+          isActive: isFullScreen,
+          tooltip: isFullScreen ? 'Exit Fullscreen (F11 / Esc)' : 'Fullscreen (F11)',
+          onTap: () async {
+            final isFull = await PlatformService.instance.isFullScreen();
+            await PlatformService.instance.setFullScreen(!isFull);
+          },
+        );
+      },
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -229,13 +230,19 @@ class CompanionAudioController extends StateNotifier<CompanionAudioState> {
     );
 
     // Optimized audio-only properties in libmpv
-    if (_audioPlayer?.platform is mk.NativePlayer) {
-      final native = _audioPlayer!.platform as mk.NativePlayer;
+    if (!kIsWeb && _audioPlayer?.platform is mk.NativePlayer) {
+      final dynamic native = _audioPlayer!.platform;
+      // ignore: avoid_dynamic_calls
       await native.setProperty('vo', 'null'); // Disable video output rendering
+      // ignore: avoid_dynamic_calls
       await native.setProperty('audio-pitch-correction', 'yes');
+      // ignore: avoid_dynamic_calls
       await native.setProperty('audio-client-name', 'IPTV_Companion');
+      // ignore: avoid_dynamic_calls
       await native.setProperty('force-window', 'no');
+      // ignore: avoid_dynamic_calls
       await native.setProperty('idle', 'yes');
+      // ignore: avoid_dynamic_calls
       await native.setProperty('keep-open', 'yes');
     }
 
@@ -386,14 +393,16 @@ class CompanionAudioController extends StateNotifier<CompanionAudioState> {
   }
 
   Future<void> _applyAudioDelay(int offsetMs) async {
+    if (kIsWeb) return;
     final player = _audioPlayer;
     if (player == null) return;
     if (player.platform is! mk.NativePlayer) return;
-    final native = player.platform as mk.NativePlayer;
+    final dynamic native = player.platform;
     // Live has no shared timeline: delay decoded audio instead of seeking.
     // VOD applies the offset via seek target, so keep audio-delay at 0.
     final delaySec = _syncEngine.isLive ? (offsetMs / 1000.0) : 0.0;
     try {
+      // ignore: avoid_dynamic_calls
       await native.setProperty('audio-delay', delaySec.toString());
     } catch (e) {
       AppLogger.warning(
