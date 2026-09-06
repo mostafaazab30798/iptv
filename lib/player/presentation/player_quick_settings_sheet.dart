@@ -5,6 +5,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 
 typedef SleepTimerCallback = void Function(Duration? duration, [String? label]);
@@ -169,12 +170,22 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                         ),
                       ),
                       const Spacer(),
-                      IconButton(
-                        icon: const HugeIcon(icon: AppIcons.close, color: Colors.white60, size: 18),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        onPressed: () => Navigator.of(context).pop(),
+                      TvFocusable(
+                        entry: true,
+                        autofocus: true,
+                        scale: 1.05,
+                        onSelect: () => Navigator.of(context).pop(),
+                        child: const SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Center(
+                            child: HugeIcon(
+                              icon: AppIcons.close,
+                              color: Colors.white60,
+                              size: 18,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -332,79 +343,92 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
 
                   // Until End of Show Card (when VOD/Series/Movies)
                   if (hasEndOfShow) ...[
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          if (_activeSleepLabel == 'Until End of Show') {
-                            _handleSelectSleepTimer(null);
-                          } else {
-                            _handleSelectSleepTimer(remaining, 'Until End of Show');
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                _activeSleepLabel == 'Until End of Show'
-                                    ? AppColors.accent.withValues(alpha: 0.25)
-                                    : AppColors.accent.withValues(alpha: 0.12),
-                                Colors.white.withValues(alpha: 0.04),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _activeSleepLabel == 'Until End of Show'
-                                  ? AppColors.accent
-                                  : AppColors.accent.withValues(alpha: 0.3),
-                              width: _activeSleepLabel == 'Until End of Show' ? 1.5 : 1.0,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent.withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Center(
-                                  child: HugeIcon(icon: AppIcons.play, color: AppColors.accent, size: 16),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Until End of Show',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${_formatDurationText(remaining)} remaining · Closes player upon finish',
-                                      style: const TextStyle(
-                                        color: Colors.white60,
-                                        fontSize: 10.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_activeSleepLabel == 'Until End of Show')
-                                const HugeIcon(icon: AppIcons.check, color: AppColors.accent, size: 18),
+                    TvFocusable(
+                      scale: 1.03,
+                      onSelect: () {
+                        if (_activeSleepLabel == 'Until End of Show') {
+                          _handleSelectSleepTimer(null);
+                        } else {
+                          _handleSelectSleepTimer(
+                            remaining,
+                            'Until End of Show',
+                          );
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _activeSleepLabel == 'Until End of Show'
+                                  ? AppColors.accent.withValues(alpha: 0.25)
+                                  : AppColors.accent.withValues(alpha: 0.12),
+                              Colors.white.withValues(alpha: 0.04),
                             ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _activeSleepLabel == 'Until End of Show'
+                                ? AppColors.accent
+                                : AppColors.accent.withValues(alpha: 0.3),
+                            width: _activeSleepLabel == 'Until End of Show'
+                                ? 1.5
+                                : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: HugeIcon(
+                                  icon: AppIcons.play,
+                                  color: AppColors.accent,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Until End of Show',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${_formatDurationText(remaining)} remaining · Closes player upon finish',
+                                    style: const TextStyle(
+                                      color: Colors.white60,
+                                      fontSize: 10.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_activeSleepLabel == 'Until End of Show')
+                              const HugeIcon(
+                                icon: AppIcons.check,
+                                color: AppColors.accent,
+                                size: 18,
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -499,38 +523,35 @@ class _SegmentPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(7),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(7),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: AppColors.accent.withValues(alpha: 0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 1),
-                    )
-                  ]
-                : null,
+    return TvFocusable(
+      scale: 1.04,
+      onSelect: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 1),
+                  )
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white70,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.black : Colors.white70,
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -550,33 +571,30 @@ class _TimerPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
+    return TvFocusable(
+      scale: 1.04,
+      onSelect: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accent
+              : Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
             color: isSelected
                 ? AppColors.accent
-                : Colors.white.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.accent
-                  : Colors.white.withValues(alpha: 0.08),
-              width: 0.8,
-            ),
+                : Colors.white.withValues(alpha: 0.08),
+            width: 0.8,
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.black : Colors.white,
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),
@@ -610,61 +628,58 @@ class _QuickActionCard extends StatelessWidget {
       chevron = Transform.flip(flipX: true, child: chevron);
     }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
-              width: 0.8,
+    return TvFocusable(
+      scale: 1.03,
+      onSelect: onTap,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          children: [
+            HugeIcon(
+              icon: icon as List<List<dynamic>>,
+              color: AppColors.accent,
+              size: 18,
             ),
-          ),
-          child: Row(
-            children: [
-              HugeIcon(
-                icon: icon as List<List<dynamic>>,
-                color: AppColors.accent,
-                size: 18,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
-                    Text(
-                      value,
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w400,
                     ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              const SizedBox(width: 4),
-              chevron,
-            ],
-          ),
+            ),
+            const SizedBox(width: 4),
+            chevron,
+          ],
         ),
       ),
     );

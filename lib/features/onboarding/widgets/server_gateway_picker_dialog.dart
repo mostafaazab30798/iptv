@@ -93,7 +93,7 @@ class ServerGatewayPickerDialogState extends State<ServerGatewayPickerDialog> {
                         height: 38,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppColors.accent, Color(0xFF0072FF)],
+                            colors: [AppColors.accent, AppColors.accent],
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),

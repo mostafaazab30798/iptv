@@ -2797,6 +2797,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to IPTV Server Setup'**
   String get authBackToOnboarding;
+
+  /// No description provided for @labelPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'PLAYING'**
+  String get labelPlaying;
+
+  /// No description provided for @actionCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get actionCopy;
+
+  /// No description provided for @searchAllCount.
+  ///
+  /// In en, this message translates to:
+  /// **'All ({count})'**
+  String searchAllCount(int count);
+
+  /// No description provided for @updateLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get updateLinkCopied;
+
+  /// No description provided for @companionEnterPairingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Pairing Code'**
+  String get companionEnterPairingCode;
+
+  /// No description provided for @companionPairingDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the TV IP address and 4-digit PIN displayed on your TV screen.'**
+  String get companionPairingDialogBody;
+
+  /// No description provided for @companionIpHintExample.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 192.168.1.50'**
+  String get companionIpHintExample;
+
+  /// No description provided for @companionPinCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'4-Digit PIN Code'**
+  String get companionPinCodeLabel;
 }
 
 class _AppLocalizationsDelegate

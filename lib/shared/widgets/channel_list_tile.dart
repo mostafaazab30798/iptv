@@ -50,7 +50,7 @@ class ChannelListTile extends ConsumerWidget {
             borderRadius: BorderRadius.circular(16),
             backgroundColor: isPlaying
                 ? AppColors.accent.withAlpha(28)
-                : const Color(0xFF10131B),
+                : AppColors.skeleton,
             borderColor: isPlaying
                 ? AppColors.accent.withAlpha(160)
                 : Colors.white.withAlpha(18),

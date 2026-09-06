@@ -9,7 +9,6 @@ import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
-import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/features/home/widgets/cards/channel_card.dart';
@@ -17,10 +16,12 @@ import 'package:iptv/features/live/live_controller.dart';
 import 'package:iptv/features/live/widgets/live_mini_preview.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/layouts/layouts.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/category_card.dart';
 import 'package:iptv/shared/widgets/channel_list_tile.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
+import 'package:iptv/shared/widgets/error_view.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class LiveScreen extends ConsumerStatefulWidget {
@@ -108,10 +109,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
       (c) => c.streamId == channel.streamId,
     );
 
-    String urlFor(Channel c) => XtreamRemoteDataSource.buildLiveStreamUrl(
-      serverUrl: session.serverUrl,
-      username: session.username,
-      password: session.password,
+    String urlFor(Channel c) => ref.read(streamUrlBuilderProvider).liveForSession(
+      session,
       streamId: c.streamId,
     );
 
@@ -149,6 +148,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     final categories = ref.watch(
       liveControllerProvider.select((s) => s.categories),
     );
+    final error = ref.watch(
+      liveControllerProvider.select((s) => s.error),
+    );
     final inChannelsView = _selectedCategory != null || _isAllChannelsSelected;
 
     return InnerBackScope(
@@ -168,6 +170,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
               : _buildCategoriesHub(
                   isLoading: isLoading,
                   categories: categories,
+                  error: error,
                 ),
         ),
       ),
@@ -181,6 +184,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
   Widget _buildCategoriesHub({
     required bool isLoading,
     required List<Category> categories,
+    required String? error,
   }) {
     if (isLoading && categories.isEmpty) {
       return const CategoryListSkeleton();
@@ -199,11 +203,19 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     return KeyedSubtree(
       key: const ValueKey('categories_hub'),
       child: categories.isEmpty
-          ? EmptyState(
-              title: context.l10n.labelNoResults,
-              subtitle: context.l10n.homeCheckConnection,
-              icon: AppIcons.empty,
-            )
+          ? (error != null
+                ? ErrorView(
+                    message: context.l10n.homeCheckConnection,
+                    eyebrow: context.l10n.labelNoResults,
+                    onRetry: () => ref
+                        .read(liveControllerProvider.notifier)
+                        .loadData(forceRefresh: true),
+                  )
+                : EmptyState(
+                    title: context.l10n.labelNoResults,
+                    subtitle: context.l10n.homeCheckConnection,
+                    icon: AppIcons.empty,
+                  ))
           : DpadRegion(
               memoryKey: 'live/categories',
               debugLabel: 'live-categories',
@@ -391,11 +403,13 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final isPortrait =
+              final formFactor = FormFactorResolver.of(context);
+              // Stack when portrait or below the compact width budget.
+              final isStacked =
                   MediaQuery.orientationOf(context) == Orientation.portrait ||
-                  constraints.maxWidth < 750;
+                  constraints.maxWidth < AppBreakpoints.compact;
 
-              if (isPortrait) {
+              if (isStacked) {
                 return Column(
                   children: [
                     if (activeChannelId != null || _selectedChannel != null)
@@ -443,6 +457,16 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                 );
               }
 
+              final previewWidth = switch (formFactor) {
+                FormFactor.tv =>
+                  (constraints.maxWidth * 0.32).clamp(260.0, 320.0),
+                FormFactor.desktop =>
+                  (constraints.maxWidth * 0.30).clamp(320.0, 420.0),
+                FormFactor.tablet =>
+                  (constraints.maxWidth * 0.34).clamp(300.0, 380.0),
+                FormFactor.phone => 360.0,
+              };
+
               return Row(
                 children: [
                   Expanded(
@@ -487,7 +511,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                   ),
                   const VerticalDivider(width: 1, color: AppColors.border),
                   SizedBox(
-                    width: 360,
+                    width: previewWidth,
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(AppSpacing.md),
                       child: LiveMiniPreview(
@@ -515,12 +539,24 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
       return const ChannelListSkeleton();
     }
 
+    final error = ref.watch(
+      liveControllerProvider.select((s) => s.error),
+    );
+
     if (filteredChannels.isEmpty) {
-      return EmptyState(
-        title: context.l10n.liveNoChannelsFound,
-        subtitle: context.l10n.searchNoResultsSubtitle,
-        icon: AppIcons.empty,
-      );
+      return error != null
+          ? ErrorView(
+              message: context.l10n.homeCheckConnection,
+              eyebrow: context.l10n.liveNoChannelsFound,
+              onRetry: () => ref
+                  .read(liveControllerProvider.notifier)
+                  .loadData(forceRefresh: true),
+            )
+          : EmptyState(
+              title: context.l10n.liveNoChannelsFound,
+              subtitle: context.l10n.searchNoResultsSubtitle,
+              icon: AppIcons.empty,
+            );
     }
 
     if (_isGridView) {

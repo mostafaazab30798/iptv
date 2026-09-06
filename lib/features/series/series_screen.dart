@@ -9,11 +9,13 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_motion.dart';
 import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
-import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/season.dart';
 import 'package:iptv/domain/entities/series.dart';
+import 'package:iptv/features/catalog/catalog_categories_hub.dart';
+import 'package:iptv/features/home/widgets/cards/movie_card.dart';
+import 'package:iptv/features/home/widgets/cards/series_card.dart';
 import 'package:iptv/features/series/series_controller.dart';
 
 import 'package:iptv/player/player_controller.dart';
@@ -22,8 +24,8 @@ import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
-import 'package:iptv/shared/widgets/category_card.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
+import 'package:iptv/shared/widgets/error_view.dart';
 import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
@@ -106,52 +108,18 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildCategoriesHub(SeriesState seriesState) {
-    if (seriesState.isLoading && seriesState.categories.isEmpty) {
-      return const CategoryListSkeleton();
-    }
-
-    final categories = seriesState.categories;
-
-    return KeyedSubtree(
-      key: const ValueKey('series_categories_hub'),
-      child: categories.isEmpty
-          ? EmptyState(
-              title: context.l10n.labelNoResults,
-              subtitle: context.l10n.homeCheckConnection,
-              icon: AppIcons.series,
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              cacheExtent: 350,
-              itemCount: categories.length + 1,
-              separatorBuilder: (_, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return CategoryCard(
-                    title: context.l10n.labelAllSeries,
-                    itemCount: seriesState.totalSeriesCount,
-                    itemCountLabel: context.l10n.labelSeries,
-                    isAllCard: true,
-                    onTap: () => _selectCategory(null, isAll: true),
-                  );
-                }
-
-                final category = categories[index - 1];
-                final count = seriesState.categoryCounts[category.id] ?? 0;
-                final logoUrl = seriesState.categoryLeadingCovers[category.id];
-
-                return CategoryCard(
-                  title: category.name,
-                  itemCount: count,
-                  itemCountLabel: context.l10n.labelSeries,
-                  logoUrl: logoUrl,
-                  onTap: () => _selectCategory(category),
-                );
-              },
-            ),
+    return CatalogCategoriesHub<Series, String?>(
+      state: seriesState,
+      hubKey: const ValueKey('series_categories_hub'),
+      allTitle: context.l10n.labelAllSeries,
+      itemCountLabel: context.l10n.labelSeries,
+      emptyIcon: AppIcons.series,
+      onRetry: () => ref
+          .read(seriesControllerProvider.notifier)
+          .loadData(forceRefresh: true),
+      onSelectAll: () => _selectCategory(null, isAll: true),
+      onSelectCategory: (category) => _selectCategory(category),
+      leadingUrlOf: (cover) => cover,
     );
   }
 
@@ -336,11 +304,19 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
           child: seriesState.isLoading
               ? const PosterGridSkeleton()
               : seriesState.filteredSeries.isEmpty
-              ? EmptyState(
-                  title: context.l10n.seriesNoSeriesFound,
-                  subtitle: context.l10n.searchNoResultsSubtitle,
-                  icon: AppIcons.series,
-                )
+              ? (seriesState.error != null
+                    ? ErrorView(
+                        message: context.l10n.homeCheckConnection,
+                        eyebrow: context.l10n.seriesNoSeriesFound,
+                        onRetry: () => ref
+                            .read(seriesControllerProvider.notifier)
+                            .loadData(forceRefresh: true),
+                      )
+                    : EmptyState(
+                        title: context.l10n.seriesNoSeriesFound,
+                        subtitle: context.l10n.searchNoResultsSubtitle,
+                        icon: AppIcons.series,
+                      ))
               : GridView.builder(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   cacheExtent: 350,
@@ -353,8 +329,14 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                   itemCount: seriesState.filteredSeries.length,
                   itemBuilder: (context, i) {
                     final series = seriesState.filteredSeries[i];
-                    return _SeriesPosterCard(
+                    return SeriesCard(
                       series: series,
+                      expand: true,
+                      borderRadius: AppRadius.card,
+                      heartSize: 22,
+                      memCacheWidth: 170,
+                      memCacheHeight: 255,
+                      titlePlacement: PosterTitlePlacement.overlay,
                       onTap: () => _openSeriesDetails(context, series),
                     );
                   },
@@ -380,20 +362,22 @@ class _SeriesCategoriesConsumer extends ConsumerWidget {
       seriesControllerProvider.select(
         (state) => (
           categories: state.categories,
-          totalSeriesCount: state.totalSeriesCount,
+          totalCount: state.totalCount,
           categoryCounts: state.categoryCounts,
-          categoryLeadingCovers: state.categoryLeadingCovers,
+          categoryLeading: state.categoryLeading,
           isLoading: state.isLoading,
+          error: state.error,
         ),
       ),
     );
     return builder(
       SeriesState(
         categories: state.categories,
-        totalSeriesCount: state.totalSeriesCount,
+        totalCount: state.totalCount,
         categoryCounts: state.categoryCounts,
-        categoryLeadingCovers: state.categoryLeadingCovers,
+        categoryLeading: state.categoryLeading,
         isLoading: state.isLoading,
+        error: state.error,
       ),
     );
   }
@@ -408,14 +392,18 @@ class _SeriesGridConsumer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(
       seriesControllerProvider.select(
-        (state) =>
-            (filteredSeries: state.filteredSeries, isLoading: state.isLoading),
+        (state) => (
+          filteredItems: state.filteredItems,
+          isLoading: state.isLoading,
+          error: state.error,
+        ),
       ),
     );
     return builder(
       SeriesState(
-        filteredSeries: state.filteredSeries,
+        filteredItems: state.filteredItems,
         isLoading: state.isLoading,
+        error: state.error,
       ),
     );
   }
@@ -499,10 +487,8 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
 
     EpisodeSource buildSource(Episode ep, int seasonNum) {
       final streamId = ep.streamId != 0 ? ep.streamId : ep.id;
-      final streamUrl = XtreamRemoteDataSource.buildSeriesStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
+      final streamUrl = ref.read(streamUrlBuilderProvider).seriesForSession(
+        session,
         streamId: streamId,
         extension: ep.containerExtension ?? 'mp4',
       );
@@ -939,96 +925,6 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
           ],
         );
       },
-    );
-  }
-}
-
-class _SeriesPosterCard extends StatelessWidget {
-  const _SeriesPosterCard({required this.series, required this.onTap});
-
-  final Series series;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return PosterHeartCard(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      favorite: (heartFocus, onHeartDirection) => FavoriteToggleButton(
-        type: FavoriteType.series,
-        itemId: series.seriesId != 0 ? series.seriesId : series.id,
-        name: series.name,
-        imageUrl: series.cover,
-        size: 22,
-        padding: 2,
-        focusNode: heartFocus,
-        onDirection: onHeartDirection,
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedImage(
-            imageUrl: series.cover,
-            fit: BoxFit.cover,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            fallbackIcon: AppIcons.series,
-            memCacheWidth: 170,
-            memCacheHeight: 255,
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: PosterTopActions(rating: series.rating),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(AppRadius.card),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xE6000000)],
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    series.name,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (series.releaseYear != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      '${series.releaseYear}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

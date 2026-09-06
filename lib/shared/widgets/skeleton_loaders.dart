@@ -287,7 +287,7 @@ class ChannelListSkeleton extends StatelessWidget {
           height: 62,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF10131B),
+            color: AppColors.skeleton,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withAlpha(18)),
           ),

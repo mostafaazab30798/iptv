@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/core/sports/big_match_detector.dart';
 import 'package:iptv/core/utils/result.dart';
-import 'package:iptv/data/repositories/live_repository_impl.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/epg_program.dart';
@@ -220,10 +219,6 @@ Channel _ch({required int id, required String name, required int categoryId}) {
 }
 
 void main() {
-  setUp(LiveRepositoryImpl.debugResetCaches);
-
-  tearDown(LiveRepositoryImpl.debugResetCaches);
-
   test(
     'Home sports/news rows use category-scoped lookups (no full-list name scan)',
     () async {

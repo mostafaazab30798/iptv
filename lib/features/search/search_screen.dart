@@ -8,11 +8,12 @@ import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
-import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/domain/entities/series.dart';
+import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/features/home/widgets/cards/movie_card.dart';
+import 'package:iptv/features/home/widgets/cards/poster_card_layout.dart';
 import 'package:iptv/features/home/widgets/cards/series_card.dart';
 import 'package:iptv/features/home/widgets/home_section_row.dart';
 import 'package:iptv/features/search/search_controller.dart';
@@ -218,6 +219,8 @@ class _SearchHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTv = PlatformService.instance.isAndroidTv;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -227,10 +230,10 @@ class _SearchHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Back Action
+          // Back Action — autofocus on TV; phone keeps field autofocus.
           TvFocusable(
             entry: true,
-            autofocus: true,
+            autofocus: isTv,
             onSelect: () => popOrGoHome(context),
             child: Container(
               decoration: BoxDecoration(
@@ -271,7 +274,7 @@ class _SearchHeader extends StatelessWidget {
                   const SizedBox(width: 14),
                   const HugeIcon(
                     icon: AppIcons.search,
-                    color: Color(0xFF00C2FF),
+                    color: AppColors.accent,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
@@ -279,13 +282,13 @@ class _SearchHeader extends StatelessWidget {
                     child: TextField(
                       controller: controller,
                       focusNode: focusNode,
-                      autofocus: true,
+                      autofocus: !isTv,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                       ),
-                      cursorColor: const Color(0xFF00C2FF),
+                      cursorColor: AppColors.accent,
                       decoration: InputDecoration(
                         hintText: context.l10n.searchHint,
                         hintStyle: TextStyle(
@@ -374,7 +377,7 @@ class _FilterTabs extends StatelessWidget {
       child: Row(
         children: [
           _TabPill(
-            title: 'All ($total)',
+            title: context.l10n.searchAllCount(total),
             isActive: selected == _SearchCategoryFilter.all,
             onTap: () => onSelect(_SearchCategoryFilter.all),
             entry: true,
@@ -430,11 +433,11 @@ class _TabPill extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF00C2FF) : const Color(0xFF161A24),
+          color: isActive ? AppColors.accent : const Color(0xFF161A24),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isActive
-                ? const Color(0xFF00C2FF)
+                ? AppColors.accent
                 : Colors.white.withAlpha(20),
             width: 0.8,
           ),
@@ -487,7 +490,7 @@ class _SearchDiscoveryView extends StatelessWidget {
           // Heading
           const Row(
             children: [
-              HugeIcon(icon: AppIcons.star, color: Color(0xFF00C2FF), size: 18),
+              HugeIcon(icon: AppIcons.star, color: AppColors.accent, size: 18),
               SizedBox(width: 8),
               Text(
                 'QUICK SEARCH',
@@ -570,17 +573,14 @@ class _SearchResultsView extends ConsumerWidget {
   final List<Movie> movies;
   final List<Series> series;
 
-  static const _rowItemWidth = 120.0;
   static const _gridCacheExtent = 300.0;
 
   void _playChannel(BuildContext context, WidgetRef ref, Channel channel) {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final url = XtreamRemoteDataSource.buildLiveStreamUrl(
-      serverUrl: session.serverUrl,
-      username: session.username,
-      password: session.password,
+    final url = ref.read(streamUrlBuilderProvider).liveForSession(
+      session,
       streamId: channel.streamId,
     );
 
@@ -591,12 +591,10 @@ class _SearchResultsView extends ConsumerWidget {
     playerNotifier.setLazyLivePlaylist(
       channels: channels.isNotEmpty ? channels : [channel],
       initialIndex: initialIndex >= 0 ? initialIndex : 0,
-      urlFor: (c) => XtreamRemoteDataSource.buildLiveStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: c.streamId,
-      ),
+      urlFor: (c) => ref.read(streamUrlBuilderProvider).liveForSession(
+      session,
+      streamId: c.streamId,
+    ),
     );
 
     playerNotifier.load(
@@ -615,10 +613,8 @@ class _SearchResultsView extends ConsumerWidget {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final url = XtreamRemoteDataSource.buildVodStreamUrl(
-      serverUrl: session.serverUrl,
-      username: session.username,
-      password: session.password,
+    final url = ref.read(streamUrlBuilderProvider).vodForSession(
+      session,
       streamId: movie.streamId,
       extension: movie.containerExtension ?? 'mp4',
     );
@@ -654,6 +650,7 @@ class _SearchResultsView extends ConsumerWidget {
     final activeChannelId = ref.watch(
       playerControllerProvider.select((s) => s.source?.channelId),
     );
+    final metrics = PosterCardLayout.posterRowMetricsOf(context);
 
     return CustomScrollView(
       cacheExtent: _gridCacheExtent,
@@ -670,12 +667,20 @@ class _SearchResultsView extends ConsumerWidget {
               child: HomeSectionRow<Movie>(
                 title: context.l10n.homeFeaturedMovies,
                 items: movies,
-                height: 215,
-                itemWidth: _rowItemWidth,
-                itemBuilder: (context, movie, _) => MovieCard(
-                  movie: movie,
-                  onTap: () => _playMovie(context, ref, movie),
-                ),
+                height: metrics.height,
+                itemWidth: metrics.itemWidth,
+                itemBuilder: (context, movie, _) {
+                  final poster = PosterCardLayout.fit(
+                    maxWidth: metrics.itemWidth,
+                    maxHeight: metrics.height,
+                  );
+                  return MovieCard(
+                    movie: movie,
+                    width: poster.width,
+                    height: poster.posterHeight,
+                    onTap: () => _playMovie(context, ref, movie),
+                  );
+                },
               ),
             ),
           ),
@@ -686,12 +691,20 @@ class _SearchResultsView extends ConsumerWidget {
               child: HomeSectionRow<Series>(
                 title: context.l10n.homePopularSeries,
                 items: series,
-                height: 215,
-                itemWidth: _rowItemWidth,
-                itemBuilder: (context, s, _) => SeriesCard(
-                  series: s,
-                  onTap: () => showSeriesDetailsModal(context, s),
-                ),
+                height: metrics.height,
+                itemWidth: metrics.itemWidth,
+                itemBuilder: (context, s, _) {
+                  final poster = PosterCardLayout.fit(
+                    maxWidth: metrics.itemWidth,
+                    maxHeight: metrics.height,
+                  );
+                  return SeriesCard(
+                    series: s,
+                    width: poster.width,
+                    height: poster.posterHeight,
+                    onTap: () => showSeriesDetailsModal(context, s),
+                  );
+                },
               ),
             ),
           ),
@@ -751,7 +764,7 @@ class _SearchResultsView extends ConsumerWidget {
       padding: const EdgeInsets.all(AppSpacing.xl),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 140,
-        mainAxisExtent: 220,
+        childAspectRatio: PosterCardLayout.gridChildAspectRatio,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
@@ -760,8 +773,7 @@ class _SearchResultsView extends ConsumerWidget {
         final movie = list[i];
         return MovieCard(
           movie: movie,
-          width: double.infinity,
-          height: 175,
+          expand: true,
           onTap: () => _playMovie(context, ref, movie),
         );
       },
@@ -778,7 +790,7 @@ class _SearchResultsView extends ConsumerWidget {
       padding: const EdgeInsets.all(AppSpacing.xl),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 140,
-        mainAxisExtent: 220,
+        childAspectRatio: PosterCardLayout.gridChildAspectRatio,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
@@ -787,8 +799,7 @@ class _SearchResultsView extends ConsumerWidget {
         final s = list[i];
         return SeriesCard(
           series: s,
-          width: double.infinity,
-          height: 175,
+          expand: true,
           onTap: () => showSeriesDetailsModal(context, s),
         );
       },

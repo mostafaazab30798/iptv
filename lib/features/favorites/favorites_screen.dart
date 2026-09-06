@@ -8,18 +8,21 @@ import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
-import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/favorite.dart';
+import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/domain/entities/series.dart';
 import 'package:iptv/features/favorites/favorite_ids.dart';
+import 'package:iptv/features/home/widgets/cards/channel_card.dart';
+import 'package:iptv/features/home/widgets/cards/movie_card.dart';
+import 'package:iptv/features/home/widgets/cards/poster_card_layout.dart';
+import 'package:iptv/features/home/widgets/cards/series_card.dart';
 import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
-import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/focus/tv_focusable.dart';
-import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
+import 'package:iptv/shared/widgets/favorite_list_tile.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -49,12 +52,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     if (session == null) return;
 
     if (fav.type == FavoriteType.movie) {
-      final streamUrl = XtreamRemoteDataSource.buildVodStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: fav.itemId,
-      );
+      final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
+      session,
+      streamId: fav.itemId,
+    );
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -78,12 +79,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
       );
       return;
     } else {
-      final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: fav.itemId,
-      );
+      final streamUrl = ref.read(streamUrlBuilderProvider).liveForSession(
+      session,
+      streamId: fav.itemId,
+    );
 
       final favorites = ref.read(favoritesListProvider).valueOrNull ?? const [];
       final channelFavorites =
@@ -114,12 +113,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                 ),
               ],
         initialIndex: initialIndex >= 0 ? initialIndex : 0,
-        urlFor: (c) => XtreamRemoteDataSource.buildLiveStreamUrl(
-          serverUrl: session.serverUrl,
-          username: session.username,
-          password: session.password,
-          streamId: c.streamId,
-        ),
+        urlFor: (c) => ref.read(streamUrlBuilderProvider).liveForSession(
+      session,
+      streamId: c.streamId,
+    ),
       );
 
       playerNotifier.load(
@@ -388,7 +385,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
                                 maxCrossAxisExtent: 180,
-                                childAspectRatio: 0.82,
+                                childAspectRatio:
+                                    PosterCardLayout.gridChildAspectRatio,
                                 crossAxisSpacing: AppSpacing.sm,
                                 mainAxisSpacing: AppSpacing.sm,
                               ),
@@ -408,7 +406,18 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, i) {
                           final item = filteredItems[i];
-                          return _buildListCard(item);
+                          return FavoriteListTile(
+                            item: item,
+                            typeLabel: _getTypeLabel(item.type),
+                            onTap: () => _playFavorite(item),
+                            onRemove: () async {
+                              await ref
+                                  .read(favoritesRepositoryProvider)
+                                  .removeFavorite(item.id);
+                              ref.invalidate(favoritesListProvider);
+                              await refreshAllFavoriteIds(ref);
+                            },
+                          );
                         },
                       );
                     },
@@ -478,199 +487,67 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     );
   }
 
-  Widget _buildListCard(Favorite item) {
-    return FocusableCard(
-      onTap: () => _playFavorite(item),
-      padding: const EdgeInsets.all(10),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AppColors.bg2,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: CachedImage(
-              imageUrl: item.imageUrl,
-              fallbackIcon: item.type == FavoriteType.channel
-                  ? AppIcons.live
-                  : (item.type == FavoriteType.movie
-                        ? AppIcons.movies
-                        : AppIcons.series),
-              borderRadius: BorderRadius.circular(8),
-              memCacheWidth: 64,
-              memCacheHeight: 64,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withAlpha(25),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    _getTypeLabel(item.type),
-                    style: const TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const HugeIcon(
-              icon: AppIcons.delete,
-              color: AppColors.textDisabled,
-              size: 20,
-            ),
-            tooltip: context.l10n.actionDelete,
-            onPressed: () async {
-              await ref
-                  .read(favoritesRepositoryProvider)
-                  .removeFavorite(item.id);
-              ref.invalidate(favoritesListProvider);
-              await refreshAllFavoriteIds(ref);
-            },
-          ),
-          const SizedBox(width: 4),
-          const HugeIcon(
-            icon: AppIcons.play,
-            color: AppColors.accent,
-            size: 24,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildGridCard(Favorite item) {
-    return FocusableCard(
-      onTap: () => _playFavorite(item),
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.bg2,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: CachedImage(
-                      imageUrl: item.imageUrl,
-                      fallbackIcon: item.type == FavoriteType.channel
-                          ? AppIcons.live
-                          : (item.type == FavoriteType.movie
-                                ? AppIcons.movies
-                                : AppIcons.series),
-                      fit: BoxFit.cover,
-                      borderRadius: BorderRadius.circular(8),
-                      memCacheWidth: 150,
-                      memCacheHeight: 150,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () async {
-                      await ref
-                          .read(favoritesRepositoryProvider)
-                          .removeFavorite(item.id);
-                      ref.invalidate(favoritesListProvider);
-                      await refreshAllFavoriteIds(ref);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(160),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const HugeIcon(
-                        icon: AppIcons.delete,
-                        color: Colors.white70,
-                        size: 14,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 4,
-                  left: 4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withAlpha(180),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      _getTypeLabel(item.type),
-                      style: const TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 8.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    switch (item.type) {
+      case FavoriteType.movie:
+        return MovieCard(
+          movie: Movie(
+            id: item.itemId,
+            serverId: 0,
+            streamId: item.itemId,
+            name: item.name,
+            streamIcon: item.imageUrl,
           ),
-          const SizedBox(height: 6),
-          Text(
-            item.name,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          expand: true,
+          onTap: () => _playFavorite(item),
+        );
+      case FavoriteType.series:
+        return SeriesCard(
+          series: Series(
+            id: item.itemId,
+            serverId: 0,
+            seriesId: item.itemId,
+            name: item.name,
+            cover: item.imageUrl,
           ),
-        ],
-      ),
-    );
+          expand: true,
+          onTap: () => _playFavorite(item),
+        );
+      case FavoriteType.channel:
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                ? constraints.maxWidth
+                : 148.0;
+            final h = constraints.maxHeight.isFinite && constraints.maxHeight > 0
+                ? constraints.maxHeight
+                : 124.0;
+            return ChannelCard(
+              channel: Channel(
+                id: item.itemId,
+                serverId: 0,
+                streamId: item.itemId,
+                name: item.name,
+                streamIcon: item.imageUrl,
+              ),
+              width: w,
+              height: h,
+              onTap: () => _playFavorite(item),
+              showBadge: true,
+            );
+          },
+        );
+    }
   }
 
   String _getTypeLabel(FavoriteType type) {
     switch (type) {
       case FavoriteType.channel:
-        return 'LIVE TV';
+        return context.l10n.navLive;
       case FavoriteType.movie:
-        return 'MOVIE';
+        return context.l10n.navMovies;
       case FavoriteType.series:
-        return 'SERIES';
+        return context.l10n.navSeries;
     }
   }
 }

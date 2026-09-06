@@ -8,7 +8,6 @@ import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
-import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/watch_history.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
@@ -234,8 +233,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       key: ValueKey('history_${item.id}'),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
+                        alignment: AlignmentDirectional.centerEnd,
+                        padding: const EdgeInsetsDirectional.only(end: 20),
                         decoration: BoxDecoration(
                           color: AppColors.error.withAlpha(200),
                           borderRadius: BorderRadius.circular(10),
@@ -246,14 +245,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           size: 22,
                         ),
                       ),
-                      onDismissed: (_) {
-                        final id = item.id;
-                        setState(() {
-                          _localItems ??= List.of(items);
-                          _localItems!.removeWhere((x) => x.id == id);
-                        });
-                        ref.read(historyRepositoryProvider).deleteEntry(id);
-                      },
+                      onDismissed: (_) => _deleteHistoryItem(items, item),
                       child: FocusableCard(
                         autofocus: i == 0,
                         entry: i == 0,
@@ -387,6 +379,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 ],
                               ),
                             ),
+                            // Remote-accessible delete (swipe still works on touch).
+                            TvFocusable(
+                              scale: 1.06,
+                              onSelect: () => _deleteHistoryItem(items, item),
+                              child: const Padding(
+                                padding: EdgeInsets.all(6),
+                                child: HugeIcon(
+                                  icon: AppIcons.delete,
+                                  color: AppColors.textDisabled,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
                             const HugeIcon(
                               icon: AppIcons.play,
                               color: AppColors.accent,
@@ -407,6 +413,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     ),
   );
 }
+
+  void _deleteHistoryItem(
+    List<WatchHistoryEntry> items,
+    WatchHistoryEntry item,
+  ) {
+    final id = item.id;
+    setState(() {
+      _localItems ??= List.of(items);
+      _localItems!.removeWhere((x) => x.id == id);
+    });
+    ref.read(historyRepositoryProvider).deleteEntry(id);
+  }
 
   String _buildSubtitle(BuildContext context, WatchHistoryEntry item) {
     final dateStr =
@@ -439,12 +457,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         : Duration.zero;
 
     if (entry.type == WatchHistoryType.movie) {
-      final streamUrl = XtreamRemoteDataSource.buildVodStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: entry.itemId,
-      );
+      final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
+      session,
+      streamId: entry.itemId,
+    );
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -457,12 +473,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
           );
     } else if (entry.type == WatchHistoryType.episode) {
-      final streamUrl = XtreamRemoteDataSource.buildSeriesStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: entry.itemId,
-      );
+      final streamUrl = ref.read(streamUrlBuilderProvider).seriesForSession(
+      session,
+      streamId: entry.itemId,
+    );
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -475,12 +489,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
           );
     } else {
-      final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: entry.itemId,
-      );
+      final streamUrl = ref.read(streamUrlBuilderProvider).liveForSession(
+      session,
+      streamId: entry.itemId,
+    );
       ref
           .read(playerControllerProvider.notifier)
           .load(

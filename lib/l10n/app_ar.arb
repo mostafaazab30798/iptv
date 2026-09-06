@@ -598,6 +598,21 @@
   "companionTransferSuccess": "تم تسجيل الدخول بنجاح على {device}!",
   "companionTransferFailed": "فشل النقل: {error}",
   "companionPhoneNotSignedIn": "هذا الهاتف غير مسجل الدخول على سيرفر IPTV بعد.",
-  "authBackToOnboarding": "العودة إلى إعداد سيرفر IPTV"
+  "authBackToOnboarding": "العودة إلى إعداد سيرفر IPTV",
+  "labelPlaying": "تشغيل",
+  "actionCopy": "نسخ",
+  "searchAllCount": "الكل ({count})",
+  "@searchAllCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "updateLinkCopied": "تم نسخ الرابط",
+  "companionEnterPairingCode": "أدخل رمز الاقتران",
+  "companionPairingDialogBody": "أدخل عنوان IP للتلفاز ورمز PIN المكوّن من 4 أرقام الظاهر على الشاشة.",
+  "companionIpHintExample": "مثال: 192.168.1.50",
+  "companionPinCodeLabel": "رمز PIN المكوّن من 4 أرقام"
 }
 

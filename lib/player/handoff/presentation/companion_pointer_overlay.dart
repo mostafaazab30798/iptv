@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/player/handoff/application/companion_input_manager.dart';
 
 /// Global overlay that draws the companion trackpad cursor on the host TV.
@@ -141,7 +142,7 @@ class _CompanionCursorLayerState extends ConsumerState<_CompanionCursorLayer>
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF00F0FF)
+                                  color: AppColors.accent
                                       .withValues(alpha: opacity * 0.7),
                                   blurRadius: 10,
                                   spreadRadius: 1,
@@ -207,12 +208,12 @@ class _CursorPainter extends CustomPainter {
       ..close();
 
     final glow = Paint()
-      ..color = const Color(0xFF00F0FF).withValues(alpha: pressed ? 0.7 : 0.45)
+      ..color = AppColors.accent.withValues(alpha: pressed ? 0.7 : 0.45)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
     canvas.drawPath(path, glow);
 
     final fill = Paint()
-      ..color = pressed ? const Color(0xFF00F0FF) : Colors.white
+      ..color = pressed ? AppColors.accent : Colors.white
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fill);
 

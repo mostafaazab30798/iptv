@@ -65,6 +65,98 @@ class MatchModel {
     };
   }
 
+  /// Normalizes Arabic-Indic digits to standard Western digits.
+  static String normalizeDigits(String input) {
+    const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    var result = input;
+    for (var i = 0; i < 10; i++) {
+      result = result.replaceAll(arabicDigits[i], '$i');
+    }
+    return result;
+  }
+
+  /// Parses scheduled kickoff time string (e.g. "20:00" or " 20:00 ") into a [DateTime].
+  /// Handles Eastern-Arabic numerals and cross-midnight scheduling.
+  static DateTime? parseStartTime(String time, {DateTime? now}) {
+    final current = now ?? DateTime.now();
+    final normalized = normalizeDigits(time).trim();
+    final parts = normalized.split(':');
+    if (parts.length < 2) return null;
+
+    final hour = int.tryParse(parts[0].trim());
+    final minute = int.tryParse(parts[1].trim());
+    if (hour == null || minute == null) return null;
+
+    var matchStartTime = DateTime(
+      current.year,
+      current.month,
+      current.day,
+      hour,
+      minute,
+    );
+
+    // If it's early in the morning (00:00 - 05:59) and the match was scheduled
+    // for evening (18:00 - 23:59), the match was kicked off yesterday evening.
+    if (current.hour < 6 && hour >= 18) {
+      matchStartTime = matchStartTime.subtract(const Duration(days: 1));
+    }
+    // If it's late evening (18:00 - 23:59) and the match is scheduled
+    // for early morning (00:00 - 05:59), it's kicking off tomorrow morning.
+    else if (current.hour >= 18 && hour < 6) {
+      matchStartTime = matchStartTime.add(const Duration(days: 1));
+    }
+
+    return matchStartTime;
+  }
+
+  /// Whether the match is currently live, or is scheduled to start within [window]
+  /// (default 10 minutes) before kickoff.
+  bool isEligibleForRealtime({
+    DateTime? now,
+    Duration window = const Duration(minutes: 10),
+  }) {
+    final current = now ?? DateTime.now();
+    final timing = resolveMatchTiming(status: status, time: time, now: current);
+
+    // If already in progress, always track real-time
+    if (timing.state == 'in') return true;
+
+    // If already finished, no real-time polling needed
+    if (timing.state == 'post') return false;
+
+    // For upcoming matches, only track if within the pre-kickoff window
+    final startTime = parseStartTime(time, now: current);
+    if (startTime == null) return false;
+
+    final windowStart = startTime.subtract(window);
+    final matchEndEstimate = startTime.add(const Duration(minutes: 130));
+
+    return (current.isAfter(windowStart) || current.isAtSameMomentAs(windowStart)) &&
+        current.isBefore(matchEndEstimate);
+  }
+
+  /// Calculates the time remaining until the [window] (default 10 minutes)
+  /// before kickoff begins. Returns [Duration.zero] if already within the window,
+  /// or null if the match is finished or time is unparseable.
+  Duration? timeUntilRealtimeWindow({
+    DateTime? now,
+    Duration window = const Duration(minutes: 10),
+  }) {
+    final current = now ?? DateTime.now();
+    final timing = resolveMatchTiming(status: status, time: time, now: current);
+    if (timing.state == 'post') return null;
+    if (timing.state == 'in') return Duration.zero;
+
+    final startTime = parseStartTime(time, now: current);
+    if (startTime == null) return null;
+
+    final windowStart = startTime.subtract(window);
+    if (current.isAfter(windowStart) || current.isAtSameMomentAs(windowStart)) {
+      return Duration.zero;
+    }
+    return windowStart.difference(current);
+  }
+
   /// Resolves the match state ('in', 'pre', 'post') and clock label based on
   /// both the scraped status string and whether the real current time has
   /// reached or exceeded the scheduled kickoff time.
@@ -96,46 +188,27 @@ class MatchModel {
     }
 
     // 3. Real-time vs scheduled start time check
-    final parts = time.trim().split(':');
-    if (parts.length >= 2) {
-      final hour = int.tryParse(parts[0].trim());
-      final minute = int.tryParse(parts[1].trim());
-      if (hour != null && minute != null) {
-        var matchStartTime = DateTime(
-          current.year,
-          current.month,
-          current.day,
-          hour,
-          minute,
-        );
-
-        // If it's early in the morning (00:00 - 06:00) and the match
-        // was scheduled for evening (18:00 - 23:59), the match was kicked
-        // off yesterday evening.
-        if (current.hour < 6 && hour >= 18) {
-          matchStartTime = matchStartTime.subtract(const Duration(days: 1));
-        }
-
-        if (current.isAfter(matchStartTime) ||
-            current.isAtSameMomentAs(matchStartTime)) {
-          final elapsed = current.difference(matchStartTime);
-          // Football matches last ~115-130 minutes total (90min + HT + stoppage)
-          if (elapsed <= const Duration(minutes: 130)) {
-            final elapsedMinutes = elapsed.inMinutes;
-            final minuteLabel =
-                elapsedMinutes > 0 ? "'+$elapsedMinutes" : 'جارية الآن';
-            return (
-              state: 'in',
-              clock: (status.isNotEmpty && status != 'لم تبدأ')
-                  ? status
-                  : minuteLabel,
-            );
-          } else {
-            return (state: 'post', clock: 'انتهت');
-          }
+    final matchStartTime = parseStartTime(time, now: current);
+    if (matchStartTime != null) {
+      if (current.isAfter(matchStartTime) ||
+          current.isAtSameMomentAs(matchStartTime)) {
+        final elapsed = current.difference(matchStartTime);
+        // Football matches last ~115-130 minutes total (90min + HT + stoppage)
+        if (elapsed <= const Duration(minutes: 130)) {
+          final elapsedMinutes = elapsed.inMinutes;
+          final minuteLabel =
+              elapsedMinutes > 0 ? "'+$elapsedMinutes" : 'جارية الآن';
+          return (
+            state: 'in',
+            clock: (status.isNotEmpty && status != 'لم تبدأ')
+                ? status
+                : minuteLabel,
+          );
         } else {
-          return (state: 'pre', clock: time);
+          return (state: 'post', clock: 'انتهت');
         }
+      } else {
+        return (state: 'pre', clock: time);
       }
     }
 
@@ -205,6 +278,7 @@ class MatchModel {
       broadcastChannel: cleanChannel,
       scheduledTime: time,
       rawStatus: status,
+      start: parseStartTime(time, now: now),
       homePenScore: homePenScore,
       awayPenScore: awayPenScore,
       homeGoals: homeGoals,

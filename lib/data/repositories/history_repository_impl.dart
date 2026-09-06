@@ -13,6 +13,9 @@ class HistoryRepositoryImpl implements HistoryRepository {
   @override
   Future<Result<List<WatchHistoryEntry>>> getHistory({int limit = maxHistoryEntries}) async {
     try {
+      // Keep the FIFO cap honest without touching the playback position-save path.
+      await _pruneHistory(maxHistoryEntries);
+
       final query = database.select(database.watchHistory)
         ..orderBy([(tbl) => OrderingTerm.desc(tbl.watchedAt), (tbl) => OrderingTerm.desc(tbl.id)])
         ..limit(limit);
@@ -131,7 +134,8 @@ class HistoryRepositoryImpl implements HistoryRepository {
             watchedAt: Value(DateTime.now()),
           ),
         );
-        await _pruneHistory(maxHistoryEntries);
+        // Intentionally no prune here — position saves are hot during playback.
+        // Pruning runs on [recordWatch] and [getHistory] instead.
       }
       return const Ok(null);
     } catch (e) {

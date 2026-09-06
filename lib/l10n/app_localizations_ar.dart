@@ -1515,4 +1515,31 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get authBackToOnboarding => 'العودة إلى إعداد سيرفر IPTV';
+
+  @override
+  String get labelPlaying => 'تشغيل';
+
+  @override
+  String get actionCopy => 'نسخ';
+
+  @override
+  String searchAllCount(int count) {
+    return 'الكل ($count)';
+  }
+
+  @override
+  String get updateLinkCopied => 'تم نسخ الرابط';
+
+  @override
+  String get companionEnterPairingCode => 'أدخل رمز الاقتران';
+
+  @override
+  String get companionPairingDialogBody =>
+      'أدخل عنوان IP للتلفاز ورمز PIN المكوّن من 4 أرقام الظاهر على الشاشة.';
+
+  @override
+  String get companionIpHintExample => 'مثال: 192.168.1.50';
+
+  @override
+  String get companionPinCodeLabel => 'رمز PIN المكوّن من 4 أرقام';
 }

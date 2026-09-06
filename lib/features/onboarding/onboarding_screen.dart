@@ -15,11 +15,15 @@ import 'package:iptv/core/constants/server_presets.dart';
 import 'package:iptv/core/utils/m3u_converter.dart';
 import 'package:iptv/features/auth/auth_controller.dart';
 import 'package:iptv/features/home/home_controller.dart';
+import 'package:iptv/features/onboarding/onboarding_validators.dart';
 import 'package:iptv/features/onboarding/widgets/m3u_converter_dialog.dart';
 import 'package:iptv/features/onboarding/widgets/server_gateway_picker_dialog.dart';
 import 'package:iptv/player/handoff/presentation/companion_auth_dialog.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
+import 'package:iptv/shared/widgets/language_picker.dart';
+
+part 'onboarding_ambient_background.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -248,43 +252,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildLanguageSwitcher() {
-    final currentLocale = ref.watch(localeProvider).languageCode;
-    final isAr = currentLocale == 'ar';
-
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF10141C).withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.12),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _LanguageSegmentButton(
-            label: 'EN',
-            isSelected: !isAr,
-            onTap: () => ref.read(localeProvider.notifier).setLocale('en'),
-          ),
-          const SizedBox(width: 4),
-          _LanguageSegmentButton(
-            label: 'العربية',
-            isSelected: isAr,
-            onTap: () => ref.read(localeProvider.notifier).setLocale('ar'),
-          ),
-        ],
-      ),
-    );
+    return const LanguagePicker(style: LanguagePickerStyle.compact);
   }
 
   /// Compact single-column layout for Mobile & Small Tablets.
@@ -663,19 +631,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   icon: AppIcons.link,
                 ),
                 validator: (v) {
-                  if (!_isCustomServer) return null;
-                  if (v == null || v.trim().isEmpty) {
+                  final code = OnboardingValidators.validateServerUrl(
+                    v,
+                    isCustomServer: _isCustomServer,
+                  );
+                  if (code == 'empty') {
                     return context.l10n.validationUrlRequired;
                   }
-                  final trimmed = v.trim();
-                  final uri = Uri.tryParse(trimmed);
-                  final hasHttpScheme =
-                      trimmed.startsWith('http://') ||
-                      trimmed.startsWith('https://');
-                  if (!hasHttpScheme ||
-                      uri == null ||
-                      uri.host.isEmpty ||
-                      (uri.scheme != 'http' && uri.scheme != 'https')) {
+                  if (code == 'invalid') {
                     return context.l10n.validationUrlInvalid;
                   }
                   return null;
@@ -748,9 +711,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               hint: context.l10n.authUsername,
               icon: AppIcons.user,
             ),
-            validator: (v) => (v == null || v.trim().isEmpty)
-                ? context.l10n.validationUsernameRequired
-                : null,
+            validator: (v) => OnboardingValidators.validateUsername(v) == null
+                ? null
+                : context.l10n.validationUsernameRequired,
           ),
           const SizedBox(height: AppSpacing.md),
 
@@ -778,9 +741,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
-            validator: (v) => (v == null || v.isEmpty)
-                ? context.l10n.validationPasswordRequired
-                : null,
+            validator: (v) => OnboardingValidators.validatePassword(v) == null
+                ? null
+                : context.l10n.validationPasswordRequired,
           ),
 
           // Error Banner
@@ -825,7 +788,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             height: 48,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppColors.accent, Color(0xFF0077FF)],
+                colors: [AppColors.accent, AppColors.accent],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1010,80 +973,3 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 /// Restrained, static header wash behind the connection workflow.
-class _AmbientBackground extends StatelessWidget {
-  const _AmbientBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF10242D), AppColors.bg0, AppColors.bg0],
-          stops: [0, 0.34, 1],
-        ),
-      ),
-    );
-  }
-}
-
-class _LanguageSegmentButton extends StatelessWidget {
-  const _LanguageSegmentButton({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.accent.withValues(alpha: 0.22)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadius.full),
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.accent.withValues(alpha: 0.6)
-                  : Colors.transparent,
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isSelected) ...[
-                const HugeIcon(
-                  icon: AppIcons.language,
-                  size: 14,
-                  color: AppColors.accent,
-                ),
-                const SizedBox(width: 5),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

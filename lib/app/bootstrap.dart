@@ -19,16 +19,10 @@ Future<void> initializeAfterFirstFrame() {
 }
 
 Future<void> _initializeAfterFirstFrame() async {
-  await Future.wait<void>([
-    PlatformService.instance.initialize(),
-    PreferencesStorage.initialize(),
-  ]);
+  // Prefs may already be warm from pre-runApp bootstrap; keep idempotent.
+  await PreferencesStorage.initialize();
 
   final platform = PlatformService.instance;
-  AppLogger.info(
-    'Platform: ${platform.platformType} lowRam=${DeviceMemory.isLowRamDevice}',
-    feature: 'bootstrap',
-  );
 
   if (platform.isAndroidTv) {
     await SystemChrome.setPreferredOrientations(const [
@@ -105,8 +99,18 @@ Future<void> bootstrap() async {
   AppLogger.initialize(verbose: kDebugMode);
   AppLogger.info('Bootstrap starting', feature: 'bootstrap');
 
-  // Initialize preferences so providers and secure storage can safely access them immediately.
-  await PreferencesStorage.initialize();
+  // Platform + prefs before runApp so isAndroidTv / formFactor are correct
+  // on the first frame (layouts must not see a permanent false TV flag).
+  await Future.wait<void>([
+    PlatformService.instance.initialize(),
+    PreferencesStorage.initialize(),
+  ]);
+
+  final platform = PlatformService.instance;
+  AppLogger.info(
+    'Platform: ${platform.platformType} lowRam=${DeviceMemory.isLowRamDevice}',
+    feature: 'bootstrap',
+  );
 
   // Open database — isolated so crash is caught before UI renders.
   final db = AppDatabase();

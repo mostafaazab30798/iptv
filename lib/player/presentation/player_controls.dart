@@ -9,6 +9,7 @@ import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/tv_focusable.dart';
+import 'package:iptv/shared/layouts/layouts.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
@@ -91,8 +92,11 @@ class PlayerControls extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 600;
-        final isWide = constraints.maxWidth >= 720;
+        final formFactor = FormFactorResolver.of(context);
+        final isTv = formFactor == FormFactor.tv;
+        // Compact chrome below 600 logical px and always on TV.
+        final isNarrow = constraints.maxWidth < 600 || isTv;
+        final isWide = constraints.maxWidth >= 720 && !isTv;
         // Phones: shortest side stays under 600 in both orientations.
         final isPhone = MediaQuery.sizeOf(context).shortestSide < 600;
 
@@ -324,167 +328,231 @@ class PlayerControls extends StatelessWidget {
                         ),
                       ],
 
-                      // Bottom utility controls row
+                      // Bottom utility controls row — Expanded gives each side a
+                      // real width; Align + FittedBox.scaleDown pins clusters to
+                      // start/end without overflow on narrow windows / TV.
                       Row(
                         children: [
-                          if (isLive) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent,
-                                borderRadius: BorderRadius.circular(4),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.redAccent.withValues(alpha: 0.4),
-                                    blurRadius: 5,
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    'LIVE',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-
-                          if (caps.audioTracks && playerState.availableAudioTracks.isNotEmpty)
-                            _CompactGlassButton(
-                              icon: AppIcons.audioTrack,
-                              tooltip: 'Audio Tracks',
-                              size: 32,
-                              iconSize: 16,
-                              onPressed: onOpenAudioTracks,
-                            ),
-                          if (caps.subtitles && playerState.availableSubtitleTracks.isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            _CompactGlassButton(
-                              icon: AppIcons.subtitles,
-                              tooltip: 'Subtitles',
-                              size: 32,
-                              iconSize: 16,
-                              onPressed: onOpenSubtitles,
-                            ),
-                          ],
-                          if (onAudioHandoff != null && !isPhone) ...[
-                            const SizedBox(width: 6),
-                            _CompactGlassButton(
-                              icon: AppIcons.headphones,
-                              tooltip: context.l10n.handoffTvDialogTitle,
-                              size: 32,
-                              iconSize: 16,
-                              onPressed: onAudioHandoff!,
-                            ),
-                          ],
-
-                          const Spacer(),
-
-                          // Channel / Episode Navigation (Always LTR: Previous on left, Next on right)
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _CompactGlassButton(
-                                  icon: AppIcons.previous,
-                                  tooltip: context.l10n.playerPreviousChannel,
-                                  size: 32,
-                                  iconSize: 16,
-                                  onPressed: onPreviousChannel,
+                          Expanded(
+                            flex: 2,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: AlignmentDirectional.centerStart,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isLive) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2.5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.redAccent,
+                                          borderRadius: BorderRadius.circular(4),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.redAccent.withValues(
+                                                alpha: 0.4,
+                                              ),
+                                              blurRadius: 5,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: const BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Text(
+                                              'LIVE',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    if (caps.audioTracks &&
+                                        playerState
+                                            .availableAudioTracks.isNotEmpty)
+                                      _CompactGlassButton(
+                                        icon: AppIcons.audioTrack,
+                                        tooltip: 'Audio Tracks',
+                                        size: 32,
+                                        iconSize: 16,
+                                        onPressed: onOpenAudioTracks,
+                                      ),
+                                    if (caps.subtitles &&
+                                        playerState.availableSubtitleTracks
+                                            .isNotEmpty) ...[
+                                      const SizedBox(width: 6),
+                                      _CompactGlassButton(
+                                        icon: AppIcons.subtitles,
+                                        tooltip: 'Subtitles',
+                                        size: 32,
+                                        iconSize: 16,
+                                        onPressed: onOpenSubtitles,
+                                      ),
+                                    ],
+                                    if (onAudioHandoff != null && !isPhone) ...[
+                                      const SizedBox(width: 6),
+                                      _CompactGlassButton(
+                                        icon: AppIcons.headphones,
+                                        tooltip:
+                                            context.l10n.handoffTvDialogTitle,
+                                        size: 32,
+                                        iconSize: 16,
+                                        onPressed: onAudioHandoff!,
+                                      ),
+                                    ],
+                                  ],
                                 ),
-                                const SizedBox(width: 4),
-                                _CompactGlassButton(
-                                  icon: AppIcons.next,
-                                  tooltip: context.l10n.playerNextChannel,
-                                  size: 32,
-                                  iconSize: 16,
-                                  onPressed: onNextChannel,
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          Expanded(
+                            flex: 3,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: AlignmentDirectional.centerEnd,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Channel / Episode Navigation (Always LTR)
+                                    Directionality(
+                                      textDirection: TextDirection.ltr,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          _CompactGlassButton(
+                                            icon: AppIcons.previous,
+                                            tooltip: context
+                                                .l10n.playerPreviousChannel,
+                                            size: 32,
+                                            iconSize: 16,
+                                            onPressed: onPreviousChannel,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          _CompactGlassButton(
+                                            icon: AppIcons.next,
+                                            tooltip:
+                                                context.l10n.playerNextChannel,
+                                            size: 32,
+                                            iconSize: 16,
+                                            onPressed: onNextChannel,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
 
-                          // Volume (slider shown when screen is not extremely narrow)
-                          if (caps.volume) ...[
-                            IconButton(
-                              icon: HugeIcon(
-                                icon: playerState.isMuted || playerState.volume == 0.0
-                                    ? AppIcons.volumeMute
-                                    : AppIcons.volumeHigh,
-                                color: Colors.white,
-                                size: 19,
-                              ),
-                              tooltip: playerState.isMuted ? 'Unmute' : 'Mute',
-                              onPressed: onToggleMute,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                            ),
-                            if (!isNarrow)
-                              SizedBox(
-                                width: 75,
-                                child: Directionality(
-                                  textDirection: TextDirection.ltr,
-                                  child: SliderTheme(
-                                    data: SliderTheme.of(context).copyWith(
-                                      activeTrackColor: Colors.white,
-                                      inactiveTrackColor: Colors.white24,
-                                      thumbColor: Colors.white,
-                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-                                      trackHeight: 2.5,
-                                    ),
-                                    child: Slider(
-                                      value: playerState.isMuted ? 0.0 : playerState.volume,
-                                      onChanged: onVolumeChanged,
-                                    ),
-                                  ),
+                                    // Volume (slider hidden when compact / TV)
+                                    if (caps.volume) ...[
+                                      IconButton(
+                                        icon: HugeIcon(
+                                          icon: playerState.isMuted ||
+                                                  playerState.volume == 0.0
+                                              ? AppIcons.volumeMute
+                                              : AppIcons.volumeHigh,
+                                          color: Colors.white,
+                                          size: 19,
+                                        ),
+                                        tooltip: playerState.isMuted
+                                            ? 'Unmute'
+                                            : 'Mute',
+                                        onPressed: onToggleMute,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 30,
+                                          minHeight: 30,
+                                        ),
+                                      ),
+                                      if (!isNarrow)
+                                        SizedBox(
+                                          width: 75,
+                                          child: Directionality(
+                                            textDirection: TextDirection.ltr,
+                                            child: SliderTheme(
+                                              data: SliderTheme.of(context)
+                                                  .copyWith(
+                                                activeTrackColor: Colors.white,
+                                                inactiveTrackColor:
+                                                    Colors.white24,
+                                                thumbColor: Colors.white,
+                                                thumbShape:
+                                                    const RoundSliderThumbShape(
+                                                  enabledThumbRadius: 4,
+                                                ),
+                                                trackHeight: 2.5,
+                                              ),
+                                              child: Slider(
+                                                value: playerState.isMuted
+                                                    ? 0.0
+                                                    : playerState.volume,
+                                                onChanged: onVolumeChanged,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      const SizedBox(width: 4),
+                                    ],
+
+                                    // Fullscreen — orientation on mobile, window on desktop.
+                                    if (caps.fullscreen) ...[
+                                      Builder(
+                                        builder: (context) {
+                                          final isMobile =
+                                              PlatformService.instance.isAndroid;
+                                          final isLandscape =
+                                              MediaQuery.maybeOrientationOf(
+                                                    context,
+                                                  ) ==
+                                                  Orientation.landscape;
+                                          final isFullscreenActive = isMobile
+                                              ? isLandscape
+                                              : playerState.isFullscreen;
+                                          final tooltip = isMobile
+                                              ? (isLandscape
+                                                  ? 'Portrait'
+                                                  : 'Fullscreen (Landscape)')
+                                              : (playerState.isFullscreen
+                                                  ? 'Exit Fullscreen'
+                                                  : 'Fullscreen');
+
+                                          return _CompactGlassButton(
+                                            icon: isFullscreenActive
+                                                ? AppIcons.exitFullscreen
+                                                : AppIcons.fullscreen,
+                                            tooltip: tooltip,
+                                            size: 32,
+                                            iconSize: 18,
+                                            onPressed: onToggleFullscreen,
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
-                            const SizedBox(width: 4),
-                          ],
-
-                          // Fullscreen — dynamically reflects orientation on mobile and window state on desktop.
-                          if (caps.fullscreen) ...[
-                            Builder(
-                              builder: (context) {
-                                final isMobile = PlatformService.instance.isAndroid;
-                                final isLandscape = MediaQuery.maybeOrientationOf(context) == Orientation.landscape;
-                                final isFullscreenActive = isMobile ? isLandscape : playerState.isFullscreen;
-                                final tooltip = isMobile
-                                    ? (isLandscape ? 'Portrait' : 'Fullscreen (Landscape)')
-                                    : (playerState.isFullscreen ? 'Exit Fullscreen' : 'Fullscreen');
-
-                                return _CompactGlassButton(
-                                  icon: isFullscreenActive
-                                      ? AppIcons.exitFullscreen
-                                      : AppIcons.fullscreen,
-                                  tooltip: tooltip,
-                                  size: 32,
-                                  iconSize: 18,
-                                  onPressed: onToggleFullscreen,
-                                );
-                              },
                             ),
-                          ],
+                          ),
                         ],
                       ),
                     ],

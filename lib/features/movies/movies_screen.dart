@@ -9,19 +9,17 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_motion.dart';
 import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
-import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/category.dart';
-import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/movie.dart';
+import 'package:iptv/features/catalog/catalog_categories_hub.dart';
+import 'package:iptv/features/home/widgets/cards/movie_card.dart';
 import 'package:iptv/features/movies/movies_controller.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
-import 'package:iptv/shared/widgets/cached_image.dart';
-import 'package:iptv/shared/widgets/category_card.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
-import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
+import 'package:iptv/shared/widgets/error_view.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 
 class MoviesScreen extends ConsumerStatefulWidget {
@@ -76,10 +74,8 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final streamUrl = XtreamRemoteDataSource.buildVodStreamUrl(
-      serverUrl: session.serverUrl,
-      username: session.username,
-      password: session.password,
+    final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
+      session,
       streamId: movie.streamId,
       extension: movie.containerExtension ?? 'mp4',
     );
@@ -122,52 +118,18 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
   }
 
   Widget _buildCategoriesHub(MoviesState moviesState) {
-    if (moviesState.isLoading && moviesState.categories.isEmpty) {
-      return const CategoryListSkeleton();
-    }
-
-    final categories = moviesState.categories;
-
-    return KeyedSubtree(
-      key: const ValueKey('movies_categories_hub'),
-      child: categories.isEmpty
-          ? EmptyState(
-              title: context.l10n.labelNoResults,
-              subtitle: context.l10n.homeCheckConnection,
-              icon: AppIcons.movies,
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              cacheExtent: 350,
-              itemCount: categories.length + 1,
-              separatorBuilder: (_, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return CategoryCard(
-                    title: context.l10n.labelAllMovies,
-                    itemCount: moviesState.totalMovieCount,
-                    itemCountLabel: context.l10n.labelMovies,
-                    isAllCard: true,
-                    onTap: () => _selectCategory(null, isAll: true),
-                  );
-                }
-
-                final category = categories[index - 1];
-                final count = moviesState.categoryCounts[category.id] ?? 0;
-                final logoUrl = moviesState.categoryLeadingLogos[category.id];
-
-                return CategoryCard(
-                  title: category.name,
-                  itemCount: count,
-                  itemCountLabel: context.l10n.labelMovies,
-                  logoUrl: logoUrl,
-                  onTap: () => _selectCategory(category),
-                );
-              },
-            ),
+    return CatalogCategoriesHub<Movie, String?>(
+      state: moviesState,
+      hubKey: const ValueKey('movies_categories_hub'),
+      allTitle: context.l10n.labelAllMovies,
+      itemCountLabel: context.l10n.labelMovies,
+      emptyIcon: AppIcons.movies,
+      onRetry: () => ref
+          .read(moviesControllerProvider.notifier)
+          .loadData(forceRefresh: true),
+      onSelectAll: () => _selectCategory(null, isAll: true),
+      onSelectCategory: (category) => _selectCategory(category),
+      leadingUrlOf: (logo) => logo,
     );
   }
 
@@ -344,11 +306,19 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
           child: moviesState.isLoading
               ? const PosterGridSkeleton()
               : moviesState.filteredMovies.isEmpty
-              ? EmptyState(
-                  title: context.l10n.moviesNoMoviesFound,
-                  subtitle: context.l10n.searchNoResultsSubtitle,
-                  icon: AppIcons.movies,
-                )
+              ? (moviesState.error != null
+                    ? ErrorView(
+                        message: context.l10n.homeCheckConnection,
+                        eyebrow: context.l10n.moviesNoMoviesFound,
+                        onRetry: () => ref
+                            .read(moviesControllerProvider.notifier)
+                            .loadData(forceRefresh: true),
+                      )
+                    : EmptyState(
+                        title: context.l10n.moviesNoMoviesFound,
+                        subtitle: context.l10n.searchNoResultsSubtitle,
+                        icon: AppIcons.movies,
+                      ))
               : GridView.builder(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   cacheExtent: 350,
@@ -361,8 +331,14 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                   itemCount: moviesState.filteredMovies.length,
                   itemBuilder: (context, i) {
                     final movie = moviesState.filteredMovies[i];
-                    return _MovieGridCard(
+                    return MovieCard(
                       movie: movie,
+                      expand: true,
+                      borderRadius: AppRadius.card,
+                      heartSize: 22,
+                      memCacheWidth: 170,
+                      memCacheHeight: 255,
+                      titlePlacement: PosterTitlePlacement.overlay,
                       onTap: () => _playMovie(movie),
                     );
                   },
@@ -384,20 +360,22 @@ class _MoviesCategoriesConsumer extends ConsumerWidget {
       moviesControllerProvider.select(
         (state) => (
           categories: state.categories,
-          totalMovieCount: state.totalMovieCount,
+          totalCount: state.totalCount,
           categoryCounts: state.categoryCounts,
-          categoryLeadingLogos: state.categoryLeadingLogos,
+          categoryLeading: state.categoryLeading,
           isLoading: state.isLoading,
+          error: state.error,
         ),
       ),
     );
     return builder(
       MoviesState(
         categories: state.categories,
-        totalMovieCount: state.totalMovieCount,
+        totalCount: state.totalCount,
         categoryCounts: state.categoryCounts,
-        categoryLeadingLogos: state.categoryLeadingLogos,
+        categoryLeading: state.categoryLeading,
         isLoading: state.isLoading,
+        error: state.error,
       ),
     );
   }
@@ -412,106 +390,18 @@ class _MoviesGridConsumer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(
       moviesControllerProvider.select(
-        (state) =>
-            (filteredMovies: state.filteredMovies, isLoading: state.isLoading),
+        (state) => (
+          filteredItems: state.filteredItems,
+          isLoading: state.isLoading,
+          error: state.error,
+        ),
       ),
     );
     return builder(
       MoviesState(
-        filteredMovies: state.filteredMovies,
+        filteredItems: state.filteredItems,
         isLoading: state.isLoading,
-      ),
-    );
-  }
-}
-
-class _MovieGridCard extends StatelessWidget {
-  const _MovieGridCard({required this.movie, required this.onTap});
-
-  final Movie movie;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return PosterHeartCard(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      favorite: (heartFocus, onHeartDirection) => FavoriteToggleButton(
-        type: FavoriteType.movie,
-        itemId: movie.streamId,
-        name: movie.name,
-        imageUrl: movie.streamIcon,
-        size: 22,
-        padding: 2,
-        focusNode: heartFocus,
-        onDirection: onHeartDirection,
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedImage(
-            imageUrl: movie.streamIcon,
-            fit: BoxFit.cover,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            fallbackIcon: AppIcons.movies,
-            // Grid cells are max 170×255 logical px — cap decoded bitmap to display size
-            // to avoid loading 300–1000px source posters into multi-MB decoded bitmaps.
-            memCacheWidth: 170,
-            memCacheHeight: 255,
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: PosterTopActions(rating: movie.rating),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(AppRadius.card),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xE6000000)],
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    movie.name,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (movie.releaseYear != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      '${movie.releaseYear}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
+        error: state.error,
       ),
     );
   }

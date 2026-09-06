@@ -21,6 +21,9 @@ abstract final class AppColors {
   static const Color bg3 = Color(0xFF1B1F28); // hover / focused surface
   static const Color bg4 = Color(0xFF242938); // selected / active surface
 
+  /// Placeholder / skeleton flash base (matches loaded card surfaces).
+  static const Color skeleton = Color(0xFF10131B);
+
   // ---------------------------------------------------------------------------
   // Borders & separators
   // ---------------------------------------------------------------------------
@@ -41,7 +44,9 @@ abstract final class AppColors {
   // Semantic
   // ---------------------------------------------------------------------------
 
-  static const Color live = Color(0xFFFF3B3B);   // live badge
+  static const Color live = Color(0xFFFF3B3B);   // live badge (red)
+  /// LIVE indicator green used on channel cards / status chips.
+  static const Color liveGreen = Color(0xFF00FF87);
   static const Color success = Color(0xFF2ECC71);
   static const Color warning = Color(0xFFF39C12);
   static const Color error = Color(0xFFE74C3C);

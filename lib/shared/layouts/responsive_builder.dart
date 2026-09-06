@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:iptv/shared/layouts/app_breakpoints.dart';
+import 'package:iptv/shared/layouts/form_factor.dart';
 
 /// Calls [builder] with the current [ScreenSize] whenever the viewport changes.
-enum ScreenSize { compact, standard, wide }
-
 class ResponsiveBuilder extends StatelessWidget {
   const ResponsiveBuilder({
     super.key,
@@ -14,14 +13,21 @@ class ResponsiveBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ScreenSize size;
-    if (AppBreakpoints.isCompact(context)) {
-      size = ScreenSize.compact;
-    } else if (AppBreakpoints.isWide(context)) {
-      size = ScreenSize.wide;
-    } else {
-      size = ScreenSize.standard;
-    }
-    return builder(context, size);
+    return builder(context, AppBreakpoints.screenSizeOf(context));
+  }
+}
+
+/// Calls [builder] with the resolved [FormFactor] whenever the viewport changes.
+class FormFactorBuilder extends StatelessWidget {
+  const FormFactorBuilder({
+    super.key,
+    required this.builder,
+  });
+
+  final Widget Function(BuildContext context, FormFactor formFactor) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return builder(context, FormFactorResolver.of(context));
   }
 }

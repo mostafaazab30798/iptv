@@ -11,7 +11,6 @@ import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
-import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/movie.dart';
@@ -21,6 +20,7 @@ import 'package:iptv/features/home/home_controller.dart';
 import 'package:iptv/features/home/widgets/cards/channel_card.dart';
 import 'package:iptv/features/home/widgets/cards/history_card.dart';
 import 'package:iptv/features/home/widgets/cards/movie_card.dart';
+import 'package:iptv/features/home/widgets/cards/poster_card_layout.dart';
 import 'package:iptv/features/home/widgets/cards/series_card.dart';
 import 'package:iptv/features/home/widgets/home_hero_banner.dart';
 import 'package:iptv/features/home/widgets/home_section_row.dart';
@@ -30,7 +30,7 @@ import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/scroll/desktop_smooth_scroll.dart';
-import 'package:iptv/shared/layouts/responsive_builder.dart';
+import 'package:iptv/shared/layouts/layouts.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/skeleton_loaders.dart';
 import 'package:iptv/shared/widgets/shimmer.dart';
@@ -353,6 +353,7 @@ class _HomeContinueWatchingSliver extends ConsumerWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    final metrics = _homePosterRowMetrics(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -362,13 +363,21 @@ class _HomeContinueWatchingSliver extends ConsumerWidget {
             title: context.l10n.labelContinueWatching,
             onSeeAll: () => context.push(Routes.history),
             items: items,
-            height: 215,
-            itemWidth: 120,
-            itemBuilder: (context, entry, _) => HistoryCard(
-              key: ValueKey('hist-${entry.itemId}-${entry.type}'),
-              entry: entry,
-              onTap: () => _HomePlayback.playHistory(context, ref, entry),
-            ),
+            height: metrics.height,
+            itemWidth: metrics.itemWidth,
+            itemBuilder: (context, entry, _) {
+              final poster = PosterCardLayout.fit(
+                maxWidth: metrics.itemWidth,
+                maxHeight: metrics.height,
+              );
+              return HistoryCard(
+                key: ValueKey('hist-${entry.itemId}-${entry.type}'),
+                entry: entry,
+                width: poster.width,
+                height: poster.posterHeight,
+                onTap: () => _HomePlayback.playHistory(context, ref, entry),
+              );
+            },
           ),
         ),
       ),
@@ -388,6 +397,7 @@ class _HomeFeaturedMoviesSliver extends ConsumerWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    final metrics = _homePosterRowMetrics(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -397,13 +407,21 @@ class _HomeFeaturedMoviesSliver extends ConsumerWidget {
             title: context.l10n.homeFeaturedMovies,
             onSeeAll: () => context.push(Routes.movies),
             items: items,
-            height: 215,
-            itemWidth: 120,
-            itemBuilder: (context, movie, _) => MovieCard(
-              key: ValueKey('movie-${movie.streamId}'),
-              movie: movie,
-              onTap: () => _HomePlayback.playMovie(context, ref, movie),
-            ),
+            height: metrics.height,
+            itemWidth: metrics.itemWidth,
+            itemBuilder: (context, movie, _) {
+              final poster = PosterCardLayout.fit(
+                maxWidth: metrics.itemWidth,
+                maxHeight: metrics.height,
+              );
+              return MovieCard(
+                key: ValueKey('movie-${movie.streamId}'),
+                movie: movie,
+                width: poster.width,
+                height: poster.posterHeight,
+                onTap: () => _HomePlayback.playMovie(context, ref, movie),
+              );
+            },
           ),
         ),
       ),
@@ -423,6 +441,7 @@ class _HomePopularSeriesSliver extends ConsumerWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    final metrics = _homePosterRowMetrics(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -432,15 +451,23 @@ class _HomePopularSeriesSliver extends ConsumerWidget {
             title: context.l10n.homePopularSeries,
             onSeeAll: () => context.push(Routes.series),
             items: items,
-            height: 215,
-            itemWidth: 120,
-            itemBuilder: (context, series, _) => SeriesCard(
-              key: ValueKey(
-                'series-${series.seriesId != 0 ? series.seriesId : series.id}',
-              ),
-              series: series,
-              onTap: () => showSeriesDetailsModal(context, series),
-            ),
+            height: metrics.height,
+            itemWidth: metrics.itemWidth,
+            itemBuilder: (context, series, _) {
+              final poster = PosterCardLayout.fit(
+                maxWidth: metrics.itemWidth,
+                maxHeight: metrics.height,
+              );
+              return SeriesCard(
+                key: ValueKey(
+                  'series-${series.seriesId != 0 ? series.seriesId : series.id}',
+                ),
+                series: series,
+                width: poster.width,
+                height: poster.posterHeight,
+                onTap: () => showSeriesDetailsModal(context, series),
+              );
+            },
           ),
         ),
       ),
@@ -460,6 +487,7 @@ class _HomeSportsChannelsSliver extends ConsumerWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    final metrics = _homeChannelRowMetrics(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -469,11 +497,13 @@ class _HomeSportsChannelsSliver extends ConsumerWidget {
             title: context.l10n.homeSportsChannels,
             onSeeAll: () => context.push(Routes.live),
             items: items,
-            height: 135,
-            itemWidth: 148,
+            height: metrics.height,
+            itemWidth: metrics.itemWidth,
             itemBuilder: (context, channel, _) => ChannelCard(
               key: ValueKey('sports-${channel.streamId}'),
               channel: channel,
+              width: metrics.itemWidth,
+              height: metrics.height,
               onTap: () => _HomePlayback.playChannel(context, ref, channel),
             ),
           ),
@@ -495,6 +525,7 @@ class _HomeNewsChannelsSliver extends ConsumerWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    final metrics = _homeChannelRowMetrics(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -504,11 +535,13 @@ class _HomeNewsChannelsSliver extends ConsumerWidget {
             title: context.l10n.homeNewsChannels,
             onSeeAll: () => context.push(Routes.live),
             items: items,
-            height: 135,
-            itemWidth: 148,
+            height: metrics.height,
+            itemWidth: metrics.itemWidth,
             itemBuilder: (context, channel, _) => ChannelCard(
               key: ValueKey('news-${channel.streamId}'),
               channel: channel,
+              width: metrics.itemWidth,
+              height: metrics.height,
               onTap: () => _HomePlayback.playChannel(context, ref, channel),
             ),
           ),
@@ -528,6 +561,7 @@ class _HomeFavoritesSliver extends ConsumerWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    final metrics = _homeChannelRowMetrics(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -537,8 +571,8 @@ class _HomeFavoritesSliver extends ConsumerWidget {
             title: context.l10n.labelFavorites,
             onSeeAll: () => context.push(Routes.favorites),
             items: items,
-            height: 135,
-            itemWidth: 148,
+            height: metrics.height,
+            itemWidth: metrics.itemWidth,
             itemBuilder: (context, fav, _) => ChannelCard(
               key: ValueKey('fav-${fav.type}-${fav.itemId}'),
               channel: Channel(
@@ -548,6 +582,8 @@ class _HomeFavoritesSliver extends ConsumerWidget {
                 name: fav.name,
                 streamIcon: fav.imageUrl,
               ),
+              width: metrics.itemWidth,
+              height: metrics.height,
               showBadge: fav.type == FavoriteType.channel,
               onTap: () => _HomePlayback.playFavorite(context, ref, fav),
             ),
@@ -577,10 +613,8 @@ abstract final class _HomePlayback {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final streamUrl = XtreamRemoteDataSource.buildLiveStreamUrl(
-      serverUrl: session.serverUrl,
-      username: session.username,
-      password: session.password,
+    final streamUrl = ref.read(streamUrlBuilderProvider).liveForSession(
+      session,
       streamId: channel.streamId,
     );
 
@@ -598,12 +632,10 @@ abstract final class _HomePlayback {
     playerNotifier.setLazyLivePlaylist(
       channels: channels,
       initialIndex: initialIndex >= 0 ? initialIndex : 0,
-      urlFor: (c) => XtreamRemoteDataSource.buildLiveStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: c.streamId,
-      ),
+      urlFor: (c) => ref.read(streamUrlBuilderProvider).liveForSession(
+      session,
+      streamId: c.streamId,
+    ),
     );
 
     playerNotifier.load(
@@ -622,10 +654,8 @@ abstract final class _HomePlayback {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final streamUrl = XtreamRemoteDataSource.buildVodStreamUrl(
-      serverUrl: session.serverUrl,
-      username: session.username,
-      password: session.password,
+    final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
+      session,
       streamId: movie.streamId,
       extension: movie.containerExtension ?? 'mp4',
     );
@@ -657,12 +687,10 @@ abstract final class _HomePlayback {
         : Duration.zero;
 
     if (entry.type == WatchHistoryType.movie) {
-      final streamUrl = XtreamRemoteDataSource.buildVodStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: entry.itemId,
-      );
+      final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
+      session,
+      streamId: entry.itemId,
+    );
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -675,12 +703,10 @@ abstract final class _HomePlayback {
             ),
           );
     } else if (entry.type == WatchHistoryType.episode) {
-      final streamUrl = XtreamRemoteDataSource.buildSeriesStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: entry.itemId,
-      );
+      final streamUrl = ref.read(streamUrlBuilderProvider).seriesForSession(
+      session,
+      streamId: entry.itemId,
+    );
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -712,12 +738,10 @@ abstract final class _HomePlayback {
     if (session == null) return;
 
     if (fav.type == FavoriteType.movie) {
-      final streamUrl = XtreamRemoteDataSource.buildVodStreamUrl(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: fav.itemId,
-      );
+      final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
+      session,
+      streamId: fav.itemId,
+    );
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -741,5 +765,22 @@ abstract final class _HomePlayback {
     } else {
       context.push(Routes.series);
     }
+  }
+}
+
+/// Poster row metrics keyed by [FormFactor]. Phone keeps prior 215×120.
+({double height, double itemWidth}) _homePosterRowMetrics(BuildContext context) =>
+    PosterCardLayout.posterRowMetricsOf(context);
+
+/// Channel / favorites row metrics. Phone keeps prior 135×148.
+({double height, double itemWidth}) _homeChannelRowMetrics(BuildContext context) {
+  switch (FormFactorResolver.of(context)) {
+    case FormFactor.tv:
+      return (height: 120, itemWidth: 132);
+    case FormFactor.tablet:
+      return (height: 128, itemWidth: 140);
+    case FormFactor.desktop:
+    case FormFactor.phone:
+      return (height: 135, itemWidth: 148);
   }
 }

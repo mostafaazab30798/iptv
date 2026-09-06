@@ -1,6 +1,7 @@
 import 'package:dpad/dpad.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:iptv/app/theme/app_colors.dart';
 
 /// Session flag: TV focus chrome stays hidden until a real remote / D-pad
 /// key is pressed. Touch, mouse, and startup autofocus must not light it up.
@@ -114,13 +115,13 @@ class ArmedDpadEffects extends DpadEffect {
   static const _effects = <DpadEffect>[
     DpadScaleEffect(scale: 1.06),
     DpadGlowEffect(
-      color: Color(0xFF00C2FF),
+      color: AppColors.accent,
       blurRadius: 16,
       spreadRadius: 1.2,
       opacity: 0.5,
     ),
     DpadBorderEffect(
-      color: Color(0xFF00C2FF),
+      color: AppColors.accent,
       width: 2.5,
     ),
   ];

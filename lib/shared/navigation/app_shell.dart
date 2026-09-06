@@ -22,9 +22,12 @@ import 'package:iptv/features/series/series_controller.dart';
 import 'package:iptv/player/handoff/presentation/companion_scanner_modal.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/tv_focusable.dart';
+import 'package:iptv/shared/layouts/layouts.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/navigation/shell_focus_bridge.dart';
-import 'package:iptv/shared/widgets/adaptive_glass.dart';
+import 'package:iptv/shared/navigation/shell_portrait_header.dart';
+
+export 'package:iptv/shared/navigation/shell_portrait_header.dart';
 import 'package:iptv/shared/widgets/landscape_gate.dart';
 import 'package:dpad/dpad.dart';
 
@@ -255,99 +258,18 @@ class _ShellTopNav extends StatelessWidget {
 
     if (isPortrait) {
       final title = _getTitle(context, currentPath);
-      final topPadding = MediaQueryData.fromView(View.of(context)).padding.top;
-      final topInset = topPadding > 0 ? (topPadding + 10.0) : 48.0;
-
-      final headerContent = Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.0, 0.70, 1.0],
-            colors: [Color(0xF5080B12), Color(0xDC080B12), Colors.transparent],
-          ),
-        ),
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          topInset,
-          AppSpacing.xl,
-          AppSpacing.sm,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  color: currentPath == Routes.home
-                      ? AppColors.accent
-                      : Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                  height: 1.1,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (!currentPath.startsWith(Routes.history)) ...[
-              const SizedBox(width: 12),
-              if (KidsModeNavButton.visibleFor(context)) ...[
-                const KidsModeNavButton(),
-                const SizedBox(width: 10),
-              ],
-              DarkGlassCapsule(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _GlassActionButton(
-                      icon: AppIcons.search,
-                      activeIcon: AppIcons.search,
-                      isActive: currentPath == Routes.search,
-                      tooltip: context.l10n.actionSearch,
-                      onTap: () => context.push(Routes.search),
-                      focusNode: ShellFocusBridge.heroChromeEntryOf(context),
-                    ),
-                    const SizedBox(width: 3),
-                    _GlassActionButton(
-                      icon: AppIcons.generalTv,
-                      activeIcon: AppIcons.generalTv,
-                      isActive: false,
-                      tooltip: 'TV Remote & Mouse',
-                      onTap: () => CompanionScannerModal.show(context),
-                    ),
-                    const SizedBox(width: 3),
-                    _SpinningRefreshButton(
-                      tooltip: context.l10n.actionRefresh,
-                      onTap: onRefresh,
-                    ),
-                    const SizedBox(width: 3),
-                    _GlassActionButton(
-                      icon: AppIcons.settings,
-                      activeIcon: AppIcons.settings,
-                      isActive: currentPath == Routes.settings,
-                      tooltip: context.l10n.navSettings,
-                      onTap: () => context.go(Routes.settings),
-                    ),
-                    if (PlatformService.instance.supportsFullscreen) ...[
-                      const SizedBox(width: 3),
-                      const _FullscreenToggleButton(),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
+      return ShellPortraitHeader(
+        title: title,
+        currentPath: currentPath,
+        onRefresh: onRefresh,
+        titleColor:
+            currentPath == Routes.home ? AppColors.accent : Colors.white,
+        showBackgroundGradient: true,
       );
-
-      return headerContent;
     }
 
     // Landscape / Desktop / TV Header with High-Performance Gradient
+    final headerHeight = ChromeHeights.of(context).header;
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -360,7 +282,7 @@ class _ShellTopNav extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: 70,
+          height: headerHeight,
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.xl,
             AppSpacing.xs,
@@ -376,12 +298,14 @@ class _ShellTopNav extends StatelessWidget {
                   children: List.generate(items.length, (i) {
                     final item = items[i];
                     final isSelected = i == selectedIndex;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _GlassHeaderNavItem(
-                        item: item,
-                        isSelected: isSelected,
-                        onTap: () => onItemTap(i, item.route),
+                    return Flexible(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 8),
+                        child: _GlassHeaderNavItem(
+                          item: item,
+                          isSelected: isSelected,
+                          onTap: () => onItemTap(i, item.route),
+                        ),
                       ),
                     );
                   }),
@@ -389,6 +313,7 @@ class _ShellTopNav extends StatelessWidget {
               ),
               if (!currentPath.startsWith(Routes.history)) ...[
                 if (KidsModeNavButton.visibleFor(context)) ...[
+                  const SizedBox(width: 8),
                   const KidsModeNavButton(),
                   const SizedBox(width: 10),
                 ],
@@ -457,28 +382,7 @@ class _ShellTopNav extends StatelessWidget {
   }
 }
 
-class _FullscreenToggleButton extends StatelessWidget {
-  const _FullscreenToggleButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: PlatformService.instance.isFullScreenNotifier,
-      builder: (context, isFullScreen, _) {
-        return _GlassActionButton(
-          icon: isFullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
-          activeIcon: isFullScreen ? AppIcons.exitFullscreen : AppIcons.fullscreen,
-          isActive: isFullScreen,
-          tooltip: isFullScreen ? 'Exit Fullscreen (F11 / Esc)' : 'Fullscreen (F11)',
-          onTap: () async {
-            final isFull = await PlatformService.instance.isFullScreen();
-            await PlatformService.instance.setFullScreen(!isFull);
-          },
-        );
-      },
-    );
-  }
-}
+typedef _FullscreenToggleButton = ShellFullscreenToggleButton;
 
 // ---------------------------------------------------------------------------
 // Figma/Dribbble Floating Frosted Glass Dock (Portrait Mobile)
@@ -499,6 +403,7 @@ class _FloatingGlassDock extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isCompact = screenWidth < 360;
+    final dockHeight = ChromeHeights.of(context).dock;
 
     return SafeArea(
       top: false,
@@ -511,7 +416,7 @@ class _FloatingGlassDock extends StatelessWidget {
           10.0,
         ),
         child: Container(
-          height: 64,
+          height: dockHeight > 0 ? dockHeight : 64,
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -700,7 +605,6 @@ class _GlassHeaderNavItemState extends State<_GlassHeaderNavItem> {
                 : null,
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedScale(
                 scale: isSelected ? 1.1 : 1.0,
@@ -716,17 +620,21 @@ class _GlassHeaderNavItemState extends State<_GlassHeaderNavItem> {
                 ),
               ),
               const SizedBox(width: 7),
-              Text(
-                widget.item.label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected
-                      ? Colors.white
-                      : (isActive
-                            ? AppColors.textPrimary
-                            : AppColors.textSecondary),
-                  letterSpacing: 0.2,
+              Expanded(
+                child: Text(
+                  widget.item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : (isActive
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary),
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ),
             ],
@@ -741,153 +649,8 @@ class _GlassHeaderNavItemState extends State<_GlassHeaderNavItem> {
 // Header Action Components (Figma/Dribbble Spec)
 // ---------------------------------------------------------------------------
 
-class _SpinningRefreshButton extends StatefulWidget {
-  const _SpinningRefreshButton({required this.tooltip, required this.onTap});
-
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  State<_SpinningRefreshButton> createState() => _SpinningRefreshButtonState();
-}
-
-class _SpinningRefreshButtonState extends State<_SpinningRefreshButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _animController;
-  bool _hovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: AppMotion.slow,
-    );
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  void _handleTap() {
-    if (!MediaQuery.disableAnimationsOf(context) &&
-        !_animController.isAnimating) {
-      _animController.forward(from: 0.0);
-    }
-    widget.onTap();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return TvFocusable(
-      onSelect: _handleTap,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        cursor: SystemMouseCursors.click,
-        child: Tooltip(
-          message: widget.tooltip,
-          child: AnimatedContainer(
-            duration: MotionPolicy.of(context).focus,
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: _hovered ? Colors.white.withAlpha(25) : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: RotationTransition(
-              turns: Tween<double>(begin: 0.0, end: 1.0).animate(
-                CurvedAnimation(
-                  parent: _animController,
-                  curve: AppMotion.curveEnter,
-                ),
-              ),
-              child: Center(
-                child: HugeIcon(
-                  icon: AppIcons.refresh,
-                  size: 19,
-                  color: _hovered ? AppColors.accent : Colors.white70,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassActionButton extends StatefulWidget {
-  const _GlassActionButton({
-    required this.icon,
-    required this.activeIcon,
-    required this.isActive,
-    required this.tooltip,
-    required this.onTap,
-    this.focusNode,
-  });
-
-  final List<List<dynamic>> icon;
-  final List<List<dynamic>> activeIcon;
-  final bool isActive;
-  final String tooltip;
-  final VoidCallback onTap;
-  final FocusNode? focusNode;
-
-  @override
-  State<_GlassActionButton> createState() => _GlassActionButtonState();
-}
-
-class _GlassActionButtonState extends State<_GlassActionButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final active = widget.isActive;
-    return TvFocusable(
-      focusNode: widget.focusNode,
-      onSelect: widget.onTap,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        cursor: SystemMouseCursors.click,
-        child: Tooltip(
-          message: widget.tooltip,
-          child: AnimatedContainer(
-            duration: MotionPolicy.of(context).focus,
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: active
-                  ? AppColors.accent.withAlpha(35)
-                  : (_hovered
-                        ? Colors.white.withAlpha(25)
-                        : Colors.transparent),
-              borderRadius: BorderRadius.circular(10),
-              border: active
-                  ? Border.all(
-                      color: AppColors.accent.withAlpha(120),
-                      width: 0.8,
-                    )
-                  : null,
-            ),
-            child: Center(
-              child: HugeIcon(
-                icon: active ? widget.activeIcon : widget.icon,
-                size: 19,
-                color: active
-                    ? AppColors.accent
-                    : (_hovered ? Colors.white : Colors.white70),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+typedef _SpinningRefreshButton = ShellSpinningRefreshButton;
+typedef _GlassActionButton = ShellGlassActionButton;
 
 class _BrandLogo extends StatefulWidget {
   const _BrandLogo({required this.onTap, this.entry = false});

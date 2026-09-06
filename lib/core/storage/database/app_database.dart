@@ -5,6 +5,17 @@ import 'package:iptv/core/constants/app_constants.dart';
 part 'app_database.g.dart';
 
 // ---------------------------------------------------------------------------
+// Drift honesty (Phase 3)
+// ---------------------------------------------------------------------------
+// Only [Favorites] and [WatchHistory] are read/written by the live app today.
+// The other tables (Accounts, Categories, Channels, EpgPrograms, Movies,
+// SeriesTable) remain in the schema for potential future local catalog use and
+// to avoid a high-risk destructive migration. Catalog browsing uses
+// [LocalCatalogCache] (JSON on disk) + Riverpod session memory, not these
+// Drift tables. Prefer documenting over dropping until a dedicated migration PR.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
 // Table definitions
 // ---------------------------------------------------------------------------
 

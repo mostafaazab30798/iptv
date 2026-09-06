@@ -546,10 +546,10 @@ class _GlowingBadge extends StatelessWidget {
 
     if (mode == KidsPinDialogMode.enter) {
       iconToken = AppIcons.lock;
-      gradientColors = const [Color(0xFF00C2FF), Color(0xFF0066FF)];
+      gradientColors = const [AppColors.accent, AppColors.accent];
     } else if (mode == KidsPinDialogMode.create) {
       iconToken = step == 0 ? AppIcons.securityCheck : AppIcons.check;
-      gradientColors = const [Color(0xFF8A2BE2), Color(0xFF00C2FF)];
+      gradientColors = const [Color(0xFF8A2BE2), AppColors.accent];
     } else {
       iconToken = step == 0
           ? AppIcons.lock

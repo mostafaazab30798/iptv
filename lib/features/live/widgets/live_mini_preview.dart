@@ -144,15 +144,15 @@ class LiveMiniPreview extends ConsumerWidget {
                   ),
 
                 // Live Badge (Top Left)
-                Positioned(
+                PositionedDirectional(
                   top: 10,
-                  left: 10,
+                  start: 10,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                        margin: const EdgeInsets.only(right: 6),
+                        margin: const EdgeInsetsDirectional.only(end: 6),
                         decoration: BoxDecoration(
                           color: AppColors.live,
                           borderRadius: BorderRadius.circular(4),

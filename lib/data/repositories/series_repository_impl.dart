@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:iptv/core/cache/local_catalog_cache.dart';
 import 'package:iptv/core/utils/result.dart';
+import 'package:iptv/data/cache/catalog_memory_cache.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/data/mappers/data_mapper.dart';
 import 'package:iptv/domain/entities/category.dart';
@@ -14,41 +15,38 @@ List<Series> _parseSeriesListIsolate(List<Map<String, dynamic>> raw) {
 }
 
 class SeriesRepositoryImpl implements SeriesRepository {
-  const SeriesRepositoryImpl({required this.remoteDataSource});
+  SeriesRepositoryImpl({
+    required this.remoteDataSource,
+    required this.cache,
+  });
 
   final XtreamRemoteDataSource remoteDataSource;
+  final CatalogMemoryCache cache;
 
   static const _ttl = Duration(minutes: 10);
-  static List<Category>? _cachedCategories;
-  static DateTime? _categoriesFetchedAt;
 
-  static List<Series>? _cachedAllSeries;
-  static DateTime? _seriesFetchedAt;
-  static final Map<int, List<Series>> _cachedCategorySeries = {};
-  static final Map<int, List<Season>> _cachedSeasons = {};
-
-  static bool _isFresh(DateTime? fetchedAt) {
+  bool _isFresh(DateTime? fetchedAt) {
     if (fetchedAt == null) return false;
     return DateTime.now().difference(fetchedAt) < _ttl;
   }
 
   @override
   Future<Result<List<Category>>> getCategories({bool forceRefresh = false}) async {
-    if (!forceRefresh && _cachedCategories != null && _isFresh(_categoriesFetchedAt)) {
-      return Ok(_cachedCategories!);
+    if (!forceRefresh && cache.seriesCategories != null && _isFresh(cache.seriesCategoriesFetchedAt)) {
+      return Ok(cache.seriesCategories!);
     }
 
     // Cold-start disk cache check
-    if (!forceRefresh && _cachedCategories == null) {
+    if (!forceRefresh && cache.seriesCategories == null) {
       final diskCategories = await LocalCatalogCache.instance.loadCategories('series', CategoryType.series);
       if (diskCategories != null && diskCategories.isNotEmpty) {
-        _cachedCategories = diskCategories;
-        _categoriesFetchedAt = DateTime.now();
+        cache.seriesCategories = diskCategories;
+        cache.seriesCategoriesFetchedAt = DateTime.now();
         unawaited(remoteDataSource.getSeriesCategories().then((raw) {
           if (raw.isNotEmpty) {
             final categories = raw.map((j) => DataMapper.categoryFromJson(j, CategoryType.series)).toList();
-            _cachedCategories = categories;
-            _categoriesFetchedAt = DateTime.now();
+            cache.seriesCategories = categories;
+            cache.seriesCategoriesFetchedAt = DateTime.now();
             LocalCatalogCache.instance.saveCategories('series', raw);
           }
         }).catchError((_) {}));
@@ -59,15 +57,15 @@ class SeriesRepositoryImpl implements SeriesRepository {
     try {
       final raw = await remoteDataSource.getSeriesCategories();
       final categories = raw.map((j) => DataMapper.categoryFromJson(j, CategoryType.series)).toList();
-      _cachedCategories = categories;
-      _categoriesFetchedAt = DateTime.now();
+      cache.seriesCategories = categories;
+      cache.seriesCategoriesFetchedAt = DateTime.now();
       if (raw.isNotEmpty) {
         unawaited(LocalCatalogCache.instance.saveCategories('series', raw));
       }
       return Ok(categories);
     } catch (e) {
-      if (_cachedCategories != null) {
-        return Ok(_cachedCategories!);
+      if (cache.seriesCategories != null) {
+        return Ok(cache.seriesCategories!);
       }
       return Err(AppResultError('Failed to load series categories', cause: e));
     }
@@ -79,23 +77,23 @@ class SeriesRepositoryImpl implements SeriesRepository {
     bool forceRefresh = false,
   }) async {
     // Fast path 1: Unfiltered request and cached all series is fresh in memory
-    if (categoryId == null && !forceRefresh && _cachedAllSeries != null && _isFresh(_seriesFetchedAt)) {
-      return Ok(_cachedAllSeries!);
+    if (categoryId == null && !forceRefresh && cache.seriesList != null && _isFresh(cache.seriesFetchedAt)) {
+      return Ok(cache.seriesList!);
     }
 
     // Fast path 2: Filtered request and full catalog is already cached in memory
-    if (categoryId != null && !forceRefresh && _cachedAllSeries != null && _isFresh(_seriesFetchedAt)) {
-      final filtered = _cachedAllSeries!.where((s) => s.categoryId == categoryId).toList();
+    if (categoryId != null && !forceRefresh && cache.seriesList != null && _isFresh(cache.seriesFetchedAt)) {
+      final filtered = cache.seriesList!.where((s) => s.categoryId == categoryId).toList();
       return Ok(filtered);
     }
 
     // Fast path 3: Cold-start disk cache loading (< 15ms)
-    if (!forceRefresh && _cachedAllSeries == null) {
+    if (!forceRefresh && cache.seriesList == null) {
       final diskSeries = await LocalCatalogCache.instance.loadSeries();
       if (diskSeries != null && diskSeries.isNotEmpty) {
-        _cachedAllSeries = diskSeries;
-        _seriesFetchedAt = DateTime.now();
-        _cachedCategorySeries.clear();
+        cache.seriesList = diskSeries;
+        cache.seriesFetchedAt = DateTime.now();
+        cache.seriesCategoryItems.clear();
 
         // Trigger silent background update
         unawaited(remoteDataSource.getSeries().then((raw) async {
@@ -103,8 +101,8 @@ class SeriesRepositoryImpl implements SeriesRepository {
             final list = raw.length > 250
                 ? await compute(_parseSeriesListIsolate, raw)
                 : raw.map(DataMapper.seriesFromJson).toList();
-            _cachedAllSeries = list;
-            _seriesFetchedAt = DateTime.now();
+            cache.seriesList = list;
+            cache.seriesFetchedAt = DateTime.now();
             unawaited(LocalCatalogCache.instance.saveSeries(raw));
           }
         }).catchError((_) {}));
@@ -117,8 +115,8 @@ class SeriesRepositoryImpl implements SeriesRepository {
     }
 
     // Fast path 4: Filtered request and specific category is cached
-    if (categoryId != null && !forceRefresh && _cachedCategorySeries.containsKey(categoryId)) {
-      return Ok(_cachedCategorySeries[categoryId]!);
+    if (categoryId != null && !forceRefresh && cache.seriesCategoryItems.containsKey(categoryId)) {
+      return Ok(cache.seriesCategoryItems[categoryId]!);
     }
 
     try {
@@ -128,23 +126,23 @@ class SeriesRepositoryImpl implements SeriesRepository {
           : raw.map(DataMapper.seriesFromJson).toList();
 
       if (categoryId == null) {
-        _cachedAllSeries = seriesList;
-        _seriesFetchedAt = DateTime.now();
-        _cachedCategorySeries.clear();
+        cache.seriesList = seriesList;
+        cache.seriesFetchedAt = DateTime.now();
+        cache.seriesCategoryItems.clear();
         if (raw.isNotEmpty) {
           unawaited(LocalCatalogCache.instance.saveSeries(raw));
         }
       } else {
-        _cachedCategorySeries[categoryId] = seriesList;
+        cache.seriesCategoryItems[categoryId] = seriesList;
       }
 
       return Ok(seriesList);
     } catch (e) {
-      if (categoryId == null && _cachedAllSeries != null) {
-        return Ok(_cachedAllSeries!);
+      if (categoryId == null && cache.seriesList != null) {
+        return Ok(cache.seriesList!);
       }
-      if (categoryId != null && _cachedAllSeries != null) {
-        return Ok(_cachedAllSeries!.where((s) => s.categoryId == categoryId).toList());
+      if (categoryId != null && cache.seriesList != null) {
+        return Ok(cache.seriesList!.where((s) => s.categoryId == categoryId).toList());
       }
       return Err(AppResultError('Failed to load series', cause: e));
     }
@@ -152,8 +150,8 @@ class SeriesRepositoryImpl implements SeriesRepository {
 
   @override
   Future<Result<List<Season>>> getSeasons(int seriesId) async {
-    if (_cachedSeasons.containsKey(seriesId)) {
-      return Ok(_cachedSeasons[seriesId]!);
+    if (cache.seriesSeasons.containsKey(seriesId)) {
+      return Ok(cache.seriesSeasons[seriesId]!);
     }
     try {
       final info = await remoteDataSource.getSeriesInfo(seriesId);
@@ -254,7 +252,7 @@ class SeriesRepositoryImpl implements SeriesRepository {
         ));
       }
 
-      _cachedSeasons[seriesId] = seasons;
+      cache.seriesSeasons[seriesId] = seasons;
       return Ok(seasons);
     } catch (e) {
       return Err(AppResultError('Failed to load seasons', cause: e));

@@ -1,6 +1,7 @@
 import 'dart:io' show Platform, exit;
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 bool isWindows() => Platform.isWindows;
@@ -23,6 +24,8 @@ Future<void> initPlatformWindow() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     try {
       await windowManager.ensureInitialized();
+      await windowManager.setMinimumSize(const Size(720, 480));
+      await windowManager.setSize(const Size(1280, 720));
     } catch (_) {}
   }
 }

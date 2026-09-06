@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:iptv/core/constants/api_constants.dart';
 import 'package:iptv/core/network/api_client.dart';
-import 'package:iptv/core/network/url_helpers.dart';
+import 'package:iptv/domain/services/stream_url_builder.dart';
 
 /// Remote datasource communicating with Xtream-compatible IPTV server APIs.
 class XtreamRemoteDataSource {
@@ -148,7 +147,7 @@ class XtreamRemoteDataSource {
     }
   }
 
-  /// Helper to build direct playback stream URLs.
+  /// Delegates to [StreamUrlBuilder] so data and presentation share one path.
   static String buildLiveStreamUrl({
     required String serverUrl,
     required String username,
@@ -156,10 +155,13 @@ class XtreamRemoteDataSource {
     required int streamId,
     String? extension,
   }) {
-    final ext = extension ?? (kIsWeb ? 'm3u8' : 'ts');
-    final base = UrlHelpers.normalizeServerUrl(serverUrl);
-    final raw = '$base/live/$username/$password/$streamId.$ext';
-    return UrlHelpers.wrapWebProxy(raw);
+    return const StreamUrlBuilder().live(
+      serverUrl: serverUrl,
+      username: username,
+      password: password,
+      streamId: streamId,
+      extension: extension,
+    );
   }
 
   static String buildVodStreamUrl({
@@ -169,9 +171,13 @@ class XtreamRemoteDataSource {
     required int streamId,
     String extension = 'mp4',
   }) {
-    final base = UrlHelpers.normalizeServerUrl(serverUrl);
-    final raw = '$base/movie/$username/$password/$streamId.$extension';
-    return UrlHelpers.wrapWebProxy(raw);
+    return const StreamUrlBuilder().vod(
+      serverUrl: serverUrl,
+      username: username,
+      password: password,
+      streamId: streamId,
+      extension: extension,
+    );
   }
 
   static String buildSeriesStreamUrl({
@@ -181,8 +187,12 @@ class XtreamRemoteDataSource {
     required int streamId,
     String extension = 'mp4',
   }) {
-    final base = UrlHelpers.normalizeServerUrl(serverUrl);
-    final raw = '$base/series/$username/$password/$streamId.$extension';
-    return UrlHelpers.wrapWebProxy(raw);
+    return const StreamUrlBuilder().series(
+      serverUrl: serverUrl,
+      username: username,
+      password: password,
+      streamId: streamId,
+      extension: extension,
+    );
   }
 }

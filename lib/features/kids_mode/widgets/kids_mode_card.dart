@@ -281,7 +281,7 @@ class _StylishSwitch extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: value
-                ? [const Color(0xFF00C2FF), const Color(0xFF0077FF)]
+                ? [AppColors.accent, AppColors.accent]
                 : [const Color(0xFF222733), const Color(0xFF161A22)],
           ),
           border: Border.all(
@@ -320,7 +320,7 @@ class _StylishSwitch extends StatelessWidget {
               child: Icon(
                 value ? Icons.check_rounded : Icons.circle,
                 size: value ? 13 : 6,
-                color: value ? const Color(0xFF0066FF) : const Color(0xFF161A22),
+                color: value ? AppColors.accent : const Color(0xFF161A22),
               ),
             ),
           ),

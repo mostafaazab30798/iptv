@@ -21,6 +21,7 @@ import 'package:iptv/player/handoff/presentation/companion_pointer_overlay.dart'
 import 'package:iptv/player/player.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/shared/focus/remote_focus.dart';
+import 'package:iptv/shared/layouts/layouts.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/navigation/navigator_keys.dart';
 import 'package:iptv/shared/scroll/desktop_smooth_scroll.dart';
@@ -161,48 +162,89 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
       // D-pad / TV remote navigation covers every route, dialog and sheet.
       // The companion cursor sits above it so trackpad aiming stays visible.
       builder: (context, child) {
-        return CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.f11): () async {
-              final isFull = await PlatformService.instance.isFullScreen();
-              await PlatformService.instance.setFullScreen(!isFull);
-            },
-            const SingleActivator(LogicalKeyboardKey.escape): () async {
-              final isFull = await PlatformService.instance.isFullScreen();
-              if (isFull) {
-                await PlatformService.instance.setFullScreen(false);
-              }
-            },
-          },
-          child: RemoteFocusScope(
-            child: Dpad(
-              theme: const DpadThemeData(
-                effects: [ArmedDpadEffects()],
-                scrollPadding: 56,
-              ),
-              keySet: const DpadKeySet().copyWith(
-                select: [
-                  ...DpadKeySet.defaultSelect,
-                  LogicalKeyboardKey.gameButtonSelect,
-                ],
-              ),
-              debugOverlay: kDebugMode &&
-                  const bool.fromEnvironment(
-                    'TV_FOCUS_INSPECTOR',
-                    defaultValue: false,
-                  ),
-              onBack: () {
-                final ctx = rootNavigatorKey.currentContext;
-                if (ctx == null) return false;
-                unawaited(handleRemoteBack(ctx));
-                return true;
+        final mediaQuery = MediaQuery.of(context);
+        final chrome = ChromeHeights.of(context);
+        final factor = chrome.formFactor;
+        // Phone/tablet keep edge-to-edge; TV/desktop get ~5% overscan inset.
+        final needsOverscan =
+            factor == FormFactor.tv || factor == FormFactor.desktop;
+        final overscan = needsOverscan ? chrome.overscan : 0.0;
+
+        var textScaler = mediaQuery.textScaler.clamp(maxScaleFactor: 1.4);
+        // Mild TV readability nudge; phone/tablet/desktop keep clamped scale.
+        if (factor == FormFactor.tv) {
+          final current = textScaler.scale(1.0);
+          textScaler = TextScaler.linear(current < 1.08 ? 1.08 : current)
+              .clamp(maxScaleFactor: 1.4);
+        }
+
+        final innerSize = overscan > 0
+            ? Size(
+                (mediaQuery.size.width - 2 * overscan).clamp(0.0, double.infinity),
+                (mediaQuery.size.height - 2 * overscan)
+                    .clamp(0.0, double.infinity),
+              )
+            : mediaQuery.size;
+
+        // FormFactorBinder reads the outer MediaQuery (full viewport) so
+        // overscan padding does not flip form-factor breakpoints.
+        Widget body = MediaQuery(
+          data: mediaQuery.copyWith(
+            textScaler: textScaler,
+            size: innerSize,
+          ),
+          child: CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.f11): () async {
+                final isFull = await PlatformService.instance.isFullScreen();
+                await PlatformService.instance.setFullScreen(!isFull);
               },
-              child: CompanionPointerOverlay(
-                child: child ?? const SizedBox.shrink(),
+              const SingleActivator(LogicalKeyboardKey.escape): () async {
+                final isFull = await PlatformService.instance.isFullScreen();
+                if (isFull) {
+                  await PlatformService.instance.setFullScreen(false);
+                }
+              },
+            },
+            child: RemoteFocusScope(
+              child: Dpad(
+                theme: const DpadThemeData(
+                  effects: [ArmedDpadEffects()],
+                  scrollPadding: 56,
+                ),
+                keySet: const DpadKeySet().copyWith(
+                  select: [
+                    ...DpadKeySet.defaultSelect,
+                    LogicalKeyboardKey.gameButtonSelect,
+                  ],
+                ),
+                debugOverlay: kDebugMode &&
+                    const bool.fromEnvironment(
+                      'TV_FOCUS_INSPECTOR',
+                      defaultValue: false,
+                    ),
+                onBack: () {
+                  final ctx = rootNavigatorKey.currentContext;
+                  if (ctx == null) return false;
+                  unawaited(handleRemoteBack(ctx));
+                  return true;
+                },
+                child: CompanionPointerOverlay(
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             ),
           ),
         );
+
+        if (overscan > 0) {
+          body = Padding(
+            padding: EdgeInsets.all(overscan),
+            child: body,
+          );
+        }
+
+        return FormFactorBinder(child: body);
       },
 
       // Theme

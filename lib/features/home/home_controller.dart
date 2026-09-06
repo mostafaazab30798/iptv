@@ -680,22 +680,85 @@ class HomeController extends StateNotifier<HomeState> {
   }
 
   Timer? _scoreboardTimer;
+  Timer? _scheduleTimer;
+
+  bool get _hasRealtimeMatchHero {
+    final now = DateTime.now();
+    return state.heroItems.any((item) {
+      if (item.type != HeroItemType.live || item.match == null) return false;
+      final fixture = item.match!.fixture;
+      if (fixture == null) return false;
+      return fixture.isEligibleForRealtime(now: now);
+    });
+  }
 
   void _startScoreboardPolling() {
     _scoreboardTimer?.cancel();
-    _scoreboardTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!mounted) return;
-      if (!_hasLiveMatchHero) {
-        _scoreboardTimer?.cancel();
-        return;
+    _scheduleTimer?.cancel();
+
+    if (!mounted || !_hasLiveMatchHero) return;
+
+    if (_hasRealtimeMatchHero) {
+      _scoreboardTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+        if (!mounted) return;
+        if (!_hasLiveMatchHero) {
+          _scoreboardTimer?.cancel();
+          return;
+        }
+        if (!_hasRealtimeMatchHero) {
+          _scoreboardTimer?.cancel();
+          _scheduleNextRealtimeWindow();
+          return;
+        }
+        unawaited(_refreshLiveScores());
+      });
+    } else {
+      _scheduleNextRealtimeWindow();
+    }
+  }
+
+  void _scheduleNextRealtimeWindow() {
+    _scheduleTimer?.cancel();
+    if (!mounted || !_hasLiveMatchHero) return;
+
+    final now = DateTime.now();
+    Duration? minWait;
+
+    for (final item in state.heroItems) {
+      if (item.type != HeroItemType.live || item.match == null) continue;
+      final fixture = item.match!.fixture;
+      if (fixture == null) continue;
+      final wait = fixture.timeUntilRealtimeWindow(now: now);
+      if (wait != null && wait > Duration.zero) {
+        if (minWait == null || wait < minWait) {
+          minWait = wait;
+        }
       }
-      unawaited(_refreshLiveScores());
-    });
+    }
+
+    if (minWait != null) {
+      AppLogger.info(
+        'Next match real-time window starts in ${minWait.inMinutes}m (${minWait.inSeconds}s). Sleeping scoreboard polling until then.',
+        feature: 'sports',
+      );
+      _scheduleTimer = Timer(minWait, () {
+        if (mounted) {
+          _startScoreboardPolling();
+          unawaited(_refreshLiveScores());
+        }
+      });
+    }
   }
 
   Future<void> _refreshLiveScores() async {
     final scores = _liveScores;
     if (scores == null || !mounted) return;
+    if (!_hasRealtimeMatchHero) {
+      _scoreboardTimer?.cancel();
+      _scheduleNextRealtimeWindow();
+      return;
+    }
+
     try {
       final fixtures = await scores.fetchLiveBigMatches(forceRefresh: true);
       if (!mounted || fixtures.isEmpty) return;
@@ -738,6 +801,10 @@ class HomeController extends StateNotifier<HomeState> {
 
       if (mounted) {
         state = state.copyWith(heroItems: updatedItems);
+        if (!_hasRealtimeMatchHero) {
+          _scoreboardTimer?.cancel();
+          _scheduleNextRealtimeWindow();
+        }
       }
     } catch (_) {}
   }
@@ -745,6 +812,7 @@ class HomeController extends StateNotifier<HomeState> {
   @override
   void dispose() {
     _scoreboardTimer?.cancel();
+    _scheduleTimer?.cancel();
     super.dispose();
   }
 }

@@ -1511,4 +1511,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authBackToOnboarding => 'Back to IPTV Server Setup';
+
+  @override
+  String get labelPlaying => 'PLAYING';
+
+  @override
+  String get actionCopy => 'Copy';
+
+  @override
+  String searchAllCount(int count) {
+    return 'All ($count)';
+  }
+
+  @override
+  String get updateLinkCopied => 'Link copied';
+
+  @override
+  String get companionEnterPairingCode => 'Enter Pairing Code';
+
+  @override
+  String get companionPairingDialogBody =>
+      'Enter the TV IP address and 4-digit PIN displayed on your TV screen.';
+
+  @override
+  String get companionIpHintExample => 'e.g. 192.168.1.50';
+
+  @override
+  String get companionPinCodeLabel => '4-Digit PIN Code';
 }

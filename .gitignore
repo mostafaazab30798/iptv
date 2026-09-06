@@ -83,3 +83,4 @@ app.*.map.json
 packages/vlc_player/
 packages/
 *.code-workspace
+.aider*

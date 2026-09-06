@@ -3,6 +3,7 @@ import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/core/sports/sports_localization.dart';
 import 'package:iptv/domain/entities/channel.dart';
+import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
@@ -40,7 +41,7 @@ class ChannelCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         backgroundColor: isPlaying
             ? AppColors.accent.withAlpha(30)
-            : const Color(0xFF10131B),
+            : AppColors.skeleton,
         borderColor: isPlaying
             ? AppColors.accent.withAlpha(180)
             : Colors.white.withAlpha(18),
@@ -82,24 +83,24 @@ class ChannelCard extends StatelessWidget {
                       ),
                     ),
                     if (isPlaying)
-                      const Positioned(
+                      PositionedDirectional(
                         top: 4,
-                        right: 4,
+                        end: 4,
                         child: _MicroBadge(
-                          label: 'PLAYING',
+                          label: context.l10n.labelPlaying,
                           foreground: Colors.black,
                           background: AppColors.accent,
                         ),
                       )
                     else if (showBadge)
-                      Positioned(
+                      PositionedDirectional(
                         top: 4,
-                        right: 4,
+                        end: 4,
                         child: _MicroBadge(
-                          label: 'LIVE',
-                          foreground: const Color(0xFF00FF87),
-                          background: const Color(0xFF00FF87).withAlpha(30),
-                          borderColor: const Color(0xFF00FF87).withAlpha(120),
+                          label: context.l10n.labelLive,
+                          foreground: AppColors.liveGreen,
+                          background: AppColors.liveGreen.withAlpha(30),
+                          borderColor: AppColors.liveGreen.withAlpha(120),
                         ),
                       ),
                   ],

@@ -339,7 +339,7 @@ class _CategoryCardState extends State<CategoryCard> {
     final lower = name.toLowerCase();
 
     if (lower.contains('sport') || lower.contains('bein')) {
-      return const Color(0xFF00E676); // Emerald Green
+      return AppColors.liveGreen; // Emerald Green / LIVE
     }
     if (lower.contains('news')) {
       return const Color(0xFFFF5252); // Vivid Red
@@ -354,10 +354,10 @@ class _CategoryCardState extends State<CategoryCard> {
       return const Color(0xFFFF4081); // Neon Pink
     }
     if (lower.contains('music')) {
-      return const Color(0xFF00E5FF); // Electric Cyan
+      return AppColors.accent; // Electric Cyan
     }
     if (lower.contains('doc') || lower.contains('geo')) {
-      return const Color(0xFF00B0FF); // Sky Blue
+      return AppColors.accent; // Sky Blue
     }
     if (lower.contains('action') || lower.contains('4k')) {
       return const Color(0xFFFFAB00); // Radiant Gold

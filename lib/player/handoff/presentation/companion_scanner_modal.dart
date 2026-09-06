@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,11 +13,14 @@ import 'package:iptv/core/commercial/supabase_client_factory.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/player/handoff/application/audio_handoff_server_controller.dart';
 import 'package:iptv/player/handoff/application/companion_audio_controller.dart';
+import 'package:iptv/player/handoff/application/companion_scanner_actions.dart';
 import 'package:iptv/player/handoff/domain/audio_handoff_models.dart';
 import 'package:iptv/player/handoff/infrastructure/audio_handoff_discovery.dart';
 import 'package:iptv/player/handoff/presentation/companion_remote_sheet.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
+part 'companion_auth_transfer_sheet.dart';
 
 enum _ScannerMode { autoDetect, camera }
 
@@ -197,28 +197,17 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
         password: creds.password,
         email: email,
         refreshToken: refreshToken,
-        companionDeviceName: Platform.isAndroid
-            ? 'Android Phone'
-            : (Platform.isIOS ? 'iPhone' : Platform.localHostname),
+        companionDeviceName: CompanionScannerActions.companionDeviceName(),
       );
 
-      final dio = Dio(
-        BaseOptions(
-          connectTimeout: const Duration(seconds: 5),
-          sendTimeout: const Duration(seconds: 5),
-          receiveTimeout: const Duration(seconds: 5),
-          headers: {'content-type': 'application/json'},
-        ),
-      );
-
-      final res = await dio.post<Map<String, dynamic>>(
-        authInfo.transferUrl,
-        data: jsonEncode(payload.toJson()),
+      final ok = await CompanionScannerActions.transferAuthCredentials(
+        authInfo: authInfo,
+        payload: payload,
       );
 
       if (!mounted) return;
 
-      if (res.statusCode == 200 && (res.data?['success'] == true)) {
+      if (ok) {
         final navigator = Navigator.of(context, rootNavigator: true);
         if (navigator.canPop()) {
           navigator.pop();
@@ -247,7 +236,7 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
           ),
         );
       } else {
-        throw Exception(res.data?['error'] ?? 'Transfer rejected');
+        throw Exception('Transfer rejected');
       }
     } catch (e) {
       if (!mounted) return;
@@ -302,8 +291,14 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
 
   @override
   Widget build(BuildContext context) {
-    final isMobile =
-        !PlatformService.instance.isWindows && !PlatformService.instance.isWeb;
+    final supportsCameraScan = !PlatformService.instance.isWindows &&
+        !PlatformService.instance.isWeb &&
+        !PlatformService.instance.isAndroidTv;
+    if (!supportsCameraScan && _mode == _ScannerMode.camera) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _switchToMode(_ScannerMode.autoDetect);
+      });
+    }
     final sessionsAsync = ref.watch(discoveredTvSessionsProvider);
     final rawSessions = sessionsAsync.valueOrNull ?? [];
     final sessionInfo = ref.watch(
@@ -457,8 +452,8 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
                 ],
               ),
 
-              // Segmented Mode Switcher (Pill Style) — only needed when camera is available on mobile
-              if (isMobile) ...[
+              // Segmented Mode Switcher — camera QR only when a camera is available
+              if (supportsCameraScan) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(4),
@@ -609,7 +604,7 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            padding: const EdgeInsetsDirectional.only(start: 4, bottom: 10),
             child: Row(
               children: [
                 Container(
@@ -656,7 +651,7 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: Icon(
-                      _getDeviceIcon(s.serverDeviceName),
+                      CompanionScannerActions.deviceIconForName(s.serverDeviceName),
                       color: AppColors.accent,
                       size: 21,
                     ),
@@ -985,13 +980,13 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
             width: 1,
           ),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.dialpad_rounded, color: AppColors.accent, size: 22),
-            SizedBox(width: 10),
+            const Icon(Icons.dialpad_rounded, color: AppColors.accent, size: 22),
+            const SizedBox(width: 10),
             Text(
-              'Enter Pairing Code',
-              style: TextStyle(
+              context.l10n.companionEnterPairingCode,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
@@ -1003,9 +998,9 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Enter the TV IP address and 4-digit PIN displayed on your TV screen.',
-              style: TextStyle(color: Colors.white70, fontSize: 12.5),
+            Text(
+              context.l10n.companionPairingDialogBody,
+              style: const TextStyle(color: Colors.white70, fontSize: 12.5),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -1014,8 +1009,8 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
               autocorrect: false,
               style: const TextStyle(color: Colors.white, fontSize: 13.5),
               decoration: InputDecoration(
-                labelText: 'TV IP Address',
-                hintText: 'e.g. 192.168.1.50',
+                labelText: context.l10n.companionDirectIpAddress,
+                hintText: context.l10n.companionIpHintExample,
                 labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
                 hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12.5),
                 prefixIcon: const Icon(Icons.lan_outlined, size: 18, color: AppColors.accent),
@@ -1039,7 +1034,7 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
                 letterSpacing: 4,
               ),
               decoration: InputDecoration(
-                labelText: '4-Digit PIN Code',
+                labelText: context.l10n.companionPinCodeLabel,
                 hintText: '0000',
                 counterText: '',
                 labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
@@ -1058,7 +1053,10 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+            child: Text(
+              context.l10n.actionCancel,
+              style: const TextStyle(color: Colors.white60),
+            ),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -1066,7 +1064,10 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
               foregroundColor: Colors.black,
             ),
             onPressed: () => Navigator.of(dialogCtx).pop(true),
-            child: const Text('Connect', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(
+              context.l10n.handoffConnect,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -1074,20 +1075,13 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
 
     if (confirmed != true) return;
 
-    var host = ipController.text.trim();
+    final rawHost = ipController.text.trim();
     final pin = pinController.text.trim();
-    if (host.isEmpty || pin.isEmpty) return;
+    if (rawHost.isEmpty || pin.isEmpty) return;
 
-    if (host.startsWith('http://')) host = host.substring(7);
-    if (host.startsWith('https://')) host = host.substring(8);
-    if (host.endsWith('/')) host = host.substring(0, host.length - 1);
-
-    int port = 8998;
-    if (host.contains(':')) {
-      final parts = host.split(':');
-      host = parts[0];
-      port = int.tryParse(parts[1]) ?? 8998;
-    }
+    final endpoint = CompanionScannerActions.normalizeManualHost(rawHost);
+    final host = endpoint.host;
+    final port = endpoint.port;
 
     setState(() {
       _isConnecting = true;
@@ -1095,14 +1089,10 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
     });
 
     try {
-      final dio = Dio(
-        BaseOptions(
-          connectTimeout: const Duration(seconds: 4),
-          receiveTimeout: const Duration(seconds: 4),
-        ),
+      final data = await CompanionScannerActions.fetchAuthHandoffInfo(
+        host: host,
+        port: port,
       );
-      final res = await dio.get<Map<String, dynamic>>('http://$host:$port/auth-handoff');
-      final data = res.data ?? {};
       final serverPin = data['pin']?.toString() ?? '';
       final token = data['tok']?.toString() ?? '';
       final dev = data['dev']?.toString() ?? 'HOPE IPTV Screen';
@@ -1129,316 +1119,4 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
     }
   }
 
-  static IconData _getDeviceIcon(String devName) {
-    final lower = devName.toLowerCase();
-    if (lower.contains('pc') ||
-        lower.contains('windows') ||
-        lower.contains('mac') ||
-        lower.contains('linux') ||
-        lower.contains('desktop') ||
-        lower.contains('laptop')) {
-      return Icons.laptop_chromebook;
-    }
-    if (lower.contains('tablet') || lower.contains('pad')) {
-      return Icons.tablet_android;
-    }
-    if (lower.contains('phone') || lower.contains('mobile')) {
-      return Icons.smartphone;
-    }
-    return Icons.tv;
-  }
-}
-
-/// Confirmation bottom sheet presented when a signed-in phone scans
-/// a target screen's Auth Handoff QR code.
-class _AuthTransferConfirmationSheet extends StatelessWidget {
-  const _AuthTransferConfirmationSheet({
-    required this.authInfo,
-    required this.serverUrl,
-    required this.username,
-    this.email,
-  });
-
-  final CompanionAuthHandoffInfo authInfo;
-  final String serverUrl;
-  final String username;
-  final String? email;
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      margin: const EdgeInsets.all(12),
-      padding: EdgeInsets.fromLTRB(22, 14, 22, bottomPadding > 0 ? bottomPadding + 8 : 22),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F1522),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: AppColors.accent.withValues(alpha: 0.35),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.75),
-            blurRadius: 36,
-            offset: const Offset(0, -6),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 38,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.22),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-
-          // Header
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.accent.withValues(alpha: 0.25),
-                      AppColors.accent.withValues(alpha: 0.05),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.accent.withValues(alpha: 0.4),
-                    width: 1,
-                  ),
-                ),
-                child: const Center(
-                  child: HugeIcon(
-                    icon: AppIcons.devices,
-                    color: AppColors.accent,
-                    size: 22,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.l10n.companionAuthorizeTitle,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      authInfo.targetDeviceName,
-                      style: const TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // Credentials preview box
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.bg0.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoRow(
-                  label: context.l10n.authServerUrl,
-                  value: serverUrl,
-                  icon: AppIcons.link,
-                ),
-                const Divider(color: AppColors.border, height: 18),
-                _buildInfoRow(
-                  label: context.l10n.authUsername,
-                  value: username,
-                  icon: AppIcons.user,
-                ),
-                if (email != null && email!.isNotEmpty) ...[
-                  const Divider(color: AppColors.border, height: 18),
-                  _buildInfoRow(
-                    label: context.l10n.accountEmailLabel,
-                    value: email!,
-                    icon: AppIcons.mail,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Security PIN confirmation badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF131C2E),
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              border: Border.all(
-                color: AppColors.accent.withValues(alpha: 0.25),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  context.l10n.companionPairingCodeLabel,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  authInfo.pinCode.split('').join(' '),
-                  style: const TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // Actions: Transfer & Cancel
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.border),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                    ),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: Text(context.l10n.actionCancel),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.accent, Color(0xFF0077FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(AppRadius.button),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accent.withValues(alpha: 0.35),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => Navigator.of(context).pop(true),
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                      child: Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const HugeIcon(
-                              icon: AppIcons.swap,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              context.l10n.companionTransferAction,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow({
-    required String label,
-    required String value,
-    required dynamic icon,
-  }) {
-    return Row(
-      children: [
-        HugeIcon(
-          icon: icon as List<List<dynamic>>,
-          color: AppColors.textSecondary,
-          size: 16,
-        ),
-        const SizedBox(width: 10),
-        Text(
-          '$label: ',
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
 }

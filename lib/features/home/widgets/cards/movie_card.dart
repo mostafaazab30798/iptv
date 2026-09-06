@@ -1,17 +1,36 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
+import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
+import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/movie.dart';
+import 'package:iptv/features/home/widgets/cards/poster_card_layout.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
+
+/// Where the movie title sits relative to the poster art.
+enum PosterTitlePlacement {
+  /// Title under the poster (home rows, favorites/search grids).
+  below,
+
+  /// Title overlaid on the poster bottom (catalog grids filling 2:3 cells).
+  overlay,
+}
 
 class MovieCard extends StatelessWidget {
   const MovieCard({
     super.key,
     required this.movie,
     required this.onTap,
-    this.width = 120,
-    this.height = 175,
+    this.width = PosterCardLayout.defaultWidth,
+    this.height = PosterCardLayout.defaultPosterHeight,
+    this.expand = false,
+    this.borderRadius = AppRadius.lg,
+    this.heartSize = 20,
+    this.memCacheWidth,
+    this.memCacheHeight,
+    this.titlePlacement = PosterTitlePlacement.below,
   });
 
   final Movie movie;
@@ -19,42 +38,99 @@ class MovieCard extends StatelessWidget {
   final double width;
   final double height;
 
+  /// When true, ignore [width]/[height] and scale from parent constraints
+  /// (grid cells). Prefer explicit sizes for horizontal rows.
+  final bool expand;
+
+  final double borderRadius;
+  final double heartSize;
+  final int? memCacheWidth;
+  final int? memCacheHeight;
+  final PosterTitlePlacement titlePlacement;
+
   @override
   Widget build(BuildContext context) {
+    if (expand) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          if (titlePlacement == PosterTitlePlacement.overlay) {
+            final w = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                ? constraints.maxWidth
+                : PosterCardLayout.defaultWidth;
+            final h = constraints.maxHeight.isFinite && constraints.maxHeight > 0
+                ? constraints.maxHeight
+                : PosterCardLayout.posterHeightForWidth(w);
+            return _buildOverlayCard(w, h);
+          }
+          final fitted = PosterCardLayout.fit(
+            maxWidth: constraints.maxWidth,
+            maxHeight:
+                constraints.maxHeight.isFinite ? constraints.maxHeight : null,
+          );
+          return _buildBelowCard(fitted.width, fitted.posterHeight);
+        },
+      );
+    }
+    if (titlePlacement == PosterTitlePlacement.overlay) {
+      return _buildOverlayCard(width, height);
+    }
+    return _buildBelowCard(width, height);
+  }
+
+  BorderRadius get _radius => BorderRadius.circular(borderRadius);
+
+  (int, int) _cacheSize(double w, double posterH) {
+    final cacheW =
+        memCacheWidth ?? (w * 1.5).round().clamp(80, 240);
+    final cacheH =
+        memCacheHeight ?? (posterH * 1.5).round().clamp(120, 360);
+    return (cacheW, cacheH);
+  }
+
+  Widget _favorite(
+    FocusNode heartFocus,
+    DpadDirectionCallback onHeartDirection,
+  ) {
+    return FavoriteToggleButton(
+      type: FavoriteType.movie,
+      itemId: movie.streamId,
+      name: movie.name,
+      imageUrl: movie.streamIcon,
+      size: heartSize,
+      padding: 2,
+      focusNode: heartFocus,
+      onDirection: onHeartDirection,
+    );
+  }
+
+  Widget _buildBelowCard(double w, double posterH) {
+    final (cacheW, cacheH) = _cacheSize(w, posterH);
+
     return SizedBox(
-      width: width,
+      width: w,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            width: width,
-            height: height,
+            width: w,
+            height: posterH,
             child: PosterHeartCard(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(16),
-              favorite: (heartFocus, onHeartDirection) => FavoriteToggleButton(
-                type: FavoriteType.movie,
-                itemId: movie.streamId,
-                name: movie.name,
-                imageUrl: movie.streamIcon,
-                size: 20,
-                padding: 2,
-                focusNode: heartFocus,
-                onDirection: onHeartDirection,
-              ),
+              borderRadius: _radius,
+              favorite: _favorite,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   CachedImage(
                     imageUrl: movie.streamIcon,
-                    width: width,
-                    height: height,
+                    width: w,
+                    height: posterH,
                     fit: BoxFit.cover,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: _radius,
                     fallbackIcon: AppIcons.movies,
-                    memCacheWidth: 160,
-                    memCacheHeight: 240,
+                    memCacheWidth: cacheW,
+                    memCacheHeight: cacheH,
                   ),
                   Positioned(
                     top: 0,
@@ -71,7 +147,7 @@ class MovieCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: PosterCardLayout.titleGap),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Text(
@@ -88,6 +164,87 @@ class MovieCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOverlayCard(double w, double posterH) {
+    final (cacheW, cacheH) = _cacheSize(w, posterH);
+
+    return SizedBox(
+      width: w,
+      height: posterH,
+      child: PosterHeartCard(
+        onTap: onTap,
+        borderRadius: _radius,
+        favorite: _favorite,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CachedImage(
+              imageUrl: movie.streamIcon,
+              width: w,
+              height: posterH,
+              fit: BoxFit.cover,
+              borderRadius: _radius,
+              fallbackIcon: AppIcons.movies,
+              memCacheWidth: cacheW,
+              memCacheHeight: cacheH,
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: PosterTopActions(rating: movie.rating),
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(borderRadius),
+                  ),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xE6000000)],
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      movie.name,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (movie.releaseYear != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${movie.releaseYear}',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
