@@ -121,6 +121,16 @@ class FakeVodRepository implements VodRepository {
     }
     return Ok(match.first);
   }
+
+  @override
+  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback}) async {
+    final match = movies.where((m) => m.streamId == streamId);
+    if (match.isEmpty) {
+      if (fallback != null) return Ok(fallback);
+      return const Err(AppResultError('not found'));
+    }
+    return Ok(match.first);
+  }
 }
 
 class FakeSeriesRepository implements SeriesRepository {

@@ -79,7 +79,13 @@ class UpdatePlatformTarget {
     required bool isWindows,
     required bool isWeb,
   }) {
-    if (isAndroid || isAndroidTv) {
+    if (isAndroidTv) {
+      return const UpdatePlatformTarget(
+        platform: 'android',
+        architecture: 'android-tv',
+      );
+    }
+    if (isAndroid) {
       return const UpdatePlatformTarget(
         platform: 'android',
         architecture: 'arm64-v8a',

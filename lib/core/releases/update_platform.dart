@@ -37,7 +37,8 @@ abstract final class UpdateUrlValidator {
 
 String? nativeArchitectureCode() {
   final platform = PlatformService.instance;
-  if (platform.isAndroid || platform.isAndroidTv) return 'arm64-v8a';
+  if (platform.isAndroidTv) return 'android-tv';
+  if (platform.isAndroid) return 'arm64-v8a';
   if (platform.isWindows) return 'x64';
   return null;
 }

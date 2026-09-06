@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +32,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    PlatformService.instance.isFullScreenNotifier.addListener(_onFullscreenChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _controller = ref.read(playerControllerProvider.notifier);
@@ -41,12 +43,22 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     });
   }
 
+  void _onFullscreenChanged() {
+    if (!mounted) return;
+    final isFull = PlatformService.instance.isFullScreenNotifier.value;
+    _controller?.setFullscreen(isFull);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
+    // On Windows, `inactive` fires on every focus change (including clicks
+    // inside the window) and must not be treated as going to background.
+    final leaving = state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.detached) {
+        state == AppLifecycleState.detached ||
+        (state == AppLifecycleState.inactive &&
+            !PlatformService.instance.isWindows);
+    if (leaving) {
       _controller?.savePlaybackProgress();
     }
   }
@@ -116,14 +128,22 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    PlatformService.instance.isFullScreenNotifier.removeListener(_onFullscreenChanged);
     _restoreDefaultOrientations();
     PlatformService.instance.setFullScreen(false);
     final controller = _controller;
+    final shouldStopOnDispose = kIsWeb || !_isLiveSource ||
+        !(controller?.hasLivePreviewHandoff ?? false);
     super.dispose();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (controller == null || !controller.mounted) return;
       controller.setPlayerRouteActive(false);
       controller.setFullscreen(false);
+      // Safety net: if leave cleanup was skipped (e.g. hard navigation),
+      // still stop HTML5 audio on web / non-handoff routes.
+      if (shouldStopOnDispose) {
+        controller.stop();
+      }
     });
   }
 
@@ -144,13 +164,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     }
     _controller?.savePlaybackProgress();
 
-    // Keep playback only when Live TV registered a mini-preview handoff.
-    // Favourites / search / history open live channels without that host, so
-    // those must stop on exit or audio continues in the background.
-    // Kick stop before pop; do not wrap in Future — that leaves pending
-    // timers when the route is disposed under widget tests.
-    final retainForMiniPreview =
-        _isLiveSource && (_controller?.hasLivePreviewHandoff ?? false);
+    // Keep playback only when Live TV is actively hosting the mini-preview.
+    // On Flutter Web the HTML5 <video> keeps playing after HtmlElementView
+    // unmounts, so never retain there — always stop on exit.
+    final retainForMiniPreview = !kIsWeb &&
+        _isLiveSource &&
+        (_controller?.hasLivePreviewHandoff ?? false);
     if (retainForMiniPreview) {
       // Drop a stuck reconnect HUD / pending retry timer without killing audio.
       _controller?.cancelAutoReconnect();
@@ -249,6 +268,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
                 final ownsSurface = ref.watch(
                   playerControllerProvider.select((s) => s.isPlayerRouteActive),
                 );
+                final videoWidth = ref.watch(
+                  playerControllerProvider.select((s) => s.metrics.videoWidth),
+                );
+                final videoHeight = ref.watch(
+                  playerControllerProvider.select((s) => s.metrics.videoHeight),
+                );
                 // Stay detached until this route owns the Texture. Mounting
                 // mkv.Video while LiveMiniPreview is still bound produces a
                 // zero-size GLES viewport on Huawei/Honor GPUs.
@@ -258,6 +283,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
                 return PlayerView(
                   aspectRatioIndex: aspectRatioIndex,
                   platformHandle: controller.engine.platformHandle,
+                  videoWidth: videoWidth,
+                  videoHeight: videoHeight,
                 );
               },
             ),

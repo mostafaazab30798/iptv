@@ -10,7 +10,6 @@ import 'package:iptv/core/logging/app_logger.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/core/releases/release_manifest.dart';
 import 'package:iptv/features/updates/update_controller.dart';
-import 'package:iptv/features/updates/update_dialog_format.dart';
 import 'package:iptv/l10n/app_localizations.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:url_launcher/url_launcher.dart';

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:iptv/core/network/url_helpers.dart';
 import 'package:iptv/domain/entities/server_config.dart';
+import 'package:iptv/player/infrastructure/web/web_player_engine.dart';
 
 /// Builds Xtream playback URLs without coupling presentation to the datasource.
 class StreamUrlBuilder {
@@ -13,7 +14,10 @@ class StreamUrlBuilder {
     required int streamId,
     String? extension,
   }) {
-    final ext = extension ?? (kIsWeb ? 'm3u8' : 'ts');
+    // Safari/iOS native <video> needs HLS (.m3u8). MediaKit on desktop web
+    // handles progressive MPEG-TS more reliably than proxied HLS right now.
+    final ext = extension ??
+        (kIsWeb && isIosOrSafariWeb() ? 'm3u8' : 'ts');
     final base = UrlHelpers.normalizeServerUrl(serverUrl);
     final raw = '$base/live/$username/$password/$streamId.$ext';
     return UrlHelpers.wrapWebProxy(raw);

@@ -3,6 +3,7 @@ export 'domain/entities/player_capabilities.dart';
 export 'domain/entities/player_metrics.dart';
 export 'domain/entities/player_source.dart';
 export 'domain/entities/player_track.dart';
+export 'domain/entities/web_video_handle.dart';
 export 'domain/enums/playback_profile.dart';
 export 'domain/enums/player_error_type.dart';
 export 'domain/enums/player_status.dart';
@@ -19,6 +20,7 @@ export 'application/smart_playback_engine.dart';
 export 'infrastructure/fake_player_engine.dart';
 export 'infrastructure/media_kit_player_engine.dart';
 export 'infrastructure/playback_retry_manager.dart';
+export 'infrastructure/player_engine_factory.dart';
 export 'infrastructure/stream_resolver.dart';
 
 // Utils

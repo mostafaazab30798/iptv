@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/epg_program.dart';

@@ -126,6 +126,38 @@ void main() {
       expect(finished.timeUntilRealtimeWindow(now: DateTime(2026, 9, 6, 23, 30)), isNull);
     });
 
+    test('needsScoreOrGoalsEnrichment returns true for finished, live, and near-kickoff matches', () {
+      const finishedModel = MatchModel(
+        league: 'Premier League',
+        teamHome: 'Everton',
+        teamAway: 'Manchester United',
+        time: '16:00',
+        scoreHome: '-',
+        scoreAway: '-',
+        channel: 'beIN Sports 1',
+      );
+
+      // Local time 20:45 (4 hours 45 minutes after kickoff -> finished!)
+      final evening = DateTime(2026, 9, 6, 20, 45);
+      // isEligibleForRealtime must be false (no 30s background timer needed for finished match)
+      expect(finishedModel.isEligibleForRealtime(now: evening), isFalse);
+      // needsScoreOrGoalsEnrichment MUST be true so FotMob provides final score & goals!
+      expect(finishedModel.needsScoreOrGoalsEnrichment(now: evening), isTrue);
+
+      // Future match 4 hours away: needsScoreOrGoalsEnrichment is false
+      final morning = DateTime(2026, 9, 6, 12, 0);
+      expect(finishedModel.needsScoreOrGoalsEnrichment(now: morning), isFalse);
+
+      // Upcoming match within 10 minutes (15:52): true
+      final nearKickoff = DateTime(2026, 9, 6, 15, 52);
+      expect(finishedModel.needsScoreOrGoalsEnrichment(now: nearKickoff), isTrue);
+
+      // LiveFixture behavior
+      final fixture = finishedModel.toLiveFixture(now: evening);
+      expect(fixture.isEligibleForRealtime(now: evening), isFalse);
+      expect(fixture.needsScoreOrGoalsEnrichment(now: evening), isTrue);
+    });
+
     test('LiveFixture correctly inherits timing from toLiveFixture and computes eligibility', () {
       final now = DateTime(2026, 9, 6, 15, 0);
       const model = MatchModel(

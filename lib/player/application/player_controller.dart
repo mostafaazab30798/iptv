@@ -20,7 +20,7 @@ import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/domain/enums/stream_type.dart';
 import 'package:iptv/player/domain/interfaces/player_engine.dart';
 import 'package:iptv/player/handoff/application/audio_handoff_server_controller.dart';
-import 'package:iptv/player/infrastructure/media_kit_player_engine.dart';
+import 'package:iptv/player/infrastructure/player_engine_factory.dart';
 import 'package:iptv/player/utils/player_logger.dart';
 
 /// Riverpod StateNotifier managing active player state and user playback actions.
@@ -33,9 +33,8 @@ class PlayerController extends StateNotifier<PlayerState> {
     VoidCallback? onStopCallback,
     void Function(PlayerSource source)? onSourceChanged,
   })  : _engine = engine ??
-            MediaKitPlayerEngine(
-              initialBufferMode:
-                  initialBufferMode ?? PlaybackBufferMode.deviceDefault,
+            createDefaultPlayerEngine(
+              initialBufferMode: initialBufferMode,
             ),
         _historyRepository = historyRepository,
         _canLoadSource = canLoadSource,
@@ -70,6 +69,8 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Lazy live playlist: channels list + URL resolver; only neighbors are materialized.
   List<Channel> _liveChannels = const [];
   String Function(Channel channel)? _liveUrlFor;
+  /// Set by Live TV only — gates mini-preview keep-alive on player exit.
+  bool _livePreviewHostActive = false;
   static const _neighborWindowRadius = 25;
   final Map<int, PlayerSource> _neighborSourceCache = {};
 
@@ -103,9 +104,16 @@ class PlayerController extends StateNotifier<PlayerState> {
   bool get _hasLazyLivePlaylist =>
       _liveChannels.isNotEmpty && _liveUrlFor != null;
 
-  /// True when Live TV registered a lazy playlist so the mini-preview can keep
-  /// the current live stream after leaving the fullscreen player route.
-  bool get hasLivePreviewHandoff => _hasLazyLivePlaylist;
+  /// True only when Live TV is hosting the mini-preview and registered a lazy
+  /// playlist. Home/search/favorites also call [setLazyLivePlaylist] for
+  /// next/prev, but must not keep audio playing after leaving the player.
+  bool get hasLivePreviewHandoff =>
+      _livePreviewHostActive && _hasLazyLivePlaylist;
+
+  /// Marks whether the Live TV route currently owns mini-preview handoff.
+  void setLivePreviewHostActive(bool active) {
+    _livePreviewHostActive = active;
+  }
 
   int get _playlistLength =>
       _hasLazyLivePlaylist ? _liveChannels.length : _channelPlaylist.length;
@@ -283,6 +291,7 @@ class PlayerController extends StateNotifier<PlayerState> {
   void _clearLazyLivePlaylist() {
     _liveChannels = const [];
     _liveUrlFor = null;
+    _livePreviewHostActive = false;
     _neighborSourceCache.clear();
   }
 
@@ -730,11 +739,11 @@ class PlayerController extends StateNotifier<PlayerState> {
   }
 
   void setAspectRatio(int index) {
-    state = state.copyWith(aspectRatioIndex: index.clamp(0, 3));
+    state = state.copyWith(aspectRatioIndex: index.clamp(0, 4));
   }
 
   void cycleAspectRatio() {
-    final nextIndex = (state.aspectRatioIndex + 1) % 4; // Fit -> Fill -> 16:9 -> 4:3
+    final nextIndex = (state.aspectRatioIndex + 1) % 5; // Best Fit -> Fit -> Fill -> 16:9 -> 4:3
     state = state.copyWith(aspectRatioIndex: nextIndex);
   }
 
@@ -780,28 +789,64 @@ class PlayerController extends StateNotifier<PlayerState> {
     if (current != null) {
       var retrySource = current;
       if (current.isLive) {
-        final uri = Uri.tryParse(current.url);
-        if (uri != null && uri.pathSegments.isNotEmpty) {
-          final lastSegment = uri.pathSegments.last;
-          if (lastSegment.endsWith('.ts')) {
-            final basePath = uri.path.substring(0, uri.path.length - 3);
-            final newUrl = uri.replace(path: '$basePath.m3u8').toString();
-            retrySource = current.copyWith(
-              url: newUrl,
-              streamType: StreamType.hls,
-            );
-          } else if (lastSegment.endsWith('.m3u8')) {
-            final basePath = uri.path.substring(0, uri.path.length - 5);
-            final newUrl = uri.replace(path: '$basePath.ts').toString();
-            retrySource = current.copyWith(
-              url: newUrl,
-              streamType: StreamType.mpegTs,
-            );
-          }
+        // Flip live container on the *real* stream URL. For web proxy URLs like
+        // /proxy/playlist.m3u8?url=http://panel/.../78395.m3u8, never rewrite the
+        // outer proxy path (that produced broken /proxy/playlist.ts requests).
+        final flipped = _flipLiveContainerUrl(current.url);
+        if (flipped != null) {
+          retrySource = current.copyWith(
+            url: flipped.url,
+            streamType: flipped.streamType,
+          );
         }
       }
       await load(retrySource);
     }
+  }
+
+  /// Swaps `.m3u8` ↔ `.ts` on a live URL (or its proxied inner `url` query).
+  static ({String url, StreamType streamType})? _flipLiveContainerUrl(
+    String url,
+  ) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+
+    final proxiedTarget = uri.queryParameters['url'];
+    if (uri.path.contains('/proxy') && proxiedTarget != null) {
+      final flippedInner = _flipExtension(proxiedTarget);
+      if (flippedInner == null) return null;
+      final newQuery = Map<String, String>.from(uri.queryParameters)
+        ..['url'] = flippedInner.url;
+      // Keep a stable outer path so Safari still sniffs HLS when needed.
+      const outerPath = '/proxy';
+      return (
+        url: uri.replace(path: outerPath, queryParameters: newQuery).toString(),
+        streamType: flippedInner.streamType,
+      );
+    }
+
+    return _flipExtension(url);
+  }
+
+  static ({String url, StreamType streamType})? _flipExtension(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.pathSegments.isEmpty) return null;
+    final lastSegment = uri.pathSegments.last;
+    if (lastSegment.endsWith('.ts')) {
+      final basePath = uri.path.substring(0, uri.path.length - 3);
+      return (
+        url: uri.replace(path: '$basePath.m3u8').toString(),
+        streamType: StreamType.hls,
+      );
+    }
+    if (lastSegment.endsWith('.m3u8')) {
+      final basePath = uri.path.substring(0, uri.path.length - 5);
+      return (
+        url: uri.replace(path: '$basePath.ts').toString(),
+        streamType: StreamType.mpegTs,
+      );
+    }
+    return null;
   }
 
   @override

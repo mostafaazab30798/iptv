@@ -122,7 +122,8 @@ export default {
                 .map((t) => decodeURIComponent(t).trim().toLowerCase())
                 .filter(Boolean);
 
-              if (targets.length > 0 && Array.isArray(data.leagues)) {
+              const hasArabic = targets.some((t) => /[\u0600-\u06FF]/.test(t));
+              if (!hasArabic && targets.length > 0 && Array.isArray(data.leagues)) {
                 const filteredLeagues = [];
                 for (const league of data.leagues) {
                   if (Array.isArray(league.matches)) {

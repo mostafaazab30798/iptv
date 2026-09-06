@@ -56,10 +56,11 @@ void main() {
   });
 
   group('ChromeHeights', () {
-    test('overscan is always 28 logical px', () {
-      for (final factor in FormFactor.values) {
-        expect(ChromeHeights.forFactor(factor).overscan, 28);
-      }
+    test('overscan is reserved for TV and zero for other form factors', () {
+      expect(ChromeHeights.forFactor(FormFactor.tv).overscan, 28);
+      expect(ChromeHeights.forFactor(FormFactor.desktop).overscan, 0);
+      expect(ChromeHeights.forFactor(FormFactor.phone).overscan, 0);
+      expect(ChromeHeights.forFactor(FormFactor.tablet).overscan, 0);
       expect(ChromeHeights.overscanLogicalPx, 28);
     });
 

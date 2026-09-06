@@ -45,7 +45,7 @@ abstract final class PosterCardLayout {
   ) {
     switch (factor) {
       case FormFactor.tv:
-        return (height: 190, itemWidth: 104);
+        return (height: 225, itemWidth: 135);
       case FormFactor.tablet:
         return (height: 200, itemWidth: 112);
       case FormFactor.desktop:

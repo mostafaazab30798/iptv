@@ -38,6 +38,8 @@
 
   <title>HOPE TV</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Native iOS/Safari VOD helper: remuxes MKV into fMP4 for AVPlayer -->
+  <script src="js/hope_tv_native_vod.js" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -47,6 +49,18 @@
       });
     }
   </script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000000;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  </style>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

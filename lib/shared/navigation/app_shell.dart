@@ -97,6 +97,21 @@ class AppShell extends ConsumerWidget {
     final isHomeOrHistoryPortrait =
         isPortrait &&
         (currentPath == Routes.home || currentPath.startsWith(Routes.history));
+    final overlayLandscapeHome = !isPortrait && currentPath == Routes.home;
+    final hideInFlowHeader = isHomeOrHistoryPortrait || overlayLandscapeHome;
+
+    final topNav = DpadRegion(
+      memoryKey: 'shell/nav',
+      debugLabel: 'shell-nav',
+      child: _ShellTopNav(
+        items: navItems,
+        selectedIndex: selectedIndex,
+        currentPath: currentPath,
+        overlay: overlayLandscapeHome,
+        onItemTap: (index, route) => _onNavigate(context, route),
+        onRefresh: () => _handleSmartRefresh(ref, currentPath),
+      ),
+    );
 
     return PopScope(
       canPop: false,
@@ -110,23 +125,19 @@ class AppShell extends ConsumerWidget {
           child: Scaffold(
             backgroundColor: AppColors.bg0,
             extendBody: false,
-            body: Column(
+            body: Stack(
               children: [
-                if (!isHomeOrHistoryPortrait) ...[
-                  DpadRegion(
-                    memoryKey: 'shell/nav',
-                    debugLabel: 'shell-nav',
-                    child: _ShellTopNav(
-                      items: navItems,
-                      selectedIndex: selectedIndex,
-                      currentPath: currentPath,
-                      onItemTap: (index, route) => _onNavigate(context, route),
-                      onRefresh: () => _handleSmartRefresh(ref, currentPath),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                Expanded(child: child),
+                Column(
+                  children: [
+                    if (!hideInFlowHeader) ...[
+                      topNav,
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                    Expanded(child: child),
+                  ],
+                ),
+                if (overlayLandscapeHome)
+                  Positioned(top: 0, left: 0, right: 0, child: topNav),
               ],
             ),
             bottomNavigationBar: isPortrait
@@ -221,6 +232,7 @@ class _ShellTopNav extends StatelessWidget {
     required this.currentPath,
     required this.onItemTap,
     required this.onRefresh,
+    this.overlay = false,
   });
 
   final List<ShellNavItem> items;
@@ -228,6 +240,7 @@ class _ShellTopNav extends StatelessWidget {
   final String currentPath;
   final void Function(int index, String route) onItemTap;
   final VoidCallback onRefresh;
+  final bool overlay;
 
   String _getTitle(BuildContext context, String currentPath) {
     if (currentPath.startsWith(Routes.history)) {
@@ -262,27 +275,21 @@ class _ShellTopNav extends StatelessWidget {
         title: title,
         currentPath: currentPath,
         onRefresh: onRefresh,
-        titleColor:
-            currentPath == Routes.home ? AppColors.accent : Colors.white,
+        titleColor: currentPath == Routes.home
+            ? AppColors.accent
+            : Colors.white,
         showBackgroundGradient: true,
       );
     }
 
-    // Landscape / Desktop / TV Header with High-Performance Gradient
+    // Landscape / Desktop / TV header. Overlay mode floats over the Home hero
+    // with a lighter fade so the backdrop reads through the chrome.
     final headerHeight = ChromeHeights.of(context).header;
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          stops: [0.0, 0.75, 1.0],
-          colors: [Color(0xF5080B12), Color(0xDD080B12), Colors.transparent],
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Container(
-          height: headerHeight,
+    final navRow = SafeArea(
+      bottom: false,
+      child: SizedBox(
+        height: headerHeight,
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.xl,
             AppSpacing.xs,
@@ -319,7 +326,10 @@ class _ShellTopNav extends StatelessWidget {
                 ],
                 // Glass Action Capsule
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(12),
                     borderRadius: BorderRadius.circular(14),
@@ -368,7 +378,7 @@ class _ShellTopNav extends StatelessWidget {
                       ),
                       if (PlatformService.instance.supportsFullscreen) ...[
                         const SizedBox(width: 4),
-                        const _FullscreenToggleButton(),
+                        const ShellFullscreenToggleButton(),
                       ],
                     ],
                   ),
@@ -379,10 +389,50 @@ class _ShellTopNav extends StatelessWidget {
         ),
       ),
     );
+
+    if (overlay) {
+      const fadeExtra = 48.0;
+      return SizedBox(
+        height: ChromeHeights.headerExtentOf(context) + fadeExtra,
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [0.0, 0.42, 1.0],
+                      colors: [
+                        Color(0xC2080B12),
+                        Color(0x7A080B12),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            navRow,
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.75, 1.0],
+          colors: [Color(0xF5080B12), Color(0xDD080B12), Colors.transparent],
+        ),
+      ),
+      child: navRow,
+    );
   }
 }
-
-typedef _FullscreenToggleButton = ShellFullscreenToggleButton;
 
 // ---------------------------------------------------------------------------
 // Figma/Dribbble Floating Frosted Glass Dock (Portrait Mobile)
@@ -704,6 +754,9 @@ class _BrandLogoState extends State<_BrandLogo> {
                       fontWeight: FontWeight.w900,
                       letterSpacing: 2.5,
                       height: 1.05,
+                      shadows: [
+                        Shadow(color: Color(0x99000000), blurRadius: 10),
+                      ],
                     ),
                   ),
                   SizedBox(height: 1),

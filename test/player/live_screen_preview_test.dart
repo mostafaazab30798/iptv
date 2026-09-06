@@ -21,11 +21,11 @@ class FakeLiveController extends LiveController {
         Category(id: 1, serverId: 1, type: CategoryType.live, name: 'Sports'),
         Category(id: 2, serverId: 1, type: CategoryType.live, name: 'News'),
       ],
-      filteredChannels: [
+      filteredItems: [
         Channel(id: 1, serverId: 1, streamId: 101, name: 'ESPN HD', categoryId: 1),
         Channel(id: 2, serverId: 1, streamId: 102, name: 'BBC News', categoryId: 2),
       ],
-      totalChannelCount: 2,
+      totalCount: 2,
       isLoading: false,
     );
   }

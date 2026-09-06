@@ -78,15 +78,17 @@ void main() {
     });
 
     test('cycles aspect ratio modes', () {
-      expect(controller.state.aspectRatioIndex, equals(0)); // Fit
+      expect(controller.state.aspectRatioIndex, equals(0)); // Best Fit
       controller.cycleAspectRatio();
-      expect(controller.state.aspectRatioIndex, equals(1)); // Fill
+      expect(controller.state.aspectRatioIndex, equals(1)); // Fit
       controller.cycleAspectRatio();
-      expect(controller.state.aspectRatioIndex, equals(2)); // 16:9
+      expect(controller.state.aspectRatioIndex, equals(2)); // Fill
       controller.cycleAspectRatio();
-      expect(controller.state.aspectRatioIndex, equals(3)); // 4:3
+      expect(controller.state.aspectRatioIndex, equals(3)); // 16:9
       controller.cycleAspectRatio();
-      expect(controller.state.aspectRatioIndex, equals(0)); // Back to Fit
+      expect(controller.state.aspectRatioIndex, equals(4)); // 4:3
+      controller.cycleAspectRatio();
+      expect(controller.state.aspectRatioIndex, equals(0)); // Back to Best Fit
     });
 
     test('seekRelative adjusts position safely', () async {

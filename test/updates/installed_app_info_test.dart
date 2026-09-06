@@ -18,6 +18,17 @@ void main() {
       expect(target?.architecture, 'arm64-v8a');
     });
 
+    test('maps Android TV to android-tv even when isAndroid is also true', () {
+      final target = UpdatePlatformTarget.forCurrentPlatform(
+        isAndroid: true,
+        isAndroidTv: true,
+        isWindows: false,
+        isWeb: false,
+      );
+      expect(target?.platform, 'android');
+      expect(target?.architecture, 'android-tv');
+    });
+
     test('maps Windows to x64', () {
       final target = UpdatePlatformTarget.forCurrentPlatform(
         isAndroid: false,

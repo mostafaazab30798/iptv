@@ -1,7 +1,6 @@
 import 'dart:io' show Platform, exit;
 
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 bool isWindows() => Platform.isWindows;
@@ -25,7 +24,9 @@ Future<void> initPlatformWindow() async {
     try {
       await windowManager.ensureInitialized();
       await windowManager.setMinimumSize(const Size(720, 480));
-      await windowManager.setSize(const Size(1280, 720));
+      if (!Platform.isWindows) {
+        await windowManager.setSize(const Size(1280, 720));
+      }
     } catch (_) {}
   }
 }
@@ -83,6 +84,13 @@ Future<bool> isPlatformFullScreen() async {
 }
 
 Future<void> minimizePlatformWindow() async {
+  if (Platform.isWindows) {
+    try {
+      await _platformChannel.invokeMethod<void>('minimize');
+      return;
+    } catch (_) {}
+  }
+
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     try {
       await windowManager.ensureInitialized();
@@ -91,7 +99,65 @@ Future<void> minimizePlatformWindow() async {
   }
 }
 
+Future<void> maximizePlatformWindow() async {
+  if (Platform.isWindows) {
+    try {
+      await _platformChannel.invokeMethod<void>('maximize');
+      return;
+    } catch (_) {}
+  }
+
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    try {
+      await windowManager.ensureInitialized();
+      await windowManager.maximize();
+    } catch (_) {}
+  }
+}
+
+Future<void> unmaximizePlatformWindow() async {
+  if (Platform.isWindows) {
+    try {
+      await _platformChannel.invokeMethod<void>('unmaximize');
+      return;
+    } catch (_) {}
+  }
+
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    try {
+      await windowManager.ensureInitialized();
+      await windowManager.unmaximize();
+    } catch (_) {}
+  }
+}
+
+Future<bool> isPlatformWindowMaximized() async {
+  if (Platform.isWindows) {
+    try {
+      final res = await _platformChannel.invokeMethod<bool>('isMaximized');
+      if (res != null) return res;
+    } catch (_) {}
+  }
+
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    try {
+      await windowManager.ensureInitialized();
+      return await windowManager.isMaximized();
+    } catch (_) {
+      return false;
+    }
+  }
+  return false;
+}
+
 void exitPlatformApp() {
+  if (Platform.isWindows) {
+    try {
+      _platformChannel.invokeMethod<void>('close');
+      return;
+    } catch (_) {}
+  }
+
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     exit(0);
   } else {

@@ -118,7 +118,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
           .read(seriesControllerProvider.notifier)
           .loadData(forceRefresh: true),
       onSelectAll: () => _selectCategory(null, isAll: true),
-      onSelectCategory: (category) => _selectCategory(category),
+      onSelectCategory: _selectCategory,
       leadingUrlOf: (cover) => cover,
     );
   }
@@ -614,7 +614,7 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
                         Row(
                           children: [
                             if (widget.series.rating != null &&
-                                widget.series.rating!.isNotEmpty) ...[
+                                (double.tryParse(widget.series.rating!.replaceAll(',', '.')) ?? 0.0) > 0.0) ...[
                               const HugeIcon(
                                 icon: AppIcons.star,
                                 color: AppColors.warning,

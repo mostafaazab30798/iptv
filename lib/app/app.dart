@@ -36,6 +36,8 @@ class App extends ConsumerStatefulWidget {
 }
 
 class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
+  AppLifecycleState? _lifecycle;
+
   @override
   void initState() {
     super.initState();
@@ -53,8 +55,13 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final previous = _lifecycle;
+    _lifecycle = state;
     if (state == AppLifecycleState.resumed) {
-      unawaited(_onAppResumed());
+      final fromBackground = previous == AppLifecycleState.paused ||
+          previous == AppLifecycleState.hidden ||
+          previous == AppLifecycleState.detached;
+      unawaited(_onAppResumed(fromBackground: fromBackground));
     }
   }
 
@@ -87,8 +94,16 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
 
 
 
-  Future<void> _onAppResumed() async {
-    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
+  Future<void> _onAppResumed({required bool fromBackground}) async {
+    final platform = PlatformService.instance;
+    if (platform.isAndroid || platform.isAndroidTv) {
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
+    }
+    // Windows reports inactive→resumed on every click (parent vs Flutter HWND).
+    // Skip handoff/update work for those focus blips.
+    if (platform.isWindows && !fromBackground) {
+      return;
+    }
     // Re-start handoff server on resume to refresh the LAN IP (could have changed
     // if device connected to a different network while backgrounded).
     // Refresh advertised LAN IP on resume without dropping companion clients.
@@ -162,13 +177,9 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
       // D-pad / TV remote navigation covers every route, dialog and sheet.
       // The companion cursor sits above it so trackpad aiming stays visible.
       builder: (context, child) {
+        // Outer MediaQuery is the real viewport — form-factor + binder use it.
         final mediaQuery = MediaQuery.of(context);
-        final chrome = ChromeHeights.of(context);
-        final factor = chrome.formFactor;
-        // Phone/tablet keep edge-to-edge; TV/desktop get ~5% overscan inset.
-        final needsOverscan =
-            factor == FormFactor.tv || factor == FormFactor.desktop;
-        final overscan = needsOverscan ? chrome.overscan : 0.0;
+        final factor = FormFactorResolver.of(context);
 
         var textScaler = mediaQuery.textScaler.clamp(maxScaleFactor: 1.4);
         // Mild TV readability nudge; phone/tablet/desktop keep clamped scale.
@@ -178,73 +189,67 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
               .clamp(maxScaleFactor: 1.4);
         }
 
-        final innerSize = overscan > 0
-            ? Size(
-                (mediaQuery.size.width - 2 * overscan).clamp(0.0, double.infinity),
-                (mediaQuery.size.height - 2 * overscan)
-                    .clamp(0.0, double.infinity),
-              )
-            : mediaQuery.size;
-
-        // FormFactorBinder reads the outer MediaQuery (full viewport) so
-        // overscan padding does not flip form-factor breakpoints.
-        Widget body = MediaQuery(
-          data: mediaQuery.copyWith(
-            textScaler: textScaler,
-            size: innerSize,
-          ),
-          child: CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.f11): () async {
-                final isFull = await PlatformService.instance.isFullScreen();
-                await PlatformService.instance.setFullScreen(!isFull);
-              },
-              const SingleActivator(LogicalKeyboardKey.escape): () async {
-                final isFull = await PlatformService.instance.isFullScreen();
-                if (isFull) {
-                  await PlatformService.instance.setFullScreen(false);
-                }
-              },
+        final Widget tree = CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.f11): () async {
+              final isFull = await PlatformService.instance.isFullScreen();
+              await PlatformService.instance.setFullScreen(!isFull);
             },
-            child: RemoteFocusScope(
-              child: Dpad(
-                theme: const DpadThemeData(
-                  effects: [ArmedDpadEffects()],
-                  scrollPadding: 56,
-                ),
-                keySet: const DpadKeySet().copyWith(
-                  select: [
-                    ...DpadKeySet.defaultSelect,
-                    LogicalKeyboardKey.gameButtonSelect,
-                  ],
-                ),
-                debugOverlay: kDebugMode &&
-                    const bool.fromEnvironment(
-                      'TV_FOCUS_INSPECTOR',
-                      defaultValue: false,
-                    ),
-                onBack: () {
-                  final ctx = rootNavigatorKey.currentContext;
-                  if (ctx == null) return false;
-                  unawaited(handleRemoteBack(ctx));
-                  return true;
-                },
-                child: CompanionPointerOverlay(
-                  child: child ?? const SizedBox.shrink(),
-                ),
+            const SingleActivator(LogicalKeyboardKey.escape): () async {
+              final isFull = await PlatformService.instance.isFullScreen();
+              if (isFull) {
+                await PlatformService.instance.setFullScreen(false);
+              }
+            },
+          },
+          child: RemoteFocusScope(
+            child: Dpad(
+              theme: const DpadThemeData(
+                effects: [ArmedDpadEffects()],
+                scrollPadding: 56,
+              ),
+              keySet: const DpadKeySet().copyWith(
+                select: [
+                  ...DpadKeySet.defaultSelect,
+                  LogicalKeyboardKey.gameButtonSelect,
+                ],
+              ),
+              debugOverlay: kDebugMode &&
+                  const bool.fromEnvironment(
+                    'TV_FOCUS_INSPECTOR',
+                    defaultValue: false,
+                  ),
+              onBack: () {
+                final ctx = rootNavigatorKey.currentContext;
+                if (ctx == null) return false;
+                unawaited(handleRemoteBack(ctx));
+                return true;
+              },
+              child: CompanionPointerOverlay(
+                child: child ?? const SizedBox.shrink(),
               ),
             ),
           ),
         );
 
-        if (overscan > 0) {
-          body = Padding(
-            padding: EdgeInsets.all(overscan),
-            child: body,
-          );
-        }
-
-        return FormFactorBinder(child: body);
+        // Bind real viewport, then scale phones to the 411dp S24 Ultra baseline.
+        // Text scaler is applied *inside* the scaler so it does not restore the
+        // physical MediaQuery size and undo density adaptation.
+        return FormFactorBinder(
+          child: PhoneDesignScaler(
+            formFactor: factor,
+            child: Builder(
+              builder: (scaledContext) {
+                return MediaQuery(
+                  data: MediaQuery.of(scaledContext).copyWith(
+                    textScaler: textScaler,
+                  ),
+                  child: tree,
+                );
+              },
+            ),
+          ),
+        );
       },
 
       // Theme

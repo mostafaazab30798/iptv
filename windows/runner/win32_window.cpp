@@ -16,6 +16,10 @@ namespace {
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
+#ifndef DWMWA_TRANSITIONS_FORCEDISABLED
+#define DWMWA_TRANSITIONS_FORCEDISABLED 3
+#endif
+
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
 /// Registry key for app theme preference.
@@ -91,7 +95,10 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     WNDCLASS window_class{};
     window_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
     window_class.lpszClassName = kWindowClassName;
-    window_class.style = CS_HREDRAW | CS_VREDRAW;
+    // Do not use CS_HREDRAW | CS_VREDRAW — those erase the entire window on
+    // any size/frame change and show as a black flash (or a full display
+    // blank) whenever focus changes in borderless fullscreen.
+    window_class.style = CS_DBLCLKS;
     window_class.cbClsExtra = 0;
     window_class.cbWndExtra = 0;
     window_class.hInstance = GetModuleHandle(nullptr);
@@ -135,7 +142,7 @@ bool Win32Window::Create(const std::wstring& title,
   double scale_factor = dpi / 96.0;
 
   HWND window = CreateWindow(
-      window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
+      window_class, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -145,6 +152,12 @@ bool Win32Window::Create(const std::wstring& title,
   }
 
   UpdateTheme(window);
+
+  // Prevent DWM's fade-to-black animation when the window is activated,
+  // deactivated, or restyled into borderless fullscreen.
+  BOOL disable_transitions = TRUE;
+  DwmSetWindowAttribute(window, DWMWA_TRANSITIONS_FORCEDISABLED,
+                        &disable_transitions, sizeof(disable_transitions));
 
   return OnCreate();
 }
@@ -202,16 +215,30 @@ Win32Window::MessageHandler(HWND hwnd,
       if (child_content_ != nullptr) {
         // Size and position the child window.
         MoveWindow(child_content_, rect.left, rect.top, rect.right - rect.left,
-                   rect.bottom - rect.top, TRUE);
+                   rect.bottom - rect.top, FALSE);
       }
       return 0;
     }
 
     case WM_ACTIVATE:
-      if (child_content_ != nullptr) {
+      // Only forward focus to the Flutter view when *becoming* active.
+      // Calling SetFocus on WA_INACTIVE fights Windows' deactivation, which
+      // in borderless fullscreen blanks the display on every click in/out.
+      if (LOWORD(wparam) != WA_INACTIVE && child_content_ != nullptr) {
         SetFocus(child_content_);
       }
       return 0;
+
+    case WM_NCACTIVATE:
+      // Borderless fullscreen has no caption to repaint. Letting DefWindowProc
+      // redraw the non-client area on focus changes flashes the whole monitor.
+      if (is_fullscreen_) {
+        return TRUE;
+      }
+      break;
+
+    case WM_ERASEBKGND:
+      return 1;
 
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
@@ -275,7 +302,7 @@ void Win32Window::SetFullScreen(bool fullscreen) {
     ex_style_prev_ = ::GetWindowLong(hwnd, GWL_EXSTYLE);
 
     if (style_prev_ == 0) {
-      style_prev_ = WS_OVERLAPPEDWINDOW;
+      style_prev_ = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
     }
 
     if (wp_prev_.showCmd == SW_HIDE || wp_prev_.showCmd == 0) {
@@ -295,25 +322,25 @@ void Win32Window::SetFullScreen(bool fullscreen) {
       return;
     }
 
-    // Strip caption (titlebar), borders, sizing frame, system menu, and maximize/minimize buttons
-    DWORD style = style_prev_;
-    style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_MAXIMIZE);
-    ::SetWindowLongPtr(hwnd, GWL_STYLE, style);
+    // WS_POPUP is true borderless fullscreen. Subtracting caption bits from
+    // WS_OVERLAPPEDWINDOW leaves a hybrid non-client area that DWM repaints
+    // (and blanks the monitor) on every WM_NCACTIVATE / click.
+    const DWORD visible_bit =
+        (::IsWindowVisible(hwnd) || (style_prev_ & WS_VISIBLE)) ? WS_VISIBLE : 0;
+    ::SetWindowLongPtr(hwnd, GWL_STYLE,
+                       WS_POPUP | WS_CLIPCHILDREN | visible_bit);
+    ::SetWindowLongPtr(hwnd, GWL_EXSTYLE, WS_EX_APPWINDOW);
 
-    DWORD ex_style = ex_style_prev_;
-    ex_style &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE | WS_EX_WINDOWEDGE);
-    ::SetWindowLongPtr(hwnd, GWL_EXSTYLE, ex_style);
-
-    // Cover the entire monitor rectangle, on top of the taskbar
     ::SetWindowPos(hwnd, HWND_TOP,
                    mi.rcMonitor.left, mi.rcMonitor.top,
                    mi.rcMonitor.right - mi.rcMonitor.left,
                    mi.rcMonitor.bottom - mi.rcMonitor.top,
-                   SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                   SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
     is_fullscreen_ = true;
   } else {
     DWORD target_style = style_prev_ != 0 ? style_prev_ : WS_OVERLAPPEDWINDOW;
+    target_style |= WS_CLIPCHILDREN | WS_VISIBLE;
     ::SetWindowLongPtr(hwnd, GWL_STYLE, target_style);
     ::SetWindowLongPtr(hwnd, GWL_EXSTYLE, ex_style_prev_);
 
@@ -329,12 +356,8 @@ void Win32Window::SetFullScreen(bool fullscreen) {
     }
 
     ::SetWindowPlacement(hwnd, &wp_prev_);
-
-    int show_cmd = (wp_prev_.showCmd == SW_SHOWMAXIMIZED) ? SW_MAXIMIZE : SW_SHOWNORMAL;
-    ::ShowWindow(hwnd, show_cmd);
-
     ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-                   SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
     is_fullscreen_ = false;
   }

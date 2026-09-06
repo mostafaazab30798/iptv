@@ -184,4 +184,29 @@ class VodRepositoryImpl implements VodRepository {
       return Err(AppResultError('Movie not found', cause: e));
     }
   }
+
+  @override
+  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback}) async {
+    final cached = cache.vodMovieMap[streamId];
+    if (cached != null && (cached.plot != null || cached.backdropPaths != null || cached.director != null)) {
+      return Ok(cached);
+    }
+
+    try {
+      final raw = await remoteDataSource.getVodInfo(streamId);
+      if (raw.isNotEmpty) {
+        final baseMovie = fallback ?? cached ?? await () async {
+          final res = await getMovieById(streamId);
+          return res.isOk ? res.value : Movie(id: streamId, serverId: 1, streamId: streamId, name: '');
+        }();
+        final detailed = DataMapper.movieFromVodInfo(raw, baseMovie);
+        cache.vodMovieMap[streamId] = detailed;
+        return Ok(detailed);
+      }
+    } catch (_) {}
+
+    if (cached != null) return Ok(cached);
+    if (fallback != null) return Ok(fallback);
+    return getMovieById(streamId);
+  }
 }

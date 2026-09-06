@@ -154,6 +154,10 @@ class _EmptyVod implements VodRepository {
   @override
   Future<Result<Movie>> getMovieById(int streamId) async =>
       const Err(AppResultError('none'));
+
+  @override
+  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback}) async =>
+      fallback != null ? Ok(fallback) : const Err(AppResultError('none'));
 }
 
 class _MovieVod implements VodRepository {
@@ -173,6 +177,10 @@ class _MovieVod implements VodRepository {
   @override
   Future<Result<Movie>> getMovieById(int streamId) async =>
       const Err(AppResultError('none'));
+
+  @override
+  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback}) async =>
+      fallback != null ? Ok(fallback) : const Err(AppResultError('none'));
 }
 
 class _FakeScores implements LiveScoreSource {
@@ -184,6 +192,7 @@ class _FakeScores implements LiveScoreSource {
   @override
   Future<List<LiveFixture>> fetchLiveBigMatches({
     bool forceRefresh = false,
+    DateTime? now,
   }) async {
     if (delay > Duration.zero) {
       await Future<void>.delayed(delay);

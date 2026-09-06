@@ -50,5 +50,19 @@ void main() {
       expect(StreamTypeDetector.detect('http://example.com/stream/123', hint: 'rtp'), equals(StreamType.rtp));
       expect(StreamTypeDetector.detect('http://example.com/stream/123', hint: 'rtsp'), equals(StreamType.rtsp));
     });
+
+    test('detects HLS from proxied inner url, not outer proxy path', () {
+      final type = StreamTypeDetector.detect(
+        'https://tv.example.com/proxy/playlist.ts?url=http%3A%2F%2Fpanel.example.com%2Flive%2Fu%2Fp%2F1.m3u8',
+      );
+      expect(type, equals(StreamType.hls));
+    });
+
+    test('detects MPEG-TS from proxied inner url', () {
+      final type = StreamTypeDetector.detect(
+        'https://tv.example.com/proxy?url=http%3A%2F%2Fpanel.example.com%2Flive%2Fu%2Fp%2F1.ts',
+      );
+      expect(type, equals(StreamType.mpegTs));
+    });
   });
 }

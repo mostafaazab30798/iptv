@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show PointerDeviceKind;
 import 'package:dpad/dpad.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -251,21 +252,36 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     // Debounce single tap slightly so double-tap takes precedence
     _tapDebounceTimer?.cancel();
     _tapDebounceTimer = Timer(const Duration(milliseconds: 220), () {
-      if (mounted) {
+      if (!mounted) return;
+      // On web / phones: show when hidden; keep chrome up on background taps
+      // so Back remains hittable (Safari also synthesizes hover from touch).
+      if (!_controlsVisible) {
+        _showOverlay();
+      } else if (kIsWeb || !_isFinePointerDevice) {
+        _scheduleHide();
+      } else {
         _toggleOverlay();
       }
     });
+  }
+
+  bool get _isFinePointerDevice {
+    final platform = Theme.of(context).platform;
+    return platform == TargetPlatform.windows ||
+        platform == TargetPlatform.linux ||
+        platform == TargetPlatform.macOS;
   }
 
   void _handleDoubleTapDown(TapDownDetails details, BoxConstraints constraints) {
     if (widget.playerState.isLocked) return;
     _tapDebounceTimer?.cancel();
 
-    // On Desktop (Windows / Linux / macOS), double click anywhere toggles fullscreen (standard player UX)
-    final isDesktop = Theme.of(context).platform == TargetPlatform.windows ||
+    // On Desktop (Windows / Linux / macOS) and Web, double click anywhere toggles fullscreen (standard player UX)
+    final isDesktopOrWeb = kIsWeb ||
+        Theme.of(context).platform == TargetPlatform.windows ||
         Theme.of(context).platform == TargetPlatform.linux ||
         Theme.of(context).platform == TargetPlatform.macOS;
-    if (isDesktop) {
+    if (isDesktopOrWeb) {
       widget.onToggleFullscreen();
       return;
     }
@@ -568,7 +584,15 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           return MouseRegion(
-            onHover: (_) => _showOverlay(),
+            onHover: (event) {
+              // iOS Safari synthesizes hover from touch; ignoring it prevents
+              // the following tap from immediately toggling chrome closed.
+              if (event.kind == PointerDeviceKind.touch ||
+                  event.kind == PointerDeviceKind.stylus) {
+                return;
+              }
+              _showOverlay();
+            },
             child: Stack(
               fit: StackFit.expand,
               children: [

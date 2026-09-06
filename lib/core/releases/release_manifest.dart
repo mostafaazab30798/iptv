@@ -40,18 +40,29 @@ class ReleaseManifest {
   final String signature;
   final String? downloadUrl;
 
+  /// GitHub release tags use the pubspec build number, not the Android
+  /// ABI-split versionCode (arm64-v8a adds 2000).
+  String get githubReleaseTag {
+    final tagBuild = buildNumber >= 1000 ? buildNumber % 1000 : buildNumber;
+    return 'v$version-build.$tagBuild';
+  }
+
+  String get artifactFileName {
+    if (platform == 'windows') return 'HOPE_IPTV_Setup.exe';
+    if (architecture == 'android-tv') return 'HOPE_TV_Android_TV.apk';
+    return 'HOPE_IPTV.apk';
+  }
+
   String get directDownloadUrl {
     final direct = downloadUrl;
     if (direct != null && direct.isNotEmpty) {
       return direct;
     }
-    final fileName =
-        platform == 'windows' ? 'HOPE_IPTV_Setup.exe' : 'HOPE_IPTV.apk';
-    return 'https://github.com/mostafaazab30798/iptv/releases/download/v$version-build.$buildNumber/$fileName';
+    return 'https://github.com/mostafaazab30798/iptv/releases/download/$githubReleaseTag/$artifactFileName';
   }
 
   String get releasePageUrl {
-    return 'https://github.com/mostafaazab30798/iptv/releases/tag/v$version-build.$buildNumber';
+    return 'https://github.com/mostafaazab30798/iptv/releases/tag/$githubReleaseTag';
   }
 
   factory ReleaseManifest.fromJson(Map<String, dynamic> json) {

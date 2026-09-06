@@ -27,8 +27,9 @@ part 'match_poster_card.dart';
 
 /// Cinematic Home hero carousel.
 ///
-/// On portrait small screens, the hero image extends higher with a transparent,
-/// subtly blurred top bar under the title and actions, scrolling naturally with the hero card.
+/// On portrait, the hero image extends under a floating title bar.
+/// On landscape / desktop / TV, the shell top nav overlays the hero with a
+/// light fade so the backdrop shows through the chrome.
 
 class HomeHeroBanner extends StatefulWidget {
   const HomeHeroBanner({
@@ -55,19 +56,24 @@ class HomeHeroBanner extends StatefulWidget {
     final isPortrait =
         MediaQuery.orientationOf(context) == Orientation.portrait;
     final topPadding = MediaQuery.paddingOf(context).top;
+    final overlayInset = isPortrait
+        ? 0.0
+        : ChromeHeights.headerExtentOf(context, fromView: true);
 
     // TV: viewport fraction (0.45) with a modest cap — avoids fixed 420 on ~540h.
     if (chrome.formFactor == FormFactor.tv) {
-      return (size.height * chrome.heroFraction).clamp(200.0, 320.0);
+      return (size.height * chrome.heroFraction).clamp(200.0, 320.0) +
+          overlayInset;
     }
 
     if (isPortrait) {
       return 470.0 + (topPadding > 0 ? topPadding : 20.0);
     }
     if (size.width > 1400) {
-      return (size.height * chrome.heroFraction).clamp(420.0, 560.0);
+      return (size.height * chrome.heroFraction).clamp(420.0, 560.0) +
+          overlayInset;
     }
-    return size.width > 900 ? 420.0 : 380.0;
+    return (size.width > 900 ? 420.0 : 380.0) + overlayInset;
   }
 
   @override
@@ -176,6 +182,9 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
     final isPortrait =
         MediaQuery.orientationOf(context) == Orientation.portrait;
     final bannerHeight = HomeHeroBanner.heightOf(context);
+    final overlayInset = isPortrait
+        ? 0.0
+        : ChromeHeights.headerExtentOf(context, fromView: true);
 
     final currentItem = (items.isNotEmpty && _currentPage.value < items.length)
         ? items[_currentPage.value]
@@ -355,7 +364,7 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
             if (!isPortrait && items.length > 1) ...[
               Positioned(
                 left: 16,
-                top: 0,
+                top: overlayInset,
                 bottom: 0,
                 child: Center(
                   child: _HeroNavChevron(
@@ -369,15 +378,14 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
               ),
               Positioned(
                 right: 16,
-                top: 0,
+                top: overlayInset,
                 bottom: 0,
                 child: Center(
                   child: _HeroNavChevron(
                     icon: Icons.chevron_right_rounded,
                     visible: _isHovered,
-                    onTap: () => _goToPage(
-                      (_currentPage.value + 1) % items.length,
-                    ),
+                    onTap: () =>
+                        _goToPage((_currentPage.value + 1) % items.length),
                   ),
                 ),
               ),
@@ -436,7 +444,6 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
 // ---------------------------------------------------------------------------
 // Hero Card Slide Item
 // ---------------------------------------------------------------------------
-
 
 class _HeroNavChevron extends StatefulWidget {
   const _HeroNavChevron({

@@ -67,6 +67,8 @@ abstract final class UrlHelpers {
 
     if (!shouldProxy) return rawUrl;
 
+    // Keep a single /proxy endpoint. Content-Type from the Worker is enough
+    // for Safari to treat rewritten playlists as HLS.
     return '$proxyBaseUrl?url=${Uri.encodeComponent(rawUrl)}';
   }
 }

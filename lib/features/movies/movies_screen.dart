@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:iptv/app/providers.dart';
-import 'package:iptv/app/router.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_motion.dart';
@@ -13,9 +10,11 @@ import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/features/catalog/catalog_categories_hub.dart';
 import 'package:iptv/features/home/widgets/cards/movie_card.dart';
+import 'package:iptv/features/movies/movie_details_sheet.dart';
 import 'package:iptv/features/movies/movies_controller.dart';
-import 'package:iptv/player/player_controller.dart';
-import 'package:iptv/player/player_source.dart';
+
+export 'package:iptv/features/movies/movie_details_sheet.dart'
+    show showMovieDetailsModal;
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
@@ -70,30 +69,6 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
     }
   }
 
-  void _playMovie(Movie movie) {
-    final session = ref.read(sessionProvider).valueOrNull;
-    if (session == null) return;
-
-    final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
-      session,
-      streamId: movie.streamId,
-      extension: movie.containerExtension ?? 'mp4',
-    );
-
-    ref
-        .read(playerControllerProvider.notifier)
-        .load(
-          VodSource(
-            movieId: movie.streamId,
-            title: movie.name,
-            url: streamUrl,
-            posterUrl: movie.streamIcon,
-          ),
-        );
-
-    context.push(Routes.player);
-  }
-
   @override
   Widget build(BuildContext context) {
     final isCategorySelected =
@@ -128,7 +103,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
           .read(moviesControllerProvider.notifier)
           .loadData(forceRefresh: true),
       onSelectAll: () => _selectCategory(null, isAll: true),
-      onSelectCategory: (category) => _selectCategory(category),
+      onSelectCategory: _selectCategory,
       leadingUrlOf: (logo) => logo,
     );
   }
@@ -339,7 +314,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                       memCacheWidth: 170,
                       memCacheHeight: 255,
                       titlePlacement: PosterTitlePlacement.overlay,
-                      onTap: () => _playMovie(movie),
+                      onTap: () => showMovieDetailsModal(context, movie),
                     );
                   },
                 ),

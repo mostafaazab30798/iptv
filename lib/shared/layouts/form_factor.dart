@@ -6,12 +6,7 @@ import 'package:iptv/core/platform/platform_service.dart';
 /// Derived from logical viewport size plus [PlatformService.isAndroidTv].
 /// Phase 1.1 exposes this for later consumers; phone chrome values match
 /// today's fixed layouts so unused reads do not change visuals.
-enum FormFactor {
-  phone,
-  tablet,
-  desktop,
-  tv,
-}
+enum FormFactor { phone, tablet, desktop, tv }
 
 /// Resolves [FormFactor] from geometry + Android TV capability.
 abstract final class FormFactorResolver {
@@ -23,10 +18,7 @@ abstract final class FormFactorResolver {
 
   /// Android TV always wins, even when the logical size looks phone-like
   /// (e.g. 1080p/tvdpi ≈ 960×540).
-  static FormFactor resolve({
-    required Size size,
-    required bool isAndroidTv,
-  }) {
+  static FormFactor resolve({required Size size, required bool isAndroidTv}) {
     if (isAndroidTv) return FormFactor.tv;
 
     final width = size.width;
@@ -88,6 +80,15 @@ class ChromeHeights {
     return forFactor(factor);
   }
 
+  /// Header row plus top inset. Use [fromView] when MediaQuery top padding
+  /// has been stripped (Home body) so the overlay still matches AppShell.
+  static double headerExtentOf(BuildContext context, {bool fromView = false}) {
+    final top = fromView
+        ? MediaQueryData.fromView(View.of(context)).padding.top
+        : MediaQuery.paddingOf(context).top;
+    return top + of(context).header;
+  }
+
   static ChromeHeights forFactor(FormFactor factor) {
     switch (factor) {
       case FormFactor.phone:
@@ -97,7 +98,7 @@ class ChromeHeights {
           header: 70,
           dock: 64,
           heroFraction: 0.38,
-          overscan: overscanLogicalPx,
+          overscan: 0.0,
         );
       case FormFactor.tablet:
         return const ChromeHeights(
@@ -105,7 +106,7 @@ class ChromeHeights {
           header: 64,
           dock: 64,
           heroFraction: 0.40,
-          overscan: overscanLogicalPx,
+          overscan: 0.0,
         );
       case FormFactor.desktop:
         return const ChromeHeights(
@@ -113,7 +114,7 @@ class ChromeHeights {
           header: 70,
           dock: 0,
           heroFraction: 0.38,
-          overscan: overscanLogicalPx,
+          overscan: 0.0,
         );
       case FormFactor.tv:
         return const ChromeHeights(

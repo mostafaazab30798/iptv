@@ -75,14 +75,8 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
   PlaybackBufferMode get currentBufferMode => _bufferMode;
 
-  static bool get _isAndroidHost =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-
   String get _hwdecPreference {
     if (!enableHardwareAcceleration) return 'no';
-    // auto-safe uses a copy-back decoder so Flutter's GLES compositor and the
-    // video Surface do not share an invalid viewport on Mali/Maleoon GPUs.
-    if (_isAndroidHost) return 'auto-safe';
     return 'auto';
   }
 
@@ -161,21 +155,18 @@ class MediaKitPlayerEngine implements PlayerEngine {
     await _setProperty('video-sync', 'audio');
     await _setProperty('interpolation', 'no');
 
-    // ── Frame drop policy: drop VO frames if decode/render falls behind ───────
-    // framedrop=vo drops late frames to maintain real-time sync instead of getting stuck in lag.
-    await _setProperty('framedrop', 'vo');
+    // ── Frame drop policy: drop late frames to maintain real-time sync ─────────
+    // framedrop=yes drops late frames in both VO and decoder so playback never lags in slow motion.
+    await _setProperty('framedrop', 'yes');
     await _setProperty('hr-seek-framedrop', 'yes');
-    await _setProperty('correct-pts', 'yes');
-    await _setProperty('fps', '0'); // Auto-detect stream fps
 
     // ── Deinterlacing ─────────────────────────────────────────────────────────
     await _setProperty('deinterlace', 'no');
 
     // ── Hardware decoding & multithreading ────────────────────────────────────
-    // auto-safe ensures safe copy-back hwdec methods and clean software fallback
-    // if hardware decoding is unavailable or unsupported for the stream's format.
-    if (enableHardwareAcceleration && !_isAndroidHost) {
-      await _setProperty('hwdec', 'auto-safe');
+    // Direct zero-copy hardware decoding (d3d11va on Windows, mediacodec on Android)
+    if (enableHardwareAcceleration) {
+      await _setProperty('hwdec', 'auto');
       await _setProperty('hwdec-codecs', 'all');
     }
     // Full-quality lavc path: never enable vd-lavc-fast (it skips deblocking and
@@ -185,7 +176,8 @@ class MediaKitPlayerEngine implements PlayerEngine {
     await _setProperty('demuxer-thread', 'yes'); // Demux on separate thread
 
     // ── Stream probing: reliable detection for IPTV MPEG-TS / HLS ─────────────
-    await _setProperty('demuxer-lavf-o', 'fflags=+genpts+discardcorrupt');
+    // Omit +genpts as synthetic PTS generation corrupts live MPEG-TS timestamps and causes slow motion.
+    await _setProperty('demuxer-lavf-o', 'fflags=+discardcorrupt');
     await _setProperty('demuxer-lavf-probesize', '8388608'); // 8MB probe buffer for live MPEG-TS
     await _setProperty('demuxer-lavf-analyzeduration', '3.0'); // 3s analysis duration (not 0.5s)
     await _setProperty('demuxer-lavf-buffersize', '2097152'); // 2MB chunk buffer
@@ -199,6 +191,13 @@ class MediaKitPlayerEngine implements PlayerEngine {
     await _setProperty('tls-verify', 'no'); // IPTV servers often use self-signed certs
     await _setProperty('hls-bitrate', 'max');
     await _setProperty('user-agent', ApiConstants.defaultUserAgent);
+
+    // Borderless Flutter hosts the video texture. Exclusive D3D11 fullscreen
+    // would change the display mode and blank the monitor on every focus click.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      await _setProperty('d3d11-exclusive-fs', 'no');
+      await _setProperty('ontop', 'no');
+    }
   }
 
   Future<void> _applyBufferModeProperties(PlaybackBufferMode mode) async {

@@ -54,6 +54,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     final player = _playerController;
     if (player != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        player.setLivePreviewHostActive(false);
         player.stopWhenLeavingLiveRoute();
       });
     }
@@ -115,6 +116,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     );
 
     final playerNotifier = ref.read(playerControllerProvider.notifier);
+    playerNotifier.setLivePreviewHostActive(true);
     playerNotifier.setLazyLivePlaylist(
       channels: channels,
       initialIndex: initialIndex >= 0 ? initialIndex : 0,

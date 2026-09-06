@@ -41,17 +41,24 @@ class StreamTypeDetector {
       }
     }
 
-    final cleanUrl = lowerUrl.split('?').first;
+    // For web `/proxy?...&url=<real>` (or `/proxy/playlist.m3u8?url=`), detect
+    // from the inner stream URL so outer paths like playlist.ts are ignored.
+    final detectionUrl = _unwrapProxyTarget(lowerUrl);
+    final cleanUrl = detectionUrl.split('?').first;
 
-    if (cleanUrl.endsWith('.m3u8') || lowerUrl.contains('output=m3u8') || lowerUrl.contains('.m3u8?')) {
+    if (cleanUrl.endsWith('.m3u8') ||
+        detectionUrl.contains('output=m3u8') ||
+        detectionUrl.contains('.m3u8?')) {
       return StreamType.hls;
     }
 
-    if (cleanUrl.endsWith('.ts') || lowerUrl.contains('output=ts') || lowerUrl.contains('.ts?')) {
+    if (cleanUrl.endsWith('.ts') ||
+        detectionUrl.contains('output=ts') ||
+        detectionUrl.contains('.ts?')) {
       return StreamType.mpegTs;
     }
 
-    if (cleanUrl.endsWith('.mpd') || lowerUrl.contains('.mpd?')) {
+    if (cleanUrl.endsWith('.mpd') || detectionUrl.contains('.mpd?')) {
       return StreamType.dash;
     }
 
@@ -63,5 +70,15 @@ class StreamTypeDetector {
     }
 
     return StreamType.unknown;
+  }
+
+  /// Returns the decoded `url` query value for `/proxy` URLs, otherwise [url].
+  static String _unwrapProxyTarget(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    if (!uri.path.contains('/proxy')) return url;
+    final target = uri.queryParameters['url'];
+    if (target == null || target.isEmpty) return url;
+    return target.toLowerCase();
   }
 }

@@ -41,7 +41,13 @@ Future<void> _initializeAfterFirstFrame() async {
   if (platform.isAndroid || platform.isAndroidTv) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   } else if (platform.isWindows) {
-    await platform.setFullScreen(true);
+    // Native runner already entered borderless fullscreen in main.cpp.
+    // Re-applying it here restyles the HWND after first paint and can blank
+    // the display; only recover if we somehow booted windowed.
+    final alreadyFull = await platform.isFullScreen();
+    if (!alreadyFull) {
+      await platform.setFullScreen(true);
+    }
   }
 
   AppLogger.info('Post-frame initialization complete', feature: 'bootstrap');

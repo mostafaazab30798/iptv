@@ -37,6 +37,49 @@ function setToMemoryCache(key, status, headersObj, bodyText, ttlSeconds) {
   });
 }
 
+// Short-lived panel→CDN redirect cache so Range seeks skip the panel round-trip.
+const redirectCache = new Map();
+const REDIRECT_CACHE_MAX = 200;
+const REDIRECT_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function getCachedRedirect(urlKey) {
+  const entry = redirectCache.get(urlKey);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    redirectCache.delete(urlKey);
+    return null;
+  }
+  return entry.target;
+}
+
+function setCachedRedirect(urlKey, targetHref) {
+  if (redirectCache.size >= REDIRECT_CACHE_MAX) {
+    const firstKey = redirectCache.keys().next().value;
+    if (firstKey) redirectCache.delete(firstKey);
+  }
+  redirectCache.set(urlKey, {
+    target: targetHref,
+    expiresAt: Date.now() + REDIRECT_CACHE_TTL_MS,
+  });
+}
+
+function isHlsPlaylistRequest(targetParsed, proxyPathname) {
+  const path = (targetParsed.pathname || '').toLowerCase();
+  return (
+    path.includes('.m3u8') ||
+    (proxyPathname || '').endsWith('.m3u8')
+  );
+}
+
+function isProgressiveMediaPath(pathname) {
+  const p = (pathname || '').toLowerCase();
+  if (p.includes('.m3u8')) return false;
+  if (/\.(mkv|mp4|avi|mov|m4v|m4a|mp3|flac|aac|ts)(\?|$)/i.test(p)) return true;
+  if (p.includes('/movie/') || p.includes('/series/')) return true;
+  if (p.includes('/live/') && p.endsWith('.ts')) return true;
+  return false;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -118,12 +161,43 @@ export default {
       }
 
       try {
-        const upstreamResponse = await fetchWithRedirectGuard(targetParsed, request);
+        const hlsMode = isHlsPlaylistRequest(targetParsed, url.pathname);
+        const { response: upstreamResponse, finalUrl, clientRedirectLocation } =
+          await fetchWithRedirectGuard(targetParsed, request, {
+            proxyOrigin: url.origin,
+            // VOD/live.ts: hand CDN URL back to the player so Range seeks
+            // hit the CDN through /proxy instead of re-resolving the panel.
+            passRedirectToClient:
+              !hlsMode && isProgressiveMediaPath(targetParsed.pathname),
+          });
+
+        if (clientRedirectLocation) {
+          const redirectHeaders = new Headers({
+            Location: clientRedirectLocation,
+            'Cache-Control': 'no-store',
+          });
+          applyCors(redirectHeaders, cors);
+          redirectHeaders.set('Access-Control-Expose-Headers', 'Location, Content-Length, Content-Range, Accept-Ranges, Content-Type');
+          return new Response(null, {
+            status: 302,
+            headers: redirectHeaders,
+          });
+        }
 
         const responseHeaders = new Headers(upstreamResponse.headers);
         applyCors(responseHeaders, cors);
-        responseHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type');
+        responseHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Location');
         responseHeaders.set('Accept-Ranges', 'bytes');
+
+        // Prefer explicit Content-Length for media_kit seeking when upstream had one.
+        const upstreamLength = upstreamResponse.headers.get('content-length');
+        if (upstreamLength) {
+          responseHeaders.set('Content-Length', upstreamLength);
+        }
+        const upstreamRange = upstreamResponse.headers.get('content-range');
+        if (upstreamRange) {
+          responseHeaders.set('Content-Range', upstreamRange);
+        }
 
         // Delete hop-by-hop & compression headers so the browser client doesn't receive mismatched lengths
         if (upstreamResponse.headers.has('content-encoding')) {
@@ -134,31 +208,31 @@ export default {
         responseHeaders.delete('connection');
         responseHeaders.delete('keep-alive');
 
-        // Rewrite M3U8 playlists so child segments and sub-manifests route through the proxy
+        // Rewrite M3U8 playlists so child segments and sub-manifests route through the proxy.
+        // Use the final URL (after CDN redirects) as the base for relative /hls/... paths.
         const contentType = (upstreamResponse.headers.get('content-type') || '').toLowerCase();
-        const isM3u8 =
+        const pathLooksLikeM3u8 =
           targetParsed.pathname.includes('.m3u8') ||
+          url.pathname.endsWith('.m3u8') ||
+          finalUrl.pathname.includes('.m3u8');
+        const typeLooksLikeM3u8 =
           contentType.includes('mpegurl') ||
-          contentType.includes('application/x-mpegurl');
+          contentType.includes('application/x-mpegurl') ||
+          contentType.includes('application/vnd.apple.mpegurl');
 
-        if (isM3u8 && upstreamResponse.ok) {
+        if ((pathLooksLikeM3u8 || typeLooksLikeM3u8) && upstreamResponse.ok) {
           const text = await upstreamResponse.text();
-          const lines = text.split('\n');
-          const rewrittenLines = lines.map((line) => {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed.startsWith('#')) return line;
-            try {
-              const absoluteUrl = new URL(trimmed, targetParsed).toString();
-              return `${url.origin}/proxy?url=${encodeURIComponent(absoluteUrl)}`;
-            } catch (_) {
-              return line;
-            }
-          });
+          if (text.includes('#EXTM3U')) {
+            responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+            responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            responseHeaders.delete('content-length');
 
-          return new Response(rewrittenLines.join('\n'), {
-            status: upstreamResponse.status,
-            headers: responseHeaders,
-          });
+            const rewritten = rewriteM3u8Playlist(text, finalUrl, url.origin);
+            return new Response(rewritten, {
+              status: upstreamResponse.status,
+              headers: responseHeaders,
+            });
+          }
         }
 
         // Cache successful JSON API responses in Memory and at Edge
@@ -327,9 +401,120 @@ function isIpAddress(hostname) {
   return /^(\d{1,3}\.){3}\d{1,3}$/.test(h) || h.includes(':');
 }
 
+const IPTV_UA = 'IPTVSmartersPro/3.1.5.1 (iPad; iOS 16.5; Scale/2.00)';
+
+// Panels that block Cloudflare edge IPs; fall back to direct TCP sockets.
 const KNOWN_RESOLVED_IPS = {
   'fndueo.2m2h.im': ['31.59.212.51', '31.59.186.104'],
 };
+
+function shouldTrySocketFallback(status) {
+  return (
+    status === 401 ||
+    status === 403 ||
+    status === 407 ||
+    status === 429 ||
+    status === 520 ||
+    status === 521 ||
+    status === 522 ||
+    status === 523 ||
+    status === 524 ||
+    status >= 500
+  );
+}
+
+function buildUpstreamHeaders(request, targetUrl) {
+  const upstreamHeaders = new Headers();
+  upstreamHeaders.set('User-Agent', IPTV_UA);
+  upstreamHeaders.set('Accept', '*/*');
+  // Many IPTV panels/CDNs require a panel-origin Referer.
+  try {
+    upstreamHeaders.set('Referer', `${targetUrl.protocol}//${targetUrl.host}/`);
+    upstreamHeaders.set('Origin', `${targetUrl.protocol}//${targetUrl.host}`);
+  } catch (_) {}
+
+  const range = request.headers.get('range');
+  if (range) {
+    upstreamHeaders.set('Range', range);
+  }
+  return upstreamHeaders;
+}
+
+function rewriteM3u8Playlist(text, baseUrl, proxyOrigin) {
+  const lines = text.split('\n');
+  return lines
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return line;
+
+      if (trimmed.startsWith('#EXT-X-KEY') || trimmed.startsWith('#EXT-X-MAP')) {
+        return line.replace(/URI="([^"]+)"/i, (match, uri) => {
+          try {
+            const resolved = new URL(uri, baseUrl).href;
+            return `URI="${proxyOrigin}/proxy?url=${encodeURIComponent(resolved)}"`;
+          } catch (_) {
+            return match;
+          }
+        });
+      }
+
+      if (trimmed.startsWith('#')) return line;
+
+      try {
+        const absoluteUrl = new URL(trimmed, baseUrl).toString();
+        return `${proxyOrigin}/proxy?url=${encodeURIComponent(absoluteUrl)}`;
+      } catch (_) {
+        return line;
+      }
+    })
+    .join('\n');
+}
+
+async function resolveHostnameIps(hostname) {
+  const known = KNOWN_RESOLVED_IPS[hostname.toLowerCase()];
+  if (known && known.length) return known.slice();
+
+  try {
+    const dohUrl =
+      `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=A`;
+    const resp = await fetch(dohUrl, {
+      headers: { Accept: 'application/dns-json' },
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    const answers = Array.isArray(data.Answer) ? data.Answer : [];
+    return answers
+      .filter((a) => a && a.type === 1 && typeof a.data === 'string')
+      .map((a) => a.data)
+      .filter((ip) => !isBlockedHostname(ip));
+  } catch (_) {
+    return [];
+  }
+}
+
+async function fetchViaResolvedIps(targetUrl, request, hostHeader) {
+  const ips = await resolveHostnameIps(targetUrl.hostname);
+  let lastResponse = null;
+  for (const ip of ips) {
+    try {
+      const ipUrl = new URL(targetUrl.toString());
+      ipUrl.hostname = ip;
+      const socketResp = await fetchFromIpSocket(ipUrl, request, hostHeader || targetUrl.host);
+      lastResponse = socketResp;
+      if (socketResp && !shouldTrySocketFallback(socketResp.status)) {
+        return socketResp;
+      }
+      // Keep trying other IPs on auth/edge blocks; 3xx is usable (redirect loop handles it).
+      if (socketResp && socketResp.status >= 300 && socketResp.status < 400) {
+        return socketResp;
+      }
+      if (socketResp && socketResp.ok) {
+        return socketResp;
+      }
+    } catch (_) {}
+  }
+  return lastResponse;
+}
 
 async function fetchFromIpSocket(targetUrl, request, originalHost = null) {
   const port = targetUrl.port
@@ -345,10 +530,15 @@ async function fetchFromIpSocket(targetUrl, request, originalHost = null) {
   const writer = socket.writable.getWriter();
   const path = (targetUrl.pathname || '/') + (targetUrl.search || '');
   const hostHeader = originalHost || targetUrl.host;
+  const refererOrigin = originalHost
+    ? `${targetUrl.protocol}//${originalHost}/`
+    : `${targetUrl.protocol}//${targetUrl.host}/`;
+
   let reqLines = `${request.method} ${path} HTTP/1.1\r\n`;
   reqLines += `Host: ${hostHeader}\r\n`;
-  reqLines += `User-Agent: IPTVSmartersPro/3.1.5.1 (iPad; iOS 16.5; Scale/2.00)\r\n`;
+  reqLines += `User-Agent: ${IPTV_UA}\r\n`;
   reqLines += `Accept: */*\r\n`;
+  reqLines += `Referer: ${refererOrigin}\r\n`;
   reqLines += `Connection: close\r\n`;
   const range = request.headers.get('range');
   if (range) {
@@ -445,8 +635,28 @@ async function fetchFromIpSocket(targetUrl, request, originalHost = null) {
   });
 }
 
-async function fetchWithRedirectGuard(initialUrl, request) {
+/**
+ * Fetch target following redirects manually.
+ * Returns { response, finalUrl, clientRedirectLocation? }.
+ *
+ * Important: do NOT rewrite CDN redirect IPs back to the panel hostname — segments
+ * like /hls/... only work on the CDN that issued the tokenized playlist.
+ */
+async function fetchWithRedirectGuard(initialUrl, request, options = {}) {
+  const proxyOrigin = options.proxyOrigin || null;
+  const passRedirectToClient = !!options.passRedirectToClient;
+
   let current = initialUrl;
+  let panelHostHeader = isIpAddress(initialUrl.hostname) ? null : initialUrl.host;
+  const cacheKey = initialUrl.href;
+
+  // Reuse a recent panel→CDN redirect so Range seeks skip the panel.
+  const cachedTarget = getCachedRedirect(cacheKey);
+  if (cachedTarget) {
+    try {
+      current = new URL(cachedTarget);
+    } catch (_) {}
+  }
 
   for (let i = 0; i <= MAX_REDIRECTS; i++) {
     if (isBlockedHostname(current.hostname)) {
@@ -455,65 +665,60 @@ async function fetchWithRedirectGuard(initialUrl, request) {
       throw err;
     }
 
-    const upstreamHeaders = new Headers();
-    upstreamHeaders.set(
-      'User-Agent',
-      'IPTVSmartersPro/3.1.5.1 (iPad; iOS 16.5; Scale/2.00)'
-    );
-    upstreamHeaders.set('Accept', '*/*');
-
-    const range = request.headers.get('range');
-    if (range) {
-      upstreamHeaders.set('Range', range);
-    }
-
+    const upstreamHeaders = buildUpstreamHeaders(request, current);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     let response;
-    try {
-      if (isIpAddress(current.hostname)) {
-        response = await fetchFromIpSocket(current, request);
-      } else {
-        response = await fetch(current.toString(), {
-          method: request.method,
-          headers: upstreamHeaders,
-          redirect: 'manual',
-          signal: controller.signal,
-        });
+    const preferSocket =
+      isIpAddress(current.hostname) ||
+      !!KNOWN_RESOLVED_IPS[(current.hostname || '').toLowerCase()];
 
-        // If Cloudflare edge returns 520-524 or 502-504, fallback to direct TCP socket
-        if (response.status >= 500 && KNOWN_RESOLVED_IPS[current.hostname]) {
-          const ips = KNOWN_RESOLVED_IPS[current.hostname];
-          for (const ip of ips) {
-            try {
-              const ipUrl = new URL(current.toString());
-              ipUrl.hostname = ip;
-              const socketResp = await fetchFromIpSocket(ipUrl, request, current.host);
-              if (socketResp && socketResp.status < 500) {
-                response = socketResp;
-                break;
-              }
-            } catch (_) {}
+    try {
+      if (preferSocket && !isIpAddress(current.hostname)) {
+        // Known IPTV panels block Cloudflare egress — go straight to TCP.
+        const socketResp = await fetchViaResolvedIps(
+          current,
+          request,
+          current.host
+        );
+        if (socketResp) {
+          response = socketResp;
+        }
+      }
+
+      if (!response) {
+        if (isIpAddress(current.hostname)) {
+          response = await fetchFromIpSocket(current, request, current.host);
+        } else {
+          response = await fetch(current.toString(), {
+            method: request.method,
+            headers: upstreamHeaders,
+            redirect: 'manual',
+            signal: controller.signal,
+          });
+
+          if (shouldTrySocketFallback(response.status)) {
+            const socketResp = await fetchViaResolvedIps(
+              current,
+              request,
+              current.host
+            );
+            if (socketResp) {
+              response = socketResp;
+            }
           }
         }
       }
     } catch (fetchErr) {
-      if (KNOWN_RESOLVED_IPS[current.hostname]) {
-        const ips = KNOWN_RESOLVED_IPS[current.hostname];
-        for (const ip of ips) {
-          try {
-            const ipUrl = new URL(current.toString());
-            ipUrl.hostname = ip;
-            const socketResp = await fetchFromIpSocket(ipUrl, request, current.host);
-            if (socketResp && socketResp.status < 500) {
-              response = socketResp;
-              break;
-            }
-          } catch (_) {}
-        }
-      }
-      if (!response) {
+      const socketResp = await fetchViaResolvedIps(
+        current,
+        request,
+        panelHostHeader || current.host
+      );
+      if (socketResp) {
+        response = socketResp;
+      } else {
         throw fetchErr;
       }
     } finally {
@@ -523,7 +728,7 @@ async function fetchWithRedirectGuard(initialUrl, request) {
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('Location');
       if (!location) {
-        return response;
+        return { response, finalUrl: current };
       }
       let next;
       try {
@@ -538,22 +743,30 @@ async function fetchWithRedirectGuard(initialUrl, request) {
         err.code = 'BLOCKED_REDIRECT';
         throw err;
       }
+      if (isBlockedHostname(next.hostname)) {
+        const err = new Error('Blocked host');
+        err.code = 'BLOCKED_REDIRECT';
+        throw err;
+      }
 
-      // If redirect target is a raw IP address, check if initialUrl was a domain.
-      // If so, rewrite hostname to initialUrl.hostname so Cloudflare Workers fetch()
-      // can route through the cluster domain without triggering Error 1003.
-      // If it remains an IP, fetchFromIpSocket will connect via direct TCP socket.
-      const isIpV4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(next.hostname);
-      const isInitialDomain = !/^(\d{1,3}\.){3}\d{1,3}$/.test(initialUrl.hostname);
-      if (isIpV4 && isInitialDomain) {
-        next.hostname = initialUrl.hostname;
+      // Cache panel→CDN mapping for subsequent Range requests.
+      setCachedRedirect(cacheKey, next.href);
+
+      // Progressive VOD/live.ts: let the player follow a same-origin proxy
+      // redirect so later seeks target the CDN URL directly.
+      if (passRedirectToClient && proxyOrigin && i === 0 && !cachedTarget) {
+        return {
+          response,
+          finalUrl: next,
+          clientRedirectLocation: `${proxyOrigin}/proxy?url=${encodeURIComponent(next.href)}`,
+        };
       }
 
       current = next;
       continue;
     }
 
-    return response;
+    return { response, finalUrl: current };
   }
 
   const err = new Error('Too many redirects');

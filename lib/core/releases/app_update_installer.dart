@@ -17,7 +17,19 @@ typedef DownloadProgressCallback = void Function(
 );
 
 class AppUpdateInstaller {
-  AppUpdateInstaller({Dio? dio}) : _dio = dio ?? Dio();
+  AppUpdateInstaller({Dio? dio})
+      : _dio = dio ??
+            Dio(
+              BaseOptions(
+                followRedirects: true,
+                maxRedirects: 8,
+                receiveTimeout: const Duration(minutes: 15),
+                headers: const {
+                  'User-Agent': 'HOPE-TV-Updater/1.0 (in-app-update)',
+                  'Accept': '*/*',
+                },
+              ),
+            );
 
   final Dio _dio;
   static const _platformChannel = MethodChannel('com.hopetv.iptvplayer/platform');
@@ -64,17 +76,30 @@ class AppUpdateInstaller {
         feature: 'updates',
       );
 
-      await _dio.download(
-        downloadUrl,
-        targetFile.path,
-        cancelToken: cancelToken,
-        onReceiveProgress: (received, total) {
-          if (total > 0 && onProgress != null) {
-            final progress = (received / total).clamp(0.0, 1.0);
-            onProgress(progress, received, total);
-          }
-        },
-      );
+      try {
+        await _dio.download(
+          downloadUrl,
+          targetFile.path,
+          cancelToken: cancelToken,
+          onReceiveProgress: (received, total) {
+            if (total > 0 && onProgress != null) {
+              final progress = (received / total).clamp(0.0, 1.0);
+              onProgress(progress, received, total);
+            }
+          },
+        );
+      } on DioException catch (e) {
+        if (e.type == DioExceptionType.cancel) rethrow;
+        final status = e.response?.statusCode;
+        if (status == 404) {
+          throw Exception(
+            'Update file was not found (HTTP 404). URL: $downloadUrl',
+          );
+        }
+        throw Exception(
+          'Update download failed${status != null ? ' (HTTP $status)' : ''}: ${e.message}',
+        );
+      }
 
       // Verify checksum
       if (manifest.sha256.isNotEmpty && !manifest.sha256.startsWith('PLACEHOLDER')) {

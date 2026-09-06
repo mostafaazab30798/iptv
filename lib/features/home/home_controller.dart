@@ -300,7 +300,7 @@ class HomeController extends StateNotifier<HomeState> {
                   final movies = res.when(ok: (m) => m, err: (_) => <Movie>[]);
                   if (movies.isNotEmpty && mounted) {
                     state = state.copyWith(
-                      featuredMovies: movies.take(20).toList(),
+                      featuredMovies: _selectFeaturedMovies(movies),
                     );
                     _maybeApplyMovieHero(movies);
                   }
@@ -315,7 +315,7 @@ class HomeController extends StateNotifier<HomeState> {
                   final series = res.when(ok: (s) => s, err: (_) => <Series>[]);
                   if (series.isNotEmpty && mounted) {
                     state = state.copyWith(
-                      popularSeries: series.take(20).toList(),
+                      popularSeries: _selectPopularSeries(series),
                     );
                   }
                 })
@@ -336,35 +336,145 @@ class HomeController extends StateNotifier<HomeState> {
     }
   }
 
+  List<Movie> _selectFeaturedMovies(List<Movie> movies) {
+    if (movies.isEmpty) return const [];
+
+    final candidates = movies.where((m) => m.name.trim().isNotEmpty).toList();
+    if (candidates.isEmpty) return const [];
+
+    final rated = <(Movie, double, int)>[];
+    final unrated = <Movie>[];
+
+    for (final m in candidates) {
+      final r = double.tryParse(m.rating?.replaceAll(',', '.') ?? '');
+      if (r != null && r > 0.0) {
+        rated.add((m, r, m.releaseYear ?? 0));
+      } else {
+        unrated.add(m);
+      }
+    }
+
+    // Sort rated movies: prefer higher rating. If ratings are within 0.5, prefer newer year.
+    rated.sort((a, b) {
+      final ratingDiff = (a.$2 - b.$2).abs();
+      if (ratingDiff > 0.5) {
+        return b.$2.compareTo(a.$2);
+      }
+      if (a.$3 != b.$3) {
+        return b.$3.compareTo(a.$3);
+      }
+      return b.$2.compareTo(a.$2);
+    });
+
+    final result = rated.map((e) => e.$1).take(20).toList();
+
+    // Fallback if the catalog has fewer than 20 rated movies: fill with unrated items with posters & recent year
+    if (result.length < 20 && unrated.isNotEmpty) {
+      unrated.sort((a, b) {
+        final hasPosterA = (a.streamIcon != null && a.streamIcon!.isNotEmpty) ? 1 : 0;
+        final hasPosterB = (b.streamIcon != null && b.streamIcon!.isNotEmpty) ? 1 : 0;
+        if (hasPosterA != hasPosterB) return hasPosterB.compareTo(hasPosterA);
+        final yearA = a.releaseYear ?? 0;
+        final yearB = b.releaseYear ?? 0;
+        return yearB.compareTo(yearA);
+      });
+      result.addAll(unrated.take(20 - result.length));
+    }
+
+    return result;
+  }
+
+  List<Series> _selectPopularSeries(List<Series> series) {
+    if (series.isEmpty) return const [];
+
+    final candidates = series.where((s) => s.name.trim().isNotEmpty).toList();
+    if (candidates.isEmpty) return const [];
+
+    final rated = <(Series, double, int)>[];
+    final unrated = <Series>[];
+
+    for (final s in candidates) {
+      final r = double.tryParse(s.rating?.replaceAll(',', '.') ?? '');
+      if (r != null && r > 0.0) {
+        rated.add((s, r, s.releaseYear ?? 0));
+      } else {
+        unrated.add(s);
+      }
+    }
+
+    rated.sort((a, b) {
+      final ratingDiff = (a.$2 - b.$2).abs();
+      if (ratingDiff > 0.5) {
+        return b.$2.compareTo(a.$2);
+      }
+      if (a.$3 != b.$3) {
+        return b.$3.compareTo(a.$3);
+      }
+      return b.$2.compareTo(a.$2);
+    });
+
+    final result = rated.map((e) => e.$1).take(20).toList();
+
+    if (result.length < 20 && unrated.isNotEmpty) {
+      unrated.sort((a, b) {
+        final hasCoverA = (a.cover != null && a.cover!.isNotEmpty) ? 1 : 0;
+        final hasCoverB = (b.cover != null && b.cover!.isNotEmpty) ? 1 : 0;
+        if (hasCoverA != hasCoverB) return hasCoverB.compareTo(hasCoverA);
+        final yearA = a.releaseYear ?? 0;
+        final yearB = b.releaseYear ?? 0;
+        return yearB.compareTo(yearA);
+      });
+      result.addAll(unrated.take(20 - result.length));
+    }
+
+    return result;
+  }
+
   List<HomeHeroItem> _computeHeroItems(List<Movie> movies) {
     if (movies.isEmpty) return const [];
 
-    final validMovies =
-        movies.where((m) => m.name.isNotEmpty).take(150).toList();
+    final validMovies = movies
+        .where((m) =>
+            m.name.trim().isNotEmpty &&
+            ((m.streamIcon != null && m.streamIcon!.isNotEmpty) ||
+                (m.backdropPaths != null && m.backdropPaths!.isNotEmpty)))
+        .toList();
 
-    // Sort by top rating & latest release year to pick top 3
-    validMovies.sort((a, b) {
-      final ratingA = double.tryParse(a.rating ?? '') ?? 0.0;
-      final ratingB = double.tryParse(b.rating ?? '') ?? 0.0;
-      final yearA = a.releaseYear ?? 0;
-      final yearB = b.releaseYear ?? 0;
+    if (validMovies.isEmpty) return const [];
 
-      if ((ratingA - ratingB).abs() > 0.5) {
-        return ratingB.compareTo(ratingA);
+    final rated = <(Movie, double, int)>[];
+    final unrated = <Movie>[];
+
+    for (final m in validMovies) {
+      final r = double.tryParse(m.rating?.replaceAll(',', '.') ?? '');
+      if (r != null && r > 0.0) {
+        rated.add((m, r, m.releaseYear ?? 0));
+      } else {
+        unrated.add(m);
       }
-      if (yearA != yearB) {
-        return yearB.compareTo(yearA);
+    }
+
+    rated.sort((a, b) {
+      final ratingDiff = (a.$2 - b.$2).abs();
+      if (ratingDiff > 0.5) {
+        return b.$2.compareTo(a.$2);
       }
-      return ratingB.compareTo(ratingA);
+      if (a.$3 != b.$3) {
+        return b.$3.compareTo(a.$3);
+      }
+      return b.$2.compareTo(a.$2);
     });
 
-    final top3 = validMovies.take(3).toList();
+    final pickedMovies = rated.map((e) => e.$1).take(3).toList();
+    if (pickedMovies.length < 3 && unrated.isNotEmpty) {
+      unrated.sort((a, b) => (b.releaseYear ?? 0).compareTo(a.releaseYear ?? 0));
+      pickedMovies.addAll(unrated.take(3 - pickedMovies.length));
+    }
 
-    return top3.map((m) {
-      final ratingStr = m.rating != null && m.rating!.isNotEmpty
-          ? m.rating!
-          : null;
-      final yearStr = m.releaseYear != null ? '${m.releaseYear}' : null;
+    return pickedMovies.map((m) {
+      final r = double.tryParse(m.rating?.replaceAll(',', '.') ?? '');
+      final ratingStr = (r != null && r > 0.0) ? m.rating : null;
+      final yearStr = m.releaseYear != null && m.releaseYear! > 0 ? '${m.releaseYear}' : null;
       final genreStr = m.genre ?? 'Action';
 
       final subtitleParts = <String>[];
@@ -407,12 +517,16 @@ class HomeController extends StateNotifier<HomeState> {
 
   void _maybeApplyMovieHero(List<Movie> movies) {
     if (!mounted || _hasLiveMatchHero) return;
+    if (!_matchHeroResolved) {
+      _pendingHeroMovies = movies;
+      return;
+    }
     final items = _computeHeroItems(movies);
     if (items.isEmpty || !mounted || _hasLiveMatchHero) return;
     state = state.copyWith(
       heroItem: items.first,
       heroItems: items,
-      isHeroPending: !_matchHeroResolved,
+      isHeroPending: false,
     );
   }
 
@@ -675,6 +789,21 @@ class HomeController extends StateNotifier<HomeState> {
           .toList();
       if (mounted) {
         state = state.copyWith(continueWatching: active);
+      }
+    } catch (_) {}
+  }
+
+  /// Fast refresh of favorites (e.g. on returning to Home).
+  Future<void> refreshFavorites() async {
+    try {
+      final favoritesRes = await _favoritesRepo.getFavorites();
+      final favorites = favoritesRes.when(
+        ok: (f) => f,
+        err: (_) => <Favorite>[],
+      );
+      final visible = favorites.where(_allowedContent.allowsFavorite).toList();
+      if (mounted) {
+        state = state.copyWith(favorites: visible);
       }
     } catch (_) {}
   }

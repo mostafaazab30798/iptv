@@ -78,10 +78,12 @@ class PlayerControls extends StatelessWidget {
   }
 
   String _getAspectRatioLabel(int index) => switch (index) {
-        1 => 'Fill',
-        2 => '16:9',
-        3 => '4:3',
-        _ => 'Fit',
+        0 => 'Best Fit',
+        1 => 'Fit',
+        2 => 'Fill',
+        3 => '16:9',
+        4 => '4:3',
+        _ => 'Best Fit',
       };
 
   @override

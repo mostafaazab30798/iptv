@@ -200,7 +200,9 @@ void main() {
       expect(allMatches, hasLength(5));
 
       // fetchLiveBigMatches filters down to tracked big clubs (Liverpool, Real Madrid, Barcelona, Zamalek - 4 matches)
-      final bigMatches = await dataSource.fetchLiveBigMatches();
+      final bigMatches = await dataSource.fetchLiveBigMatches(
+        now: DateTime(2026, 9, 6, 12, 0),
+      );
       expect(bigMatches, hasLength(4));
       final names = bigMatches.map((m) => '${m.homeName} vs ${m.awayName}').toList();
       expect(names, contains('إيبسويتش تاون vs ليفربول'));

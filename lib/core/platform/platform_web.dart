@@ -2,19 +2,27 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 
+import 'package:iptv/core/platform/platform_service.dart';
+
 bool isWindows() => false;
 bool isAndroid() => false;
 
 Future<bool> isTelevision() async => false;
 
 Future<void> initPlatformWindow() async {
-  // Web does not require desktop window manager initialization.
+  html.document.onFullscreenChange.listen((_) {
+    final isFull = html.document.fullscreenElement != null;
+    PlatformService.instance.isFullScreenNotifier.value = isFull;
+  });
 }
 
 Future<void> setPlatformFullScreen(bool isFullScreen) async {
   try {
     if (isFullScreen) {
-      await html.document.documentElement?.requestFullscreen();
+      final doc = html.document.documentElement;
+      if (doc != null && html.document.fullscreenElement == null) {
+        await doc.requestFullscreen();
+      }
     } else {
       if (html.document.fullscreenElement != null) {
         html.document.exitFullscreen();
@@ -32,5 +40,8 @@ Future<bool> isPlatformFullScreen() async {
 }
 
 Future<void> minimizePlatformWindow() async {}
+Future<void> maximizePlatformWindow() async {}
+Future<void> unmaximizePlatformWindow() async {}
+Future<bool> isPlatformWindowMaximized() async => false;
 
 void exitPlatformApp() {}

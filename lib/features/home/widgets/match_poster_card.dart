@@ -26,8 +26,7 @@ class MatchPosterCard extends StatelessWidget {
   static ({double width, double height}) sizeForWidth(
     double screenWidth, {
     int goalRows = 0,
-  }) =>
-      MatchPosterLayout.sizeForWidth(screenWidth, goalRows: goalRows);
+  }) => MatchPosterLayout.sizeForWidth(screenWidth, goalRows: goalRows);
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +57,8 @@ class MatchPosterCard extends StatelessWidget {
     final timeLabel = isLive
         ? (fixture?.clock ?? (isArabic ? 'مباشر' : 'LIVE'))
         : (isFinished
-            ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
-            : (scheduledTime.isNotEmpty ? scheduledTime : ''));
+              ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
+              : (scheduledTime.isNotEmpty ? scheduledTime : ''));
 
     final isExpanded = width >= 520;
     final gutter = isExpanded ? 12.0 : 10.0;
@@ -440,7 +439,6 @@ class _PortraitMatchSlide extends StatelessWidget {
     final isLive = fixture?.isLive ?? false;
     final scheduledTime = fixture?.scheduledTime ?? fixture?.clock ?? '';
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    final topPadding = MediaQuery.paddingOf(context).top;
     final rawChannel = fixture?.broadcastChannel ?? match.channel.name;
     final channel = SportsLocalization.localizeChannel(
       rawChannel,
@@ -463,8 +461,8 @@ class _PortraitMatchSlide extends StatelessWidget {
     final timeLabel = isLive
         ? (fixture?.clock ?? (isArabic ? 'مباشر' : 'LIVE'))
         : (isFinished
-            ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
-            : (scheduledTime.isNotEmpty ? scheduledTime : '—'));
+              ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
+              : (scheduledTime.isNotEmpty ? scheduledTime : '—'));
 
     return Stack(
       fit: StackFit.expand,
@@ -474,7 +472,8 @@ class _PortraitMatchSlide extends StatelessWidget {
         Padding(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            (topPadding > 0 ? topPadding : 20.0) + 56.0,
+            // Match [ShellPortraitHeader] — Home strips MediaQuery top padding.
+            ShellPortraitHeader.heightOf(context) + AppSpacing.xs,
             AppSpacing.lg,
             AppSpacing.x4l,
           ),
@@ -496,7 +495,8 @@ class _PortraitMatchSlide extends StatelessWidget {
                       logoUrl: fixture?.homeLogoUrl,
                       goals: fixture?.homeGoals ?? const [],
                       showGoalsUnder: true,
-                      logoSize: (fixture?.homeGoals.isNotEmpty == true ||
+                      logoSize:
+                          (fixture?.homeGoals.isNotEmpty == true ||
                               fixture?.awayGoals.isNotEmpty == true)
                           ? 54
                           : 64,
@@ -516,7 +516,8 @@ class _PortraitMatchSlide extends StatelessWidget {
                       logoUrl: fixture?.awayLogoUrl,
                       goals: fixture?.awayGoals ?? const [],
                       showGoalsUnder: true,
-                      logoSize: (fixture?.homeGoals.isNotEmpty == true ||
+                      logoSize:
+                          (fixture?.homeGoals.isNotEmpty == true ||
                               fixture?.awayGoals.isNotEmpty == true)
                           ? 54
                           : 64,
@@ -616,7 +617,8 @@ class _MatchKickoffDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = isLive ? AppColors.live : AppColors.accent;
     final dayLabel = isArabic ? 'اليوم' : 'TODAY';
-    final isFinished = timeLabel.contains('FT') ||
+    final isFinished =
+        timeLabel.contains('FT') ||
         timeLabel.contains('انتهت') ||
         timeLabel.contains('Pen') ||
         timeLabel.contains('AET');
@@ -626,7 +628,9 @@ class _MatchKickoffDisplay extends StatelessWidget {
 
     if (!large) {
       return Align(
-        alignment: alignStart ? AlignmentDirectional.centerStart : Alignment.center,
+        alignment: alignStart
+            ? AlignmentDirectional.centerStart
+            : Alignment.center,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 280),
           child: SilverGlassCapsule(
@@ -683,7 +687,9 @@ class _MatchKickoffDisplay extends StatelessWidget {
     }
 
     return Align(
-      alignment: alignStart ? AlignmentDirectional.centerStart : Alignment.center,
+      alignment: alignStart
+          ? AlignmentDirectional.centerStart
+          : Alignment.center,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -747,7 +753,9 @@ class _MatchKickoffDisplay extends StatelessWidget {
                       Text(
                         headerLabel,
                         style: TextStyle(
-                          color: isFinished ? const Color(0xCCF7F8FA) : AppColors.accent,
+                          color: isFinished
+                              ? const Color(0xCCF7F8FA)
+                              : AppColors.accent,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.6,
@@ -985,16 +993,18 @@ class _TeamGoalsShelfColumn extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         for (final entry in entries)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 1.0),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment:
-                  alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+              mainAxisAlignment: alignEnd
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
               children: alignEnd
                   ? [
                       // Away: [23', 68' (P)] PlayerName ⚽
@@ -1007,7 +1017,9 @@ class _TeamGoalsShelfColumn extends StatelessWidget {
                         child: Text(
                           _formatPlayerName(entry.key),
                           style: TextStyle(
-                            color: AppColors.textPrimary.withValues(alpha: 0.95),
+                            color: AppColors.textPrimary.withValues(
+                              alpha: 0.95,
+                            ),
                             fontSize: isExpanded ? 11 : 10,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.1,
@@ -1035,7 +1047,9 @@ class _TeamGoalsShelfColumn extends StatelessWidget {
                         child: Text(
                           _formatPlayerName(entry.key),
                           style: TextStyle(
-                            color: AppColors.textPrimary.withValues(alpha: 0.95),
+                            color: AppColors.textPrimary.withValues(
+                              alpha: 0.95,
+                            ),
                             fontSize: isExpanded ? 11 : 10,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.1,
@@ -1066,10 +1080,7 @@ class _TeamGoalsShelfColumn extends StatelessWidget {
 }
 
 class _MinuteBadge extends StatelessWidget {
-  const _MinuteBadge({
-    required this.minutes,
-    required this.isExpanded,
-  });
+  const _MinuteBadge({required this.minutes, required this.isExpanded});
 
   final String minutes;
   final bool isExpanded;
@@ -1149,13 +1160,7 @@ class _TeamGoalsList extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: rowMainAxis,
               children: [
-                const Text(
-                  '⚽',
-                  style: TextStyle(
-                    fontSize: 8.5,
-                    height: 1,
-                  ),
-                ),
+                const Text('⚽', style: TextStyle(fontSize: 8.5, height: 1)),
                 const SizedBox(width: 3.5),
                 Flexible(
                   child: Text(
@@ -1178,8 +1183,7 @@ class _TeamGoalsList extends StatelessWidget {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    textAlign:
-                        center ? TextAlign.center : TextAlign.start,
+                    textAlign: center ? TextAlign.center : TextAlign.start,
                   ),
                 ),
               ],
@@ -1371,4 +1375,3 @@ class _VersusOrScoreBadge extends StatelessWidget {
     );
   }
 }
-

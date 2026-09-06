@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/domain/entities/series.dart';
 import 'package:iptv/domain/entities/watch_history.dart';
+import 'package:iptv/features/favorites/favorite_ids.dart';
 import 'package:iptv/features/home/home_controller.dart';
 import 'package:iptv/features/home/widgets/cards/channel_card.dart';
 import 'package:iptv/features/home/widgets/cards/history_card.dart';
@@ -24,6 +26,7 @@ import 'package:iptv/features/home/widgets/cards/poster_card_layout.dart';
 import 'package:iptv/features/home/widgets/cards/series_card.dart';
 import 'package:iptv/features/home/widgets/home_hero_banner.dart';
 import 'package:iptv/features/home/widgets/home_section_row.dart';
+import 'package:iptv/features/movies/movie_details_sheet.dart';
 import 'package:iptv/features/series/series_screen.dart';
 
 import 'package:iptv/player/player_controller.dart';
@@ -50,6 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         ref.read(playerControllerProvider.notifier).stop();
         ref.read(homeControllerProvider.notifier).refreshContinueWatching();
+        ref.read(homeControllerProvider.notifier).refreshFavorites();
       }
     });
   }
@@ -228,11 +232,11 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                 slivers: [
                   _HomeHeroSliver(autoPlayNotifier: _heroAutoPlayNotifier),
                   const _HomeContinueWatchingSliver(),
+                  const _HomeFavoritesSliver(),
                   const _HomeFeaturedMoviesSliver(),
                   const _HomePopularSeriesSliver(),
                   const _HomeSportsChannelsSliver(),
                   const _HomeNewsChannelsSliver(),
-                  const _HomeFavoritesSliver(),
                   const SliverToBoxAdapter(
                     child: SizedBox(height: AppSpacing.xxl),
                   ),
@@ -419,7 +423,7 @@ class _HomeFeaturedMoviesSliver extends ConsumerWidget {
                 movie: movie,
                 width: poster.width,
                 height: poster.posterHeight,
-                onTap: () => _HomePlayback.playMovie(context, ref, movie),
+                onTap: () => showMovieDetailsModal(context, movie),
               );
             },
           ),
@@ -556,12 +560,26 @@ class _HomeFavoritesSliver extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(homeControllerProvider.select((s) => s.favorites));
+    final favoritesAsync = ref.watch(favoritesListProvider);
+    final homeFavorites = ref.watch(
+      homeControllerProvider.select((s) => s.favorites),
+    );
+    final List<Favorite> items = favoritesAsync.valueOrNull ?? homeFavorites;
     if (items.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    final metrics = _homeChannelRowMetrics(context);
+    final featuredMovies = ref.watch(
+      homeControllerProvider.select((s) => s.featuredMovies),
+    );
+    final popularSeries = ref.watch(
+      homeControllerProvider.select((s) => s.popularSeries),
+    );
+    final liveChannels = ref.watch(
+      homeControllerProvider.select((s) => s.liveChannels),
+    );
+
+    final metrics = _homePosterRowMetrics(context);
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -573,20 +591,80 @@ class _HomeFavoritesSliver extends ConsumerWidget {
             items: items,
             height: metrics.height,
             itemWidth: metrics.itemWidth,
-            itemBuilder: (context, fav, _) => ChannelCard(
-              key: ValueKey('fav-${fav.type}-${fav.itemId}'),
-              channel: Channel(
-                id: fav.itemId,
-                serverId: 0,
-                streamId: fav.itemId,
-                name: fav.name,
-                streamIcon: fav.imageUrl,
-              ),
-              width: metrics.itemWidth,
-              height: metrics.height,
-              showBadge: fav.type == FavoriteType.channel,
-              onTap: () => _HomePlayback.playFavorite(context, ref, fav),
-            ),
+            itemBuilder: (context, fav, _) {
+              final poster = PosterCardLayout.fit(
+                maxWidth: metrics.itemWidth,
+                maxHeight: metrics.height,
+              );
+
+              switch (fav.type) {
+                case FavoriteType.movie:
+                  final existingMovie = featuredMovies.firstWhereOrNull(
+                    (m) => m.streamId == fav.itemId,
+                  );
+                  final movie = existingMovie ??
+                      Movie(
+                        id: fav.itemId,
+                        serverId: 0,
+                        streamId: fav.itemId,
+                        name: fav.name,
+                        streamIcon: fav.imageUrl,
+                      );
+                  return MovieCard(
+                    key: ValueKey('fav-movie-${fav.itemId}'),
+                    movie: movie,
+                    width: poster.width,
+                    height: poster.posterHeight,
+                    onTap: () => showMovieDetailsModal(context, movie),
+                  );
+
+                case FavoriteType.series:
+                  final existingSeries = popularSeries.firstWhereOrNull(
+                    (s) =>
+                        (s.seriesId != 0 ? s.seriesId : s.id) == fav.itemId,
+                  );
+                  final series = existingSeries ??
+                      Series(
+                        id: fav.itemId,
+                        serverId: 0,
+                        seriesId: fav.itemId,
+                        name: fav.name,
+                        cover: fav.imageUrl,
+                      );
+                  return SeriesCard(
+                    key: ValueKey('fav-series-${fav.itemId}'),
+                    series: series,
+                    width: poster.width,
+                    height: poster.posterHeight,
+                    onTap: () => showSeriesDetailsModal(context, series),
+                  );
+
+                case FavoriteType.channel:
+                  final existingChannel = liveChannels.firstWhereOrNull(
+                    (c) => c.streamId == fav.itemId,
+                  );
+                  final channel = existingChannel ??
+                      Channel(
+                        id: fav.itemId,
+                        serverId: 0,
+                        streamId: fav.itemId,
+                        name: fav.name,
+                        streamIcon: fav.imageUrl,
+                      );
+                  return ChannelCard(
+                    key: ValueKey('fav-chan-${fav.itemId}'),
+                    channel: channel,
+                    width: poster.width,
+                    height: poster.posterHeight,
+                    showBadge: true,
+                    onTap: () => _HomePlayback.playChannel(
+                      context,
+                      ref,
+                      channel,
+                    ),
+                  );
+              }
+            },
           ),
         ),
       ),
@@ -733,39 +811,6 @@ abstract final class _HomePlayback {
     context.push(Routes.player);
   }
 
-  static void playFavorite(BuildContext context, WidgetRef ref, Favorite fav) {
-    final session = ref.read(sessionProvider).valueOrNull;
-    if (session == null) return;
-
-    if (fav.type == FavoriteType.movie) {
-      final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
-      session,
-      streamId: fav.itemId,
-    );
-      ref
-          .read(playerControllerProvider.notifier)
-          .load(
-            PlayerSource.vod(
-              url: streamUrl,
-              title: fav.name,
-              movieId: fav.itemId,
-              posterUrl: fav.imageUrl,
-            ),
-          );
-      context.push(Routes.player);
-    } else if (fav.type == FavoriteType.channel) {
-      final channel = Channel(
-        id: fav.itemId,
-        serverId: 0,
-        streamId: fav.itemId,
-        name: fav.name,
-        streamIcon: fav.imageUrl,
-      );
-      playChannel(context, ref, channel);
-    } else {
-      context.push(Routes.series);
-    }
-  }
 }
 
 /// Poster row metrics keyed by [FormFactor]. Phone keeps prior 215×120.
@@ -776,7 +821,7 @@ abstract final class _HomePlayback {
 ({double height, double itemWidth}) _homeChannelRowMetrics(BuildContext context) {
   switch (FormFactorResolver.of(context)) {
     case FormFactor.tv:
-      return (height: 120, itemWidth: 132);
+      return (height: 145, itemWidth: 160);
     case FormFactor.tablet:
       return (height: 128, itemWidth: 140);
     case FormFactor.desktop:

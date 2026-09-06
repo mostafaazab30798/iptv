@@ -28,6 +28,8 @@ class LiveMiniPreview extends ConsumerWidget {
     final isBuffering = ref.watch(playerControllerProvider.select((s) => s.isBuffering));
     final isMuted = ref.watch(playerControllerProvider.select((s) => s.isMuted));
     final aspectRatioIndex = ref.watch(playerControllerProvider.select((s) => s.aspectRatioIndex));
+    final videoWidth = ref.watch(playerControllerProvider.select((s) => s.metrics.videoWidth));
+    final videoHeight = ref.watch(playerControllerProvider.select((s) => s.metrics.videoHeight));
     // Only one mkv.Video may bind the shared controller at a time. While the
     // fullscreen PlayerScreen owns the surface, detach the mini preview.
     final isPlayerRouteActive =
@@ -118,6 +120,8 @@ class LiveMiniPreview extends ConsumerWidget {
                   PlayerView(
                     aspectRatioIndex: aspectRatioIndex,
                     platformHandle: controller.engine.platformHandle,
+                    videoWidth: videoWidth,
+                    videoHeight: videoHeight,
                   )
                 else
                   ColoredBox(

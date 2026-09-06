@@ -17,6 +17,7 @@ import 'package:iptv/features/home/widgets/cards/poster_card_layout.dart';
 import 'package:iptv/features/home/widgets/cards/series_card.dart';
 import 'package:iptv/features/home/widgets/home_section_row.dart';
 import 'package:iptv/features/search/search_controller.dart';
+import 'package:iptv/features/movies/movie_details_sheet.dart';
 import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
@@ -609,30 +610,6 @@ class _SearchResultsView extends ConsumerWidget {
     context.push(Routes.player);
   }
 
-  void _playMovie(BuildContext context, WidgetRef ref, Movie movie) {
-    final session = ref.read(sessionProvider).valueOrNull;
-    if (session == null) return;
-
-    final url = ref.read(streamUrlBuilderProvider).vodForSession(
-      session,
-      streamId: movie.streamId,
-      extension: movie.containerExtension ?? 'mp4',
-    );
-
-    ref
-        .read(playerControllerProvider.notifier)
-        .load(
-          VodSource(
-            movieId: movie.streamId,
-            title: movie.name,
-            url: url,
-            posterUrl: movie.streamIcon,
-          ),
-        );
-
-    context.push(Routes.player);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // If specific tab is selected:
@@ -678,7 +655,7 @@ class _SearchResultsView extends ConsumerWidget {
                     movie: movie,
                     width: poster.width,
                     height: poster.posterHeight,
-                    onTap: () => _playMovie(context, ref, movie),
+                    onTap: () => showMovieDetailsModal(context, movie),
                   );
                 },
               ),
@@ -774,7 +751,7 @@ class _SearchResultsView extends ConsumerWidget {
         return MovieCard(
           movie: movie,
           expand: true,
-          onTap: () => _playMovie(context, ref, movie),
+          onTap: () => showMovieDetailsModal(context, movie),
         );
       },
     );

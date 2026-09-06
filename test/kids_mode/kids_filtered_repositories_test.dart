@@ -107,6 +107,10 @@ class _FakeVodRepository implements VodRepository {
   @override
   Future<Result<Movie>> getMovieById(int streamId) async =>
       Ok(movies.firstWhere((movie) => movie.streamId == streamId));
+
+  @override
+  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback}) async =>
+      Ok(movies.firstWhere((movie) => movie.streamId == streamId, orElse: () => fallback ?? movies.first));
 }
 
 class _FakeSeriesRepository implements SeriesRepository {

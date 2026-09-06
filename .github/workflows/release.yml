@@ -100,6 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build_number: ${{ steps.artifact.outputs.build_number }}
+      tv_build_number: ${{ steps.artifact.outputs.tv_build_number }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -236,14 +237,20 @@ jobs:
 
           AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -name aapt 2>/dev/null | sort -V | tail -1 || true)
           ANDROID_BUILD_NUM=""
+          TV_BUILD_NUM=""
           if [ -n "$AAPT_BIN" ] && [ -x "$AAPT_BIN" ]; then
             ANDROID_BUILD_NUM=$("$AAPT_BIN" dump badging "$TARGET_FILE" | grep -o "versionCode='[^']*'" | cut -d"'" -f2 || true)
+            TV_BUILD_NUM=$("$AAPT_BIN" dump badging "$TV_TARGET_FILE" | grep -o "versionCode='[^']*'" | cut -d"'" -f2 || true)
           fi
           if [ -z "$ANDROID_BUILD_NUM" ]; then
             ANDROID_BUILD_NUM=$((2000 + ${{ needs.version.outputs.build_number }}))
           fi
+          if [ -z "$TV_BUILD_NUM" ]; then
+            TV_BUILD_NUM="${{ needs.version.outputs.build_number }}"
+          fi
 
           echo "build_number=${ANDROID_BUILD_NUM}" >> "$GITHUB_OUTPUT"
+          echo "tv_build_number=${TV_BUILD_NUM}" >> "$GITHUB_OUTPUT"
           echo "file_name=HOPE_IPTV.apk" >> "$GITHUB_OUTPUT"
           echo "file_path=${TARGET_FILE}" >> "$GITHUB_OUTPUT"
           echo "file_size=${FILE_SIZE}" >> "$GITHUB_OUTPUT"
@@ -432,6 +439,7 @@ jobs:
           VERSION="${{ needs.version.outputs.version }}"
           WINDOWS_BUILD="${{ needs.version.outputs.build_number }}"
           ANDROID_BUILD="${{ needs.build-android.outputs.build_number }}"
+          ANDROID_TV_BUILD="${{ needs.build-android.outputs.tv_build_number }}"
           MANDATORY="${{ needs.version.outputs.mandatory }}"
           NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           REPO="${{ github.repository }}"
@@ -439,18 +447,23 @@ jobs:
           NOTES_AR="${{ needs.version.outputs.release_notes_ar }}"
 
           ANDROID_URL="https://github.com/${REPO}/releases/download/${TAG}/HOPE_IPTV.apk"
+          ANDROID_TV_URL="https://github.com/${REPO}/releases/download/${TAG}/HOPE_TV_Android_TV.apk"
           WINDOWS_URL="https://github.com/${REPO}/releases/download/${TAG}/HOPE_IPTV_Setup.exe"
 
           PAYLOAD=$(jq -n \
             --arg channel "$CHANNEL" \
             --arg version "$VERSION" \
             --argjson android_build "$ANDROID_BUILD" \
+            --argjson android_tv_build "$ANDROID_TV_BUILD" \
             --argjson windows_build "$WINDOWS_BUILD" \
             --arg android_url "$ANDROID_URL" \
+            --arg android_tv_url "$ANDROID_TV_URL" \
             --arg windows_url "$WINDOWS_URL" \
             --argjson android_size "${{ steps.meta.outputs.android_size }}" \
+            --argjson android_tv_size "${{ steps.meta.outputs.android_tv_size }}" \
             --argjson windows_size "${{ steps.meta.outputs.windows_size }}" \
             --arg android_sha "${{ steps.meta.outputs.android_sha }}" \
+            --arg android_tv_sha "${{ steps.meta.outputs.android_tv_sha }}" \
             --arg windows_sha "${{ steps.meta.outputs.windows_sha }}" \
             --arg now "$NOW" \
             --arg notes_en "$NOTES_EN" \
@@ -466,6 +479,20 @@ jobs:
                 object_key: $android_url,
                 file_size_bytes: $android_size,
                 sha256: $android_sha,
+                mandatory_update: $mandatory,
+                published_at: $now,
+                release_notes_en: (if $notes_en == "" then null else $notes_en end),
+                release_notes_ar: (if $notes_ar == "" then null else $notes_ar end)
+              },
+              {
+                platform: "android",
+                architecture: "android-tv",
+                channel: $channel,
+                version: $version,
+                build_number: $android_tv_build,
+                object_key: $android_tv_url,
+                file_size_bytes: $android_tv_size,
+                sha256: $android_tv_sha,
                 mandatory_update: $mandatory,
                 published_at: $now,
                 release_notes_en: (if $notes_en == "" then null else $notes_en end),
@@ -496,11 +523,12 @@ jobs:
             -d "$PAYLOAD")
 
           ROW_COUNT=$(echo "$RESPONSE" | jq 'length')
-          if [ "$ROW_COUNT" != "2" ]; then
-            echo "::error::Expected 2 Supabase rows, got ${ROW_COUNT}. Response: ${RESPONSE}"
+          if [ "$ROW_COUNT" != "3" ]; then
+            echo "::error::Expected 3 Supabase rows, got ${ROW_COUNT}. Response: ${RESPONSE}"
             exit 1
           fi
 
           echo "$RESPONSE" | jq -e '.[] | select(.platform=="android" and .architecture=="arm64-v8a" and .build_number=='"$ANDROID_BUILD"')' >/dev/null
+          echo "$RESPONSE" | jq -e '.[] | select(.platform=="android" and .architecture=="android-tv" and .build_number=='"$ANDROID_TV_BUILD"')' >/dev/null
           echo "$RESPONSE" | jq -e '.[] | select(.platform=="windows" and .architecture=="x64" and .build_number=='"$WINDOWS_BUILD"')' >/dev/null
-          echo "Registered Android and Windows releases in Supabase."
+          echo "Registered Android, Android TV, and Windows releases in Supabase."

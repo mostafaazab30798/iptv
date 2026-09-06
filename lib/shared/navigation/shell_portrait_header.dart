@@ -358,3 +358,4 @@ class ShellFullscreenToggleButton extends StatelessWidget {
     );
   }
 }
+

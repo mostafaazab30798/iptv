@@ -20,7 +20,7 @@ class PlayerState extends Equatable {
     this.isFullscreen = false,
     /// True while [PlayerScreen] is mounted and owns the shared video texture.
     this.isPlayerRouteActive = false,
-    this.aspectRatioIndex = 0, // 0: Fit, 1: Fill, 2: 16:9, 3: 4:3
+    this.aspectRatioIndex = 0, // 0: Best Fit, 1: Fit, 2: Fill, 3: 16:9, 4: 4:3
     this.playbackRate = 1.0,
     this.isLocked = false,
     this.bufferMode = PlaybackBufferMode.balanced,

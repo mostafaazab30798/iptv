@@ -17,6 +17,7 @@ import 'package:iptv/features/home/widgets/cards/channel_card.dart';
 import 'package:iptv/features/home/widgets/cards/movie_card.dart';
 import 'package:iptv/features/home/widgets/cards/poster_card_layout.dart';
 import 'package:iptv/features/home/widgets/cards/series_card.dart';
+import 'package:iptv/features/movies/movie_details_sheet.dart';
 import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
@@ -52,20 +53,17 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     if (session == null) return;
 
     if (fav.type == FavoriteType.movie) {
-      final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
-      session,
-      streamId: fav.itemId,
-    );
-      ref
-          .read(playerControllerProvider.notifier)
-          .load(
-            VodSource(
-              url: streamUrl,
-              title: fav.name,
-              movieId: fav.itemId,
-              posterUrl: fav.imageUrl,
-            ),
-          );
+      showMovieDetailsModal(
+        context,
+        Movie(
+          id: fav.itemId,
+          serverId: 0,
+          streamId: fav.itemId,
+          name: fav.name,
+          streamIcon: fav.imageUrl,
+        ),
+      );
+      return;
     } else if (fav.type == FavoriteType.series) {
       showSeriesDetailsModal(
         context,

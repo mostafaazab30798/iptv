@@ -388,8 +388,8 @@ class FotmobRealtimeDataSource {
     final now = DateTime.now();
 
     if (!forceRefresh) {
-      final cached = _cachedMatchesByDate[cacheKey];
-      final cachedAt = _cachedAtByDate[cacheKey];
+      final cached = _cachedMatchesByDate[cacheKey] ?? _cachedMatchesByDate[dateKey];
+      final cachedAt = _cachedAtByDate[cacheKey] ?? _cachedAtByDate[dateKey];
       if (cached != null &&
           cachedAt != null &&
           now.difference(cachedAt) < _cacheTtl) {
@@ -402,14 +402,25 @@ class FotmobRealtimeDataSource {
 
     final queryParams = <String>['date=$dateKey'];
     if (targetTeams != null && targetTeams.isNotEmpty) {
-      final encodedTeams = targetTeams
-          .map((t) => Uri.encodeComponent(
-                SportsLocalization.localizeTeam(t, isArabic: false),
-              ))
-          .toSet()
-          .join(',');
-      if (encodedTeams.isNotEmpty) {
-        queryParams.add('teams=$encodedTeams');
+      // Only include English/Latin localized teams in the URL parameter.
+      // If any target team has Arabic letters that cannot be localized, omit 'teams='
+      // from queryParams so the upstream proxy returns the full match list without dropping fixtures.
+      final hasArabicOnlyTeam = targetTeams.any((t) {
+        final localized = SportsLocalization.localizeTeam(t, isArabic: false);
+        return SportsLocalization.hasArabic(localized);
+      });
+
+      if (!hasArabicOnlyTeam) {
+        final encodedTeams = targetTeams
+            .map((t) => Uri.encodeComponent(
+                  SportsLocalization.localizeTeam(t, isArabic: false),
+                ))
+            .where((t) => t.isNotEmpty)
+            .toSet()
+            .join(',');
+        if (encodedTeams.isNotEmpty) {
+          queryParams.add('teams=$encodedTeams');
+        }
       }
     }
 
@@ -471,6 +482,13 @@ class FotmobRealtimeDataSource {
 
   /// Checks whether a raw FotMob match JSON object involves any of the target teams.
   static bool _matchesAnyTarget(Map<dynamic, dynamic> m, Iterable<String> targetTeams) {
+    // If any target has untranslated Arabic, don't drop matches prematurely
+    final hasUntranslatedArabic = targetTeams.any((t) {
+      final loc = SportsLocalization.localizeTeam(t, isArabic: false);
+      return SportsLocalization.hasArabic(loc);
+    });
+    if (hasUntranslatedArabic) return true;
+
     final home = m['home'] as Map?;
     final away = m['away'] as Map?;
     final hName =
@@ -511,9 +529,9 @@ class FotmobRealtimeDataSource {
       targetTeams: targetTeams,
     );
 
-    // If date wasn't explicitly pinned and it's before noon,
-    // also fetch yesterday's matches to capture late-night / finished evening matches.
-    if (date == null && targetDate.hour < 12) {
+    // When checking matches before noon, also fetch yesterday's matches
+    // to capture late-night / finished evening matches.
+    if (targetDate.hour < 12) {
       final yesterday = targetDate.subtract(const Duration(days: 1));
       final yesterdayMatches = await _fetchMatchesForSingleDate(
         yesterday,

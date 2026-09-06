@@ -61,6 +61,55 @@ export default {
         applyCors(responseHeaders, cors);
         responseHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type');
 
+        const rawContentType = (responseHeaders.get('Content-Type') || '').toLowerCase();
+        const isHls = targetParsed.pathname.endsWith('.m3u8') ||
+                      url.pathname.endsWith('.m3u8') ||
+                      rawContentType.includes('mpegurl');
+
+        if (isHls && upstreamResponse.status === 200) {
+          responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+          responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+          const playlistText = await upstreamResponse.text();
+          if (playlistText.includes('#EXTM3U')) {
+            const lines = playlistText.split('\n');
+            const targetBase = targetParsed.href;
+            const origin = url.origin;
+
+            const rewrittenLines = lines.map((line) => {
+              const trimmed = line.trim();
+              if (!trimmed) return line;
+
+              if (trimmed.startsWith('#EXT-X-KEY') || trimmed.startsWith('#EXT-X-MAP')) {
+                return line.replace(/URI="([^"]+)"/, (match, uri) => {
+                  try {
+                    const resolved = new URL(uri, targetBase).href;
+                    return `URI="${origin}/proxy/key?url=${encodeURIComponent(resolved)}"`;
+                  } catch (_) {
+                    return match;
+                  }
+                });
+              }
+
+              if (trimmed.startsWith('#')) {
+                return line;
+              }
+
+              try {
+                const resolvedSegment = new URL(trimmed, targetBase).href;
+                return `${origin}/proxy/segment.ts?url=${encodeURIComponent(resolvedSegment)}`;
+              } catch (_) {
+                return line;
+              }
+            });
+
+            return new Response(rewrittenLines.join('\n'), {
+              status: 200,
+              headers: responseHeaders,
+            });
+          }
+        }
+
         return new Response(upstreamResponse.body, {
           status: upstreamResponse.status,
           statusText: upstreamResponse.statusText,

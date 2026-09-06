@@ -31,7 +31,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
-  // Boot windowed at 1280×720; F11 / in-app toggle still enters fullscreen.
+  window.SetFullScreen(true);
 
   ::MSG msg;
   while (::GetMessage(&msg, nullptr, 0, 0)) {

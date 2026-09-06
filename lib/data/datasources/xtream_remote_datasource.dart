@@ -147,6 +147,22 @@ class XtreamRemoteDataSource {
     }
   }
 
+  /// Detailed movie metadata including plot, cast, director, etc.
+  Future<Map<String, dynamic>> getVodInfo(int vodId) async {
+    try {
+      final res = await _client.get<Map<String, dynamic>>(
+        'player_api.php',
+        params: {
+          'action': ApiConstants.actionGetVodInfo,
+          'vod_id': vodId.toString(),
+        },
+      );
+      return res;
+    } catch (_) {
+      return {};
+    }
+  }
+
   /// Delegates to [StreamUrlBuilder] so data and presentation share one path.
   static String buildLiveStreamUrl({
     required String serverUrl,

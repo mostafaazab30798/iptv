@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/features/home/widgets/cards/poster_card_layout.dart';
 import 'package:iptv/shared/layouts/form_factor.dart';
@@ -30,10 +29,10 @@ void main() {
   });
 
   group('PosterCardLayout.posterRowMetrics', () {
-    test('TV uses compact poster row', () {
+    test('TV uses comfortable 10-foot poster row', () {
       final m = PosterCardLayout.posterRowMetrics(FormFactor.tv);
-      expect(m.itemWidth, 104);
-      expect(m.height, 190);
+      expect(m.itemWidth, 135);
+      expect(m.height, 225);
     });
 
     test('phone keeps legacy 215×120', () {
@@ -47,7 +46,7 @@ void main() {
     tester,
   ) async {
     const cellW = 140.0;
-    final cellH = cellW / PosterCardLayout.gridChildAspectRatio;
+    const cellH = cellW / PosterCardLayout.gridChildAspectRatio;
     final fitted = PosterCardLayout.fit(maxWidth: cellW, maxHeight: cellH);
     expect(fitted.posterHeight + PosterCardLayout.titleStrip, lessThanOrEqualTo(cellH + 0.5));
   });

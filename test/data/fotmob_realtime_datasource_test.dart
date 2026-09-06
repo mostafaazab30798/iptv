@@ -451,7 +451,10 @@ void main() {
       });
 
       final ds = FotmobRealtimeDataSource(dio: dio);
-      final matches = await ds.fetchMatches(forceRefresh: true);
+      final matches = await ds.fetchMatches(
+        date: DateTime(2026, 9, 5, 8, 0),
+        forceRefresh: true,
+      );
       // Both yesterday's and today's matches must be merged
       expect(matches.any((m) => m.id == 101), isTrue);
       expect(matches.any((m) => m.id == 202), isTrue);

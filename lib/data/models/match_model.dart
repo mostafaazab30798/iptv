@@ -109,6 +109,32 @@ class MatchModel {
     return matchStartTime;
   }
 
+  /// Whether the match needs score or goal enrichment from FotMob.
+  /// Matches that are in progress, finished today, past scheduled kickoff,
+  /// or within the [window] (default 10 minutes) before kickoff are eligible.
+  bool needsScoreOrGoalsEnrichment({
+    DateTime? now,
+    Duration window = const Duration(minutes: 10),
+  }) {
+    final current = now ?? DateTime.now();
+    final timing = resolveMatchTiming(status: status, time: time, now: current);
+
+    // Matches in progress or finished today need score and goal data
+    if (timing.state == 'in' || timing.state == 'post') return true;
+
+    final startTime = parseStartTime(time, now: current);
+    if (startTime == null) return false;
+
+    // Past kickoff time
+    if (current.isAfter(startTime) || current.isAtSameMomentAs(startTime)) {
+      return true;
+    }
+
+    // Within pre-kickoff window
+    final windowStart = startTime.subtract(window);
+    return current.isAfter(windowStart) || current.isAtSameMomentAs(windowStart);
+  }
+
   /// Whether the match is currently live, or is scheduled to start within [window]
   /// (default 10 minutes) before kickoff.
   bool isEligibleForRealtime({

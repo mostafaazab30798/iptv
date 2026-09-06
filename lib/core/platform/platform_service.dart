@@ -76,12 +76,23 @@ class PlatformService {
   bool get supportsKeyboard => isWindows || isWeb || isAndroidTv;
   bool get supportsRemote => isAndroidTv;
   bool get supportsHardwareBack => isAndroid;
-  bool get supportsFullscreen => isAndroidTv || isWindows || isWeb;
+  bool get supportsFullscreen => isWindows || isWeb;
   bool get supportsPip => isAndroid || isWindows;
   bool get supportsNativePlayer => isAndroid || isWindows;
   bool get supportsMouse => isWindows || isWeb;
 
   Future<void> minimizeWindow() => plat.minimizePlatformWindow();
+  Future<void> maximizeWindow() => plat.maximizePlatformWindow();
+  Future<void> unmaximizeWindow() => plat.unmaximizePlatformWindow();
+  Future<bool> isWindowMaximized() => plat.isPlatformWindowMaximized();
+  Future<void> toggleMaximize() async {
+    final isMax = await isWindowMaximized();
+    if (isMax) {
+      await unmaximizeWindow();
+    } else {
+      await maximizeWindow();
+    }
+  }
 
   void exitApp() => plat.exitPlatformApp();
 

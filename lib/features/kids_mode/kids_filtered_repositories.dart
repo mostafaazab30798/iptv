@@ -73,6 +73,19 @@ class KidsFilteredVodRepository implements VodRepository {
         ? movieResult
         : const Err(_blockedContentError);
   }
+
+  @override
+  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback}) async {
+    final movieResult = await _delegate.getMovieDetails(streamId, fallback: fallback);
+    if (movieResult case Err<Movie>(:final appError)) return Err(appError);
+    final allowedResult = await _allowedCategoryIds();
+    if (allowedResult case Err<Set<int>>(:final appError)) {
+      return Err(appError);
+    }
+    return allowedResult.value.contains(movieResult.value.categoryId)
+        ? movieResult
+        : const Err(_blockedContentError);
+  }
 }
 
 class KidsFilteredSeriesRepository implements SeriesRepository {

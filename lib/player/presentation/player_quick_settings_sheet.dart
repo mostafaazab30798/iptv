@@ -219,10 +219,11 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                     const SizedBox(height: 6),
                     _SegmentedTrack(
                       children: [
-                        (0, 'Fit'),
-                        (1, 'Fill'),
-                        (2, '16:9'),
-                        (3, '4:3'),
+                        (0, 'Best Fit'),
+                        (1, 'Fit'),
+                        (2, 'Fill'),
+                        (3, '16:9'),
+                        (4, '4:3'),
                       ].map((item) {
                         final isSelected = _aspectRatioIndex == item.$1;
                         return Expanded(

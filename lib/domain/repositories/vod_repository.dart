@@ -9,4 +9,5 @@ abstract interface class VodRepository {
     bool forceRefresh = false,
   });
   Future<Result<Movie>> getMovieById(int streamId);
+  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback});
 }

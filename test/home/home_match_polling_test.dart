@@ -93,10 +93,10 @@ class _FakeLive implements LiveRepository {
   }) async =>
       const Ok([]);
 
-  Future<Result<List<EpgProgram>>> getEpg(int streamId) async => Ok(const []);
+  Future<Result<List<EpgProgram>>> getEpg(int streamId) async => const Ok([]);
 
   Future<Result<List<Channel>>> searchChannels(String query) async =>
-      Ok(const []);
+      const Ok([]);
 }
 
 class _CountingScores implements LiveScoreSource {
@@ -107,6 +107,7 @@ class _CountingScores implements LiveScoreSource {
   @override
   Future<List<LiveFixture>> fetchLiveBigMatches({
     bool forceRefresh = false,
+    DateTime? now,
   }) async {
     fetchCount++;
     return fixtures;

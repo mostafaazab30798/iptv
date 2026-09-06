@@ -57,12 +57,15 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
   }
 
   /// Fetches raw [MatchModel] instances.
-  Future<List<MatchModel>> fetchTodayMatches({bool forceRefresh = false}) async {
-    final now = DateTime.now();
+  Future<List<MatchModel>> fetchTodayMatches({
+    bool forceRefresh = false,
+    DateTime? now,
+  }) async {
+    final currentTime = now ?? DateTime.now();
     if (!forceRefresh &&
         _cachedModels != null &&
         _cachedAt != null &&
-        now.difference(_cachedAt!) < _cacheTtl) {
+        currentTime.difference(_cachedAt!) < _cacheTtl) {
       return _cachedModels!;
     }
 
@@ -92,9 +95,9 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
             .toList();
 
         if (models.isNotEmpty) {
-          // Gate FotMob real-time scores to matches that are live or starting within 10 minutes
+          // Gate FotMob real-time scores to matches that need enrichment
           final eligible =
-              models.where((m) => m.isEligibleForRealtime(now: now)).toList();
+              models.where((m) => m.needsScoreOrGoalsEnrichment(now: now)).toList();
 
           if (eligible.isNotEmpty) {
             try {
@@ -109,7 +112,7 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
               if (fotmobMatches.isNotEmpty) {
                 models = await Future.wait(
                   models.map((m) async {
-                    if (!m.isEligibleForRealtime(now: now)) return m;
+                    if (!m.needsScoreOrGoalsEnrichment(now: now)) return m;
                     final fm = _fotmob.findMatchFor(
                       fotmobMatches: fotmobMatches,
                       homeName: m.teamHome,
@@ -128,8 +131,10 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
                           fm.id,
                           forceRefresh: forceRefresh,
                         );
-                        homeGoals = goals.homeGoals;
-                        awayGoals = goals.awayGoals;
+                        if (goals.homeGoals.isNotEmpty || goals.awayGoals.isNotEmpty) {
+                          homeGoals = goals.homeGoals;
+                          awayGoals = goals.awayGoals;
+                        }
                       } catch (_) {}
                     }
 
@@ -154,7 +159,7 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
             }
           } else {
             AppLogger.info(
-              'No matches currently live or starting within 10 minutes. Skipping FotMob real-time enrichment.',
+              'No matches currently eligible for enrichment. Skipping FotMob real-time enrichment.',
               feature: 'sports',
             );
           }
@@ -190,24 +195,30 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
   }
 
   @override
-  Future<List<LiveFixture>> fetchLiveBigMatches({bool forceRefresh = false}) async {
-    final now = DateTime.now();
+  Future<List<LiveFixture>> fetchLiveBigMatches({
+    bool forceRefresh = false,
+    DateTime? now,
+  }) async {
+    final currentTime = now ?? DateTime.now();
     if (!forceRefresh &&
         _cachedFixtures != null &&
         _cachedAt != null &&
-        now.difference(_cachedAt!) < _cacheTtl) {
+        currentTime.difference(_cachedAt!) < _cacheTtl) {
       return _cachedFixtures!;
     }
 
-    final allMatches = await fetchTodayMatches(forceRefresh: forceRefresh);
+    final allMatches = await fetchTodayMatches(
+      forceRefresh: forceRefresh,
+      now: currentTime,
+    );
     var bigMatchFixtures = allMatches
-        .map((m) => m.toLiveFixture(now: now))
+        .map((m) => m.toLiveFixture(now: currentTime))
         .where((fixture) => fixture.teams.isNotEmpty)
         .toList();
 
-    // Gate FotMob real-time enrichment to big matches that are live or starting within 10 minutes
+    // Gate FotMob real-time enrichment to big matches that need enrichment
     final eligibleBigMatches =
-        bigMatchFixtures.where((f) => f.isEligibleForRealtime(now: now)).toList();
+        bigMatchFixtures.where((f) => f.needsScoreOrGoalsEnrichment(now: currentTime)).toList();
 
     if (eligibleBigMatches.isNotEmpty) {
       try {
@@ -216,13 +227,14 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
             .where((t) => t.trim().isNotEmpty)
             .toSet();
         final fotmobMatches = await _fotmob.fetchMatches(
+          date: currentTime,
           forceRefresh: forceRefresh,
           targetTeams: targetTeams,
         );
         if (fotmobMatches.isNotEmpty) {
           bigMatchFixtures = await Future.wait(
             bigMatchFixtures.map((fixture) async {
-              if (!fixture.isEligibleForRealtime(now: now)) return fixture;
+              if (!fixture.needsScoreOrGoalsEnrichment(now: currentTime)) return fixture;
               final fm = _fotmob.findMatchFor(
                 fotmobMatches: fotmobMatches,
                 homeName: fixture.homeName,
@@ -251,8 +263,10 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
                     fm.id,
                     forceRefresh: forceRefresh,
                   );
-                  homeGoals = goals.homeGoals;
-                  awayGoals = goals.awayGoals;
+                  if (goals.homeGoals.isNotEmpty || goals.awayGoals.isNotEmpty) {
+                    homeGoals = goals.homeGoals;
+                    awayGoals = goals.awayGoals;
+                  }
                 } catch (_) {}
               }
 

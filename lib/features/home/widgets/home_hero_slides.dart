@@ -227,13 +227,13 @@ class _WideHeroSlide extends StatelessWidget {
               CachedImage(
                 imageUrl: item.backdropUrl,
                 fit: BoxFit.cover,
-                alignment: Alignment.center,
+                alignment: Alignment.topCenter,
                 fallbackIcon: item.type == HeroItemType.live
                     ? AppIcons.live
                     : AppIcons.movies,
                 memCacheWidth: blurCacheWidth.clamp(480, 960),
               ),
-              const ColoredBox(color: Color(0xA008090B)),
+              const ColoredBox(color: Color(0x3D08090B)),
             ],
           )
         else
@@ -246,7 +246,6 @@ class _WideHeroSlide extends StatelessWidget {
               ),
             ),
           ),
-        const ColoredBox(color: Color(0x6608090B)),
         const Positioned.fill(child: _HeroScrim()),
         Padding(
           padding: const EdgeInsets.fromLTRB(40, 28, 48, 36),
@@ -305,10 +304,10 @@ class _HeroScrim extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: [0.0, 0.18, 0.45, 0.72, 1.0],
+          stops: [0.0, 0.16, 0.42, 0.72, 1.0],
           colors: [
-            Color(0x9008090B),
-            Color(0x3008090B),
+            Color(0x5908090B),
+            Color(0x2408090B),
             Colors.transparent,
             Color(0xD008090B),
             AppColors.bg0,
@@ -471,8 +470,8 @@ class _MatchHeroCopy extends StatelessWidget {
     final timeLabel = isLive
         ? (fixture?.clock ?? (isArabic ? 'مباشر' : 'LIVE'))
         : (isFinished
-            ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
-            : (scheduledTime.isNotEmpty ? scheduledTime : '—'));
+              ? (fixture?.clock ?? (isArabic ? 'انتهت' : 'FT'))
+              : (scheduledTime.isNotEmpty ? scheduledTime : '—'));
 
     final metaParts = <String>[
       if (league != null && league.isNotEmpty) league,
@@ -639,8 +638,8 @@ class _MatchHeroScrim extends StatelessWidget {
           end: Alignment.bottomCenter,
           stops: [0.0, 0.22, 0.52, 0.78, 1.0],
           colors: [
-            Color(0x7008090B),
-            Color(0x2008090B),
+            Color(0x4D08090B),
+            Color(0x1808090B),
             Colors.transparent,
             Color(0xA008090B),
             AppColors.bg0,
@@ -662,73 +661,72 @@ class _MatchGlossOverlay extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-          // Soft top rim highlight (stadium floodlight feel).
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: [0.0, 0.18, 0.42],
-                colors: [
-                  Color(0x38FFFFFF),
-                  Color(0x12FFFFFF),
-                  Colors.transparent,
-                ],
+            // Soft top rim highlight (stadium floodlight feel).
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.0, 0.18, 0.42],
+                  colors: [
+                    Color(0x38FFFFFF),
+                    Color(0x12FFFFFF),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
-          ),
-          // Diagonal specular sheen.
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment(-0.95, -1.0),
-                end: Alignment(0.85, 0.7),
-                stops: [0.0, 0.28, 0.42, 0.56, 1.0],
-                colors: [
-                  Colors.transparent,
-                  Color(0x22FFFFFF),
-                  Color(0x38FFFFFF),
-                  Color(0x14FFFFFF),
-                  Colors.transparent,
-                ],
+            // Diagonal specular sheen.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment(-0.95, -1.0),
+                  end: Alignment(0.85, 0.7),
+                  stops: [0.0, 0.28, 0.42, 0.56, 1.0],
+                  colors: [
+                    Colors.transparent,
+                    Color(0x22FFFFFF),
+                    Color(0x38FFFFFF),
+                    Color(0x14FFFFFF),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
-          ),
-          // Cool accent glint (brand cyan, very subtle).
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment(-1.0, -0.4),
-                end: Alignment(0.6, 0.9),
-                stops: [0.0, 0.35, 0.55, 1.0],
-                colors: [
-                  Colors.transparent,
-                  Color(0x1200C2FF),
-                  Color(0x0800C2FF),
-                  Colors.transparent,
-                ],
+            // Cool accent glint (brand cyan, very subtle).
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment(-1.0, -0.4),
+                  end: Alignment(0.6, 0.9),
+                  stops: [0.0, 0.35, 0.55, 1.0],
+                  colors: [
+                    Colors.transparent,
+                    Color(0x1200C2FF),
+                    Color(0x0800C2FF),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
-          ),
-          // Bottom glass reflection fade into app bg.
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.center,
-                stops: [0.0, 0.35, 1.0],
-                colors: [
-                  Color(0x2800C2FF),
-                  Color(0x0800C2FF),
-                  Colors.transparent,
-                ],
+            // Bottom glass reflection fade into app bg.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.center,
+                  stops: [0.0, 0.35, 1.0],
+                  colors: [
+                    Color(0x2800C2FF),
+                    Color(0x0800C2FF),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
 }
-

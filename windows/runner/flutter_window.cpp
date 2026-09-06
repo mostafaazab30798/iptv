@@ -49,6 +49,22 @@ bool FlutterWindow::OnCreate() {
           result->Success();
         } else if (call.method_name() == "isFullScreen") {
           result->Success(flutter::EncodableValue(this->IsFullScreen()));
+        } else if (call.method_name() == "minimize") {
+          ::ShowWindow(this->GetHandle(), SW_MINIMIZE);
+          result->Success();
+        } else if (call.method_name() == "maximize") {
+          ::ShowWindow(this->GetHandle(), SW_MAXIMIZE);
+          result->Success();
+        } else if (call.method_name() == "unmaximize") {
+          ::ShowWindow(this->GetHandle(), SW_RESTORE);
+          result->Success();
+        } else if (call.method_name() == "isMaximized") {
+          WINDOWPLACEMENT wp{sizeof(wp)};
+          ::GetWindowPlacement(this->GetHandle(), &wp);
+          result->Success(flutter::EncodableValue(wp.showCmd == SW_SHOWMAXIMIZED));
+        } else if (call.method_name() == "close") {
+          ::PostMessage(this->GetHandle(), WM_CLOSE, 0, 0);
+          result->Success();
         } else {
           result->NotImplemented();
         }

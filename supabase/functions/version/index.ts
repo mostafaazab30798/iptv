@@ -8,11 +8,13 @@ import {
   signReleaseManifest,
 } from "../_shared/release_signing.ts";
 
-const CONTROL_PLANE_VERSION = "0.2.0-phase6";
+const CONTROL_PLANE_VERSION = "0.2.1-android-tv";
 
 const VALID_PLATFORMS = new Set(["android", "windows"]);
 const VALID_CHANNELS = new Set(["stable", "beta", "internal"]);
-const VALID_ARCHITECTURES = new Set(["arm64-v8a", "x64"]);
+const ANDROID_TV_ARCHITECTURE = "android-tv";
+const VALID_ARCHITECTURES = new Set(["arm64-v8a", "x64", ANDROID_TV_ARCHITECTURE]);
+const ANDROID_ABI_SPLIT_OFFSET = 1000;
 
 function serviceClient() {
   return createClient(getSupabaseUrl(), getServiceRoleKey(), {
@@ -33,6 +35,62 @@ function parseBuildNumber(raw: string | null): number {
     );
   }
   return value;
+}
+
+function firstRow(rows: unknown) {
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+function withDownloadUrl(
+  manifest: Record<string, unknown>,
+  objectKey: unknown,
+): Record<string, unknown> {
+  if (typeof objectKey !== "string" || objectKey.length === 0) {
+    return manifest;
+  }
+  // Unsigned extra field. Current Flutter clients read it and must not include
+  // it in the signed canonical JSON, or verification would fail.
+  return { ...manifest, downloadUrl: objectKey };
+}
+
+async function lookupRelease(
+  client: ReturnType<typeof serviceClient>,
+  platform: string,
+  channel: string,
+  architecture: string,
+  currentBuild: number,
+) {
+  // Universal Android TV APKs use unsplit versionCode (< 1000). Older TV
+  // clients still query as android/arm64-v8a, so route them to the TV artifact.
+  if (
+    platform === "android" &&
+    architecture === "arm64-v8a" &&
+    currentBuild < ANDROID_ABI_SPLIT_OFFSET
+  ) {
+    const { data: tvRows, error: tvError } = await client.rpc(
+      "latest_release_for_platform",
+      {
+        p_platform: platform,
+        p_channel: channel,
+        p_architecture: ANDROID_TV_ARCHITECTURE,
+      },
+    );
+    if (!tvError) {
+      const tvRelease = firstRow(tvRows);
+      if (tvRelease) return tvRelease;
+    }
+  }
+
+  const { data: rows, error } = await client.rpc("latest_release_for_platform", {
+    p_platform: platform,
+    p_channel: channel,
+    p_architecture: architecture,
+  });
+
+  if (error) {
+    throw new AppError("version_lookup_failed", "Release lookup failed.", 500);
+  }
+  return firstRow(rows);
 }
 
 Deno.serve(async (req) => {
@@ -68,17 +126,13 @@ Deno.serve(async (req) => {
     }
 
     const client = serviceClient();
-    const { data: rows, error } = await client.rpc("latest_release_for_platform", {
-      p_platform: platform,
-      p_channel: channel,
-      p_architecture: architecture,
-    });
-
-    if (error) {
-      throw new AppError("version_lookup_failed", "Release lookup failed.", 500);
-    }
-
-    const release = Array.isArray(rows) ? rows[0] : rows;
+    const release = await lookupRelease(
+      client,
+      platform,
+      channel,
+      architecture,
+      currentBuild,
+    );
     let updateAvailable = false;
     let manifest = null;
 
@@ -92,11 +146,15 @@ Deno.serve(async (req) => {
         isNewer = true;
       } else if (platform === "android") {
         // Handle Flutter ABI split offset on Android (arm64 adds 2000: e.g. installed 2017 vs raw 19)
-        const normalizedCurrent = currentBuild >= 1000 ? currentBuild % 1000 : currentBuild;
-        const normalizedRelease = releaseBuild >= 1000 ? releaseBuild % 1000 : releaseBuild;
+        const normalizedCurrent = currentBuild >= ANDROID_ABI_SPLIT_OFFSET
+          ? currentBuild % ANDROID_ABI_SPLIT_OFFSET
+          : currentBuild;
+        const normalizedRelease = releaseBuild >= ANDROID_ABI_SPLIT_OFFSET
+          ? releaseBuild % ANDROID_ABI_SPLIT_OFFSET
+          : releaseBuild;
         if (normalizedRelease > normalizedCurrent) {
           isNewer = true;
-          if (currentBuild >= 1000 && releaseBuild < 1000) {
+          if (currentBuild >= ANDROID_ABI_SPLIT_OFFSET && releaseBuild < ANDROID_ABI_SPLIT_OFFSET) {
             manifestBuildNumber = 2000 + releaseBuild;
           }
         }
@@ -120,6 +178,7 @@ Deno.serve(async (req) => {
         releaseNotesAr: release.release_notes_ar,
       });
 
+      let signed: Record<string, unknown>;
       if (release.manifest_signature) {
         const colon = String(release.manifest_signature).indexOf(":");
         const keyId = colon > 0
@@ -128,15 +187,17 @@ Deno.serve(async (req) => {
         const signature = colon > 0
           ? String(release.manifest_signature).slice(colon + 1)
           : "";
-        manifest = { ...body, keyId, signature };
+        signed = { ...body, keyId, signature };
       } else {
-        manifest = await signReleaseManifest(body);
+        signed = await signReleaseManifest(body);
       }
+      manifest = withDownloadUrl(signed, release.object_key);
     }
 
     logInfo(correlationId, "version_check", {
       platform,
       architecture,
+      resolvedArchitecture: release?.architecture ?? architecture,
       currentBuild,
       updateAvailable,
     });

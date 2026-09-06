@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/core/network/api_client.dart';
 import 'package:iptv/core/network/api_config.dart';
+import 'package:iptv/data/cache/catalog_memory_cache.dart';
 import 'package:iptv/data/datasources/xtream_remote_datasource.dart';
 import 'package:iptv/data/mappers/data_mapper.dart';
 import 'package:iptv/data/repositories/series_repository_impl.dart';
@@ -98,6 +99,7 @@ void main() {
 
       final repo = SeriesRepositoryImpl(
         remoteDataSource: FakeXtreamRemoteDataSource(payload),
+        cache: CatalogMemoryCache(),
       );
 
       final result = await repo.getSeasons(1452);
@@ -157,6 +159,7 @@ void main() {
 
       final repo = SeriesRepositoryImpl(
         remoteDataSource: FakeXtreamRemoteDataSource(payload),
+        cache: CatalogMemoryCache(),
       );
 
       final result = await repo.getSeasons(999);
@@ -194,6 +197,7 @@ void main() {
 
       final repo = SeriesRepositoryImpl(
         remoteDataSource: FakeXtreamRemoteDataSource(payload),
+        cache: CatalogMemoryCache(),
       );
 
       final result = await repo.getSeasons(123);
@@ -228,6 +232,7 @@ void main() {
 
       final repo = SeriesRepositoryImpl(
         remoteDataSource: FakeXtreamRemoteDataSource(payload),
+        cache: CatalogMemoryCache(),
       );
 
       final result = await repo.getSeasons(456);

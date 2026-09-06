@@ -223,7 +223,8 @@ class PosterTopActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasRating = rating != null && rating!.trim().isNotEmpty;
+    final parsed = double.tryParse(rating?.replaceAll(',', '.') ?? '');
+    final hasRating = parsed != null && parsed > 0.0;
     final starSize = compact ? 10.0 : 11.0;
     final textSize = compact ? 9.5 : 10.0;
     final hPad = compact ? 5.0 : 6.0;
@@ -252,7 +253,7 @@ class PosterTopActions extends StatelessWidget {
                 ),
                 const SizedBox(width: 2),
                 Text(
-                  rating!,
+                  parsed.toStringAsFixed(1),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: textSize,

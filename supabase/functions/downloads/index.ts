@@ -140,14 +140,18 @@ Deno.serve(async (req) => {
     // 2. Resolve the GitHub asset URL to a downloadable CDN URL.
     const downloadUrl = await resolveGitHubUrl(release.object_key);
 
-    // 3. Emit analytics event.
-    await admin.schema("analytics").from("download_events").insert({
-      user_id: user.id,
-      release_id: release.id,
-      platform: release.platform,
-      event_name: "download_authorized",
-      metadata: { correlationId, version: release.version },
-    });
+    // 3. Emit analytics event. Never block the download if logging fails.
+    try {
+      await admin.schema("analytics").from("download_events").insert({
+        user_id: user.id,
+        release_id: release.id,
+        platform: release.platform,
+        event_name: "download_authorized",
+        metadata: { correlationId, version: release.version },
+      });
+    } catch (analyticsError) {
+      console.warn("download_events insert failed", analyticsError);
+    }
 
     logInfo(correlationId, "download_authorized", {
       userId: user.id,

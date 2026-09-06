@@ -139,6 +139,29 @@ class LiveFixture extends Equatable {
       start ??
       (scheduledTime != null ? parseStartTime(scheduledTime!, now: now) : null);
 
+  /// Whether the fixture needs score or goal enrichment from FotMob.
+  /// Matches that are live, finished today, past scheduled kickoff,
+  /// or within the [window] (default 10 minutes) before kickoff are eligible.
+  bool needsScoreOrGoalsEnrichment({
+    DateTime? now,
+    Duration window = const Duration(minutes: 10),
+  }) {
+    if (isLive || isFinished) return true;
+
+    final current = now ?? DateTime.now();
+    final startTime = resolvedStartTime(now: current);
+    if (startTime == null) return false;
+
+    // Past kickoff time
+    if (current.isAfter(startTime) || current.isAtSameMomentAs(startTime)) {
+      return true;
+    }
+
+    // Within pre-kickoff window
+    final windowStart = startTime.subtract(window);
+    return current.isAfter(windowStart) || current.isAtSameMomentAs(windowStart);
+  }
+
   /// Whether the match is currently live, or is scheduled to start within [window]
   /// (default 10 minutes) before kickoff.
   bool isEligibleForRealtime({
@@ -291,12 +314,18 @@ class LiveFixture extends Equatable {
 }
 
 abstract interface class LiveScoreSource {
-  Future<List<LiveFixture>> fetchLiveBigMatches({bool forceRefresh = false});
+  Future<List<LiveFixture>> fetchLiveBigMatches({
+    bool forceRefresh = false,
+    DateTime? now,
+  });
 }
 
 class EmptyLiveScoreSource implements LiveScoreSource {
   const EmptyLiveScoreSource();
 
   @override
-  Future<List<LiveFixture>> fetchLiveBigMatches({bool forceRefresh = false}) async => const [];
+  Future<List<LiveFixture>> fetchLiveBigMatches({
+    bool forceRefresh = false,
+    DateTime? now,
+  }) async => const [];
 }
