@@ -9,9 +9,9 @@ import 'package:iptv/player/infrastructure/web/web_player_engine.dart';
 PlayerEngine createDefaultPlayerEngine({
   PlaybackBufferMode? initialBufferMode,
 }) {
-  // On Web: If running on iOS (iPhone/iPad) or Safari, utilize native hardware AVPlayer.
-  // Other browsers (Chrome, Firefox, Edge) and non-web platforms use MediaKit.
-  if (kIsWeb && isIosOrSafariWeb()) {
+  // iOS/iPadOS Safari uses the native HTML video/AVPlayer pipeline.
+  // Other browsers and non-web platforms continue to use MediaKit.
+  if (kIsWeb && isIosSafariWeb()) {
     return createWebIosPlayerEngine(
       initialBufferMode: initialBufferMode,
     );

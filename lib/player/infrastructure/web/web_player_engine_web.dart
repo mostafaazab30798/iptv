@@ -16,12 +16,12 @@ import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/domain/enums/software_decode_fallback_tier.dart';
 import 'package:iptv/player/domain/interfaces/player_engine.dart';
 import 'package:iptv/player/infrastructure/web/native_vod_bridge.dart';
+import 'package:iptv/player/infrastructure/web/native_vod_policy.dart';
 
 int _instanceIdCounter = 0;
 
-/// Detects whether the current web browser is running on an iOS device (iPhone/iPad)
-/// or is Safari capable of native hardware HLS playback via AVPlayer.
-bool isIosOrSafariWeb() {
+/// Detects iOS/iPadOS Safari, where native AVPlayer playback is preferred.
+bool isIosSafariWeb() {
   try {
     // Hardware/Native HLS capability probe:
     // Safari on Apple platforms (iOS/iPadOS/macOS) responds with 'probably' or 'maybe'
@@ -45,17 +45,23 @@ bool isIosOrSafariWeb() {
     final isIpadOs = ua.contains('macintosh') &&
         (html.window.navigator.maxTouchPoints ?? 0) > 1;
 
-    // Safari browser (excluding Chrome / Chromium / Android WebKit)
+    // Safari browser (excluding alternative iOS browsers and embedded WebViews).
     final isSafariBrowser = ua.contains('safari') &&
         !ua.contains('chrome') &&
         !ua.contains('crios') &&
+        !ua.contains('fxios') &&
+        !ua.contains('edgios') &&
+        !ua.contains('opios') &&
         !ua.contains('android');
 
-    return isIosDevice || isIpadOs || isSafariBrowser;
+    return (isIosDevice || isIpadOs) && isSafariBrowser;
   } catch (_) {
     return false;
   }
 }
+
+/// Backwards-compatible alias for existing callers.
+bool isIosOrSafariWeb() => isIosSafariWeb();
 
 /// Factory function to create [WebIosPlayerEngine] on web.
 PlayerEngine createWebIosPlayerEngine({
@@ -182,21 +188,17 @@ class WebIosPlayerEngine implements PlayerEngine {
     _handle = WebVideoHandle(
       viewTypeId: _viewTypeId,
       videoElement: video,
-      onAspectRatioChanged: (index, [scale = 1.0]) {
+      onAspectRatioChanged: (index, [_ = 1.0]) {
         if (index == 2) {
           // Fill (100% cover)
           video.style.objectFit = 'cover';
-          video.style.transform = 'none';
-        } else if (index == 0) {
-          // Best Fit (Smart contained zoom to eliminate/reduce black edges without content clipping)
-          video.style.objectFit = 'contain';
-          video.style.transformOrigin = 'center center';
-          video.style.transform = scale > 1.001 ? 'scale($scale)' : 'none';
         } else {
-          // 1: Fit (contain 1.0x), 3: 16:9, 4: 4:3
+          // Preserve the source ratio for Best Fit, Fit, 16:9, and 4:3.
+          // The Flutter view constrains forced-ratio modes; CSS only decides
+          // how the native video is fitted inside that box.
           video.style.objectFit = 'contain';
-          video.style.transform = 'none';
         }
+        video.style.transform = 'none';
       },
     );
 
@@ -379,12 +381,16 @@ class WebIosPlayerEngine implements PlayerEngine {
     // Movies/series are often Matroska (.mkv). AVPlayer cannot demux MKV, so
     // remux into fragmented MP4 via HopeTvNativeVod while still using this
     // native <video> element (hardware decode on iOS).
-    if (_shouldUseNativeVodHelper(source, streamUrl)) {
+    if (_shouldUseNativeVodHelper(streamUrl)) {
       await _openWithNativeVodHelper(video, streamUrl);
       return;
     }
 
     _usingNativeVodHelper = false;
+    await _openDirect(video, streamUrl);
+  }
+
+  Future<void> _openDirect(html.VideoElement video, String streamUrl) async {
     video.src = streamUrl;
     video.load();
 
@@ -397,21 +403,8 @@ class WebIosPlayerEngine implements PlayerEngine {
     }
   }
 
-  bool _shouldUseNativeVodHelper(PlayerSource source, String streamUrl) {
-    if (source.isVod) return true;
-    final target = _unwrapProxyTarget(streamUrl).toLowerCase();
-    return target.contains('/movie/') ||
-        target.contains('/series/') ||
-        target.contains('.mkv') ||
-        target.contains('.avi');
-  }
-
-  String _unwrapProxyTarget(String url) {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return url;
-    if (!uri.path.contains('/proxy')) return url;
-    return uri.queryParameters['url'] ?? url;
-  }
+  bool _shouldUseNativeVodHelper(String streamUrl) =>
+      requiresIosVodRemux(streamUrl);
 
   Future<void> _openWithNativeVodHelper(
     html.VideoElement video,
@@ -426,11 +419,7 @@ class WebIosPlayerEngine implements PlayerEngine {
           feature: 'player',
         );
         _usingNativeVodHelper = false;
-        video.src = streamUrl;
-        video.load();
-        try {
-          await video.play();
-        } catch (_) {}
+        await _openDirect(video, streamUrl);
         return;
       }
       AppLogger.info(
@@ -440,8 +429,10 @@ class WebIosPlayerEngine implements PlayerEngine {
     } catch (e) {
       AppLogger.warning('Web iOS native VOD helper failed: $e', feature: 'player');
       _usingNativeVodHelper = false;
-      _setStatus(PlayerStatus.error);
-      _errorController.add(PlayerErrorType.unsupportedFormat);
+      // Some panels report an MKV/AVI extension while returning an MP4
+      // container. Give native AVPlayer a final direct attempt and let its
+      // media error provide the authoritative failure classification.
+      await _openDirect(video, streamUrl);
     }
   }
 

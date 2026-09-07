@@ -56,10 +56,12 @@ void main() {
 
     testWidgets('triggers onAspectRatioChanged when platformHandle is WebVideoHandle', (tester) async {
       int? observedIndex;
+      double? observedScale;
       final handle = WebVideoHandle(
         viewTypeId: 'test-web-view',
-        onAspectRatioChanged: (index) {
+        onAspectRatioChanged: (index, [scale = 1.0]) {
           observedIndex = index;
+          observedScale = scale;
         },
       );
 
@@ -68,14 +70,21 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: PlayerView(
-              aspectRatioIndex: 1,
+              aspectRatioIndex: 0,
               platformHandle: handle,
+              videoWidth: 1920,
+              videoHeight: 1080,
             ),
           ),
         ),
       );
 
-      expect(observedIndex, equals(1));
+      expect(observedIndex, equals(0));
+      expect(
+        observedScale,
+        equals(1.0),
+        reason: 'iOS web Best Fit must preserve the native source ratio',
+      );
     });
   });
 }

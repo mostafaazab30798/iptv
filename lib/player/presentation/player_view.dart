@@ -156,27 +156,11 @@ class PlayerView extends StatelessWidget {
       final webHandle = platformHandle as WebVideoHandle;
 
       return LayoutBuilder(
-        builder: (context, constraints) {
-          final vw = (videoWidth != null && videoWidth! > 0)
-              ? videoWidth!.toDouble()
-              : 16.0;
-          final vh = (videoHeight != null && videoHeight! > 0)
-              ? videoHeight!.toDouble()
-              : 9.0;
-
-          final bestFitScale = calculateBestFitScale(
-            viewportWidth: constraints.maxWidth,
-            viewportHeight: constraints.maxHeight,
-            videoWidth: vw,
-            videoHeight: vh,
-          );
-
+        builder: (context, _) {
           double? forcedAspectRatio;
-          double scale = 1.0;
 
           switch (aspectRatioIndex) {
             case 0:
-              scale = bestFitScale;
               break;
             case 1:
               break;
@@ -189,11 +173,10 @@ class PlayerView extends StatelessWidget {
               forcedAspectRatio = 4 / 3;
               break;
             default:
-              scale = bestFitScale;
               break;
           }
 
-          webHandle.onAspectRatioChanged?.call(aspectRatioIndex, scale);
+          webHandle.onAspectRatioChanged?.call(aspectRatioIndex);
 
           // HtmlElementView has no intrinsic size. Centering it under loose
           // constraints collapses the platform view to 0×0 (audio still plays).
@@ -206,15 +189,6 @@ class PlayerView extends StatelessWidget {
             videoWidget = Center(
               child: AspectRatio(
                 aspectRatio: forcedAspectRatio,
-                child: videoWidget,
-              ),
-            );
-          }
-
-          if (scale > 1.001) {
-            videoWidget = ClipRect(
-              child: Transform.scale(
-                scale: scale,
                 child: videoWidget,
               ),
             );
