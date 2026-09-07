@@ -32,22 +32,22 @@ class PlayerController extends StateNotifier<PlayerState> {
     Future<bool> Function(PlayerSource source)? canLoadSource,
     VoidCallback? onStopCallback,
     void Function(PlayerSource source)? onSourceChanged,
-  })  : _engine = engine ??
-            createDefaultPlayerEngine(
-              initialBufferMode: initialBufferMode,
-            ),
-        _historyRepository = historyRepository,
-        _canLoadSource = canLoadSource,
-        _onStopCallback = onStopCallback,
-        _onSourceChanged = onSourceChanged,
-        super(
-          PlayerState.initial.copyWith(
-            bufferMode: initialBufferMode ??
-                (engine == null
-                    ? PlaybackBufferMode.deviceDefault
-                    : PlaybackBufferMode.balanced),
-          ),
-        ) {
+  }) : _engine =
+           engine ??
+           createDefaultPlayerEngine(initialBufferMode: initialBufferMode),
+       _historyRepository = historyRepository,
+       _canLoadSource = canLoadSource,
+       _onStopCallback = onStopCallback,
+       _onSourceChanged = onSourceChanged,
+       super(
+         PlayerState.initial.copyWith(
+           bufferMode:
+               initialBufferMode ??
+               (engine == null
+                   ? PlaybackBufferMode.deviceDefault
+                   : PlaybackBufferMode.balanced),
+         ),
+       ) {
     _smartEngine = SmartPlaybackEngine(
       engine: _engine,
       initialBufferMode: state.bufferMode,
@@ -69,6 +69,7 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Lazy live playlist: channels list + URL resolver; only neighbors are materialized.
   List<Channel> _liveChannels = const [];
   String Function(Channel channel)? _liveUrlFor;
+
   /// Set by Live TV only — gates mini-preview keep-alive on player exit.
   bool _livePreviewHostActive = false;
   static const _neighborWindowRadius = 25;
@@ -86,12 +87,14 @@ class PlayerController extends StateNotifier<PlayerState> {
   int _playbackEpoch = 0;
 
   /// High-frequency seek-bar / time-label channel — do not mirror into Riverpod.
-  final ValueNotifier<Duration> positionListenable =
-      ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> positionListenable = ValueNotifier(
+    Duration.zero,
+  );
 
   /// High-frequency buffered range for the seek-bar secondary track.
-  final ValueNotifier<Duration> bufferedPositionListenable =
-      ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> bufferedPositionListenable = ValueNotifier(
+    Duration.zero,
+  );
 
   static const _riverpodProgressThrottle = Duration(milliseconds: 250);
   DateTime? _lastPositionStateEmit;
@@ -139,7 +142,8 @@ class PlayerController extends StateNotifier<PlayerState> {
         if (!mounted) return;
         state = state.copyWith(
           status: status,
-          clearError: status == PlayerStatus.playing || status == PlayerStatus.loading,
+          clearError:
+              status == PlayerStatus.playing || status == PlayerStatus.loading,
           isRetrying: status == PlayerStatus.playing ? false : state.isRetrying,
           retryAttempt: status == PlayerStatus.playing ? 0 : state.retryAttempt,
         );
@@ -156,7 +160,6 @@ class PlayerController extends StateNotifier<PlayerState> {
       }),
     );
 
-
     _subscriptions.add(
       _engine.positionStream.listen((pos) {
         if (!mounted) return;
@@ -165,8 +168,10 @@ class PlayerController extends StateNotifier<PlayerState> {
           positionListenable.value = pos;
         }
         final now = DateTime.now();
-        final due = _lastPositionStateEmit == null ||
-            now.difference(_lastPositionStateEmit!) >= _riverpodProgressThrottle;
+        final due =
+            _lastPositionStateEmit == null ||
+            now.difference(_lastPositionStateEmit!) >=
+                _riverpodProgressThrottle;
         if (due && state.position != pos) {
           _lastPositionStateEmit = now;
           state = state.copyWith(position: pos);
@@ -188,7 +193,8 @@ class PlayerController extends StateNotifier<PlayerState> {
           bufferedPositionListenable.value = buf;
         }
         final now = DateTime.now();
-        final due = _lastBufferStateEmit == null ||
+        final due =
+            _lastBufferStateEmit == null ||
             now.difference(_lastBufferStateEmit!) >= _riverpodProgressThrottle;
         if (due && state.bufferedPosition != buf) {
           _lastBufferStateEmit = now;
@@ -346,7 +352,10 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Flushes current playback progress to local storage immediately.
   Future<void> savePlaybackProgress() async {
     final source = state.source;
-    if (source == null || source.channelId == null || _historyRepository == null) return;
+    if (source == null ||
+        source.channelId == null ||
+        _historyRepository == null)
+      return;
 
     final type = _determineHistoryType(source);
     final posSecs = positionListenable.value.inSeconds;
@@ -364,10 +373,15 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   Future<void> _handlePlaybackCompleted() async {
     final source = state.source;
-    if (source == null || source.channelId == null || _historyRepository == null) return;
+    if (source == null ||
+        source.channelId == null ||
+        _historyRepository == null)
+      return;
 
     final type = _determineHistoryType(source);
-    final durSecs = state.duration.inSeconds > 0 ? state.duration.inSeconds : state.position.inSeconds;
+    final durSecs = state.duration.inSeconds > 0
+        ? state.duration.inSeconds
+        : state.position.inSeconds;
 
     // Mark as finished by setting position to total duration
     await _historyRepository.updatePosition(
@@ -404,7 +418,8 @@ class PlayerController extends StateNotifier<PlayerState> {
     // playlist (favourites, movies, series, search, etc.).
     if (_hasLazyLivePlaylist) {
       final id = source.channelId;
-      final inLivePlaylist = id != null && _liveChannels.any((c) => c.streamId == id);
+      final inLivePlaylist =
+          id != null && _liveChannels.any((c) => c.streamId == id);
       if (!inLivePlaylist) {
         _clearLazyLivePlaylist();
       }
@@ -430,10 +445,7 @@ class PlayerController extends StateNotifier<PlayerState> {
       );
       if (!mounted || epoch != _playbackEpoch) return;
 
-      final entry = historyRes.when(
-        ok: (e) => e,
-        err: (_) => null,
-      );
+      final entry = historyRes.when(ok: (e) => e, err: (_) => null);
 
       if (entry != null && entry.positionSecs >= 5 && !entry.isFinished) {
         effectiveSource = effectiveSource.copyWith(
@@ -442,7 +454,9 @@ class PlayerController extends StateNotifier<PlayerState> {
       }
     }
 
-    final capabilities = PlayerCapabilityService.getCapabilities(streamType: effectiveSource.streamType);
+    final capabilities = PlayerCapabilityService.getCapabilities(
+      streamType: effectiveSource.streamType,
+    );
     positionListenable.value = effectiveSource.startAt ?? Duration.zero;
     bufferedPositionListenable.value = Duration.zero;
     _lastPositionStateEmit = null;
@@ -484,7 +498,9 @@ class PlayerController extends StateNotifier<PlayerState> {
       unawaited(_smartEngine.initDeviceProfile());
     }
 
-    if (mounted && epoch == _playbackEpoch && _engine.currentStatus != state.status) {
+    if (mounted &&
+        epoch == _playbackEpoch &&
+        _engine.currentStatus != state.status) {
       state = state.copyWith(status: _engine.currentStatus);
     }
   }
@@ -632,8 +648,10 @@ class PlayerController extends StateNotifier<PlayerState> {
 
     await pauseOperation;
     if (!mounted) return;
-    await _smartEngine.seek(position);
-    await savePlaybackProgress();
+    // Use the normal seek path so the thumb and elapsed label update
+    // immediately on Safari instead of snapping back until `timeupdate`.
+    // This also persists the newly selected position rather than the old one.
+    await seek(position);
     if (shouldResume && mounted) {
       await _smartEngine.play();
       if (mounted) state = state.copyWith(status: PlayerStatus.playing);
@@ -643,7 +661,8 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Seeks without persisting watch history, waits for the decoder to render
   /// the requested position, then returns that real frame for the scrub HUD.
   Future<Uint8List?> createSeekPreview(Duration position) async {
-    if (!mounted || state.isLive || state.duration <= Duration.zero) return null;
+    if (!mounted || state.isLive || state.duration <= Duration.zero)
+      return null;
 
     if (!_seekScrubActive) beginSeekScrub();
     await _seekScrubPauseOperation;
@@ -658,9 +677,11 @@ class PlayerController extends StateNotifier<PlayerState> {
 
     // A libmpv seek command is acknowledged before the target frame finishes
     // decoding. Wait until its playback clock reaches the requested region.
-    for (var attempt = 0;
-        attempt < 12 && mounted && _seekScrubActive;
-        attempt++) {
+    for (
+      var attempt = 0;
+      attempt < 12 && mounted && _seekScrubActive;
+      attempt++
+    ) {
       final delta =
           (positionListenable.value.inMilliseconds - position.inMilliseconds)
               .abs();
@@ -672,9 +693,11 @@ class PlayerController extends StateNotifier<PlayerState> {
     // until the screenshot really changes, instead of repeatedly returning the
     // pre-seek frame. Static scenes safely fall back after the bounded timeout.
     Uint8List? latestFrame;
-    for (var attempt = 0;
-        attempt < 5 && mounted && _seekScrubActive;
-        attempt++) {
+    for (
+      var attempt = 0;
+      attempt < 5 && mounted && _seekScrubActive;
+      attempt++
+    ) {
       await Future<void>.delayed(const Duration(milliseconds: 80));
       latestFrame = await _smartEngine.captureFrame();
       if (latestFrame != null &&
@@ -743,7 +766,9 @@ class PlayerController extends StateNotifier<PlayerState> {
   }
 
   void cycleAspectRatio() {
-    final nextIndex = (state.aspectRatioIndex + 1) % 5; // Best Fit -> Fit -> Fill -> 16:9 -> 4:3
+    final nextIndex =
+        (state.aspectRatioIndex + 1) %
+        5; // Best Fit -> Fit -> Fill -> 16:9 -> 4:3
     state = state.copyWith(aspectRatioIndex: nextIndex);
   }
 
@@ -868,28 +893,27 @@ class PlayerController extends StateNotifier<PlayerState> {
 /// Global provider for the PlayerController.
 final playerControllerProvider =
     StateNotifierProvider<PlayerController, PlayerState>((ref) {
-  final historyRepo = ref.watch(historyRepositoryProvider);
-  PlayerController? controller;
-  controller = PlayerController(
-    historyRepository: historyRepo,
-    onStopCallback: () {
-      ref.read(audioHandoffServerProvider.notifier).unbindPlayback();
-    },
-    onSourceChanged: (source) {
-      final player = controller;
-      if (player == null) return;
-      ref.read(audioHandoffServerProvider.notifier).bindPlayback(
-            player,
-            source: source,
-          );
-    },
-    canLoadSource: (source) async {
-      final mode = ref.read(kidsModeProvider);
-      if (!mode.isInitialized) return false;
-      if (!mode.isEnabled) return true;
-      final allowed = await ref.read(kidsAllowedContentProvider.future);
-      return allowed.allowsSource(source);
-    },
-  );
-  return controller;
-});
+      final historyRepo = ref.watch(historyRepositoryProvider);
+      PlayerController? controller;
+      controller = PlayerController(
+        historyRepository: historyRepo,
+        onStopCallback: () {
+          ref.read(audioHandoffServerProvider.notifier).unbindPlayback();
+        },
+        onSourceChanged: (source) {
+          final player = controller;
+          if (player == null) return;
+          ref
+              .read(audioHandoffServerProvider.notifier)
+              .bindPlayback(player, source: source);
+        },
+        canLoadSource: (source) async {
+          final mode = ref.read(kidsModeProvider);
+          if (!mode.isInitialized) return false;
+          if (!mode.isEnabled) return true;
+          final allowed = await ref.read(kidsAllowedContentProvider.future);
+          return allowed.allowsSource(source);
+        },
+      );
+      return controller;
+    });
