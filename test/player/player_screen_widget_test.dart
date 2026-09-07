@@ -499,7 +499,7 @@ void main() {
 
       expect(previews, isNotEmpty);
       expect(seeks, hasLength(1));
-      final expected = const Duration(minutes: 67, seconds: 30);
+      const expected = Duration(minutes: 67, seconds: 30);
       final errorMilliseconds =
           (seeks.last.inMilliseconds - expected.inMilliseconds).abs();
       expect(

@@ -354,8 +354,9 @@ class PlayerController extends StateNotifier<PlayerState> {
     final source = state.source;
     if (source == null ||
         source.channelId == null ||
-        _historyRepository == null)
+        _historyRepository == null) {
       return;
+    }
 
     final type = _determineHistoryType(source);
     final posSecs = positionListenable.value.inSeconds;
@@ -375,8 +376,9 @@ class PlayerController extends StateNotifier<PlayerState> {
     final source = state.source;
     if (source == null ||
         source.channelId == null ||
-        _historyRepository == null)
+        _historyRepository == null) {
       return;
+    }
 
     final type = _determineHistoryType(source);
     final durSecs = state.duration.inSeconds > 0
@@ -661,8 +663,9 @@ class PlayerController extends StateNotifier<PlayerState> {
   /// Seeks without persisting watch history, waits for the decoder to render
   /// the requested position, then returns that real frame for the scrub HUD.
   Future<Uint8List?> createSeekPreview(Duration position) async {
-    if (!mounted || state.isLive || state.duration <= Duration.zero)
+    if (!mounted || state.isLive || state.duration <= Duration.zero) {
       return null;
+    }
 
     if (!_seekScrubActive) beginSeekScrub();
     await _seekScrubPauseOperation;
