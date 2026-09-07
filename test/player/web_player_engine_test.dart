@@ -15,7 +15,7 @@ void main() {
         int? changedIndex;
         final handle = WebVideoHandle(
           viewTypeId: 'test-view-123',
-          onAspectRatioChanged: (index) {
+          onAspectRatioChanged: (index, [_ = 1.0]) {
             changedIndex = index;
           },
         );
@@ -30,8 +30,8 @@ void main() {
   });
 
   group('PlayerEngineFactory non-web behavior', () {
-    test('isIosOrSafariWeb returns false on non-web test runtime', () {
-      expect(isIosOrSafariWeb(), isFalse);
+    test('isIosSafariWeb returns false on non-web test runtime', () {
+      expect(isIosSafariWeb(), isFalse);
     });
 
     test(
