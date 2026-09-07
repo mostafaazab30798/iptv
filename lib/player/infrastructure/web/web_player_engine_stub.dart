@@ -8,8 +8,8 @@ bool isIosSafariWeb() => false;
 bool isIosOrSafariWeb() => false;
 
 /// Stub factory for non-web platforms.
-PlayerEngine createWebIosPlayerEngine({
-  PlaybackBufferMode? initialBufferMode,
-}) {
-  throw UnsupportedError('WebIosPlayerEngine is only available on web platforms.');
+PlayerEngine createWebIosPlayerEngine({PlaybackBufferMode? initialBufferMode}) {
+  throw UnsupportedError(
+    'WebIosPlayerEngine is only available on web platforms.',
+  );
 }

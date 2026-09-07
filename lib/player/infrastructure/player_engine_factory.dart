@@ -12,9 +12,7 @@ PlayerEngine createDefaultPlayerEngine({
   // iOS/iPadOS Safari uses the native HTML video/AVPlayer pipeline.
   // Other browsers and non-web platforms continue to use MediaKit.
   if (kIsWeb && isIosSafariWeb()) {
-    return createWebIosPlayerEngine(
-      initialBufferMode: initialBufferMode,
-    );
+    return createWebIosPlayerEngine(initialBufferMode: initialBufferMode);
   }
 
   return MediaKitPlayerEngine(

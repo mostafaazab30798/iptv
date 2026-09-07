@@ -29,7 +29,7 @@ bool isIosSafariWeb() {
     final probe = html.VideoElement();
     final canPlayHls =
         probe.canPlayType('application/vnd.apple.mpegurl').isNotEmpty ||
-            probe.canPlayType('application/x-mpegurl').isNotEmpty;
+        probe.canPlayType('application/x-mpegurl').isNotEmpty;
 
     if (!canPlayHls) {
       return false;
@@ -42,11 +42,13 @@ bool isIosSafariWeb() {
         ua.contains('iphone') || ua.contains('ipad') || ua.contains('ipod');
 
     // iPadOS 13+ desktop-class Safari reports as Macintosh with multi-touch points
-    final isIpadOs = ua.contains('macintosh') &&
+    final isIpadOs =
+        ua.contains('macintosh') &&
         (html.window.navigator.maxTouchPoints ?? 0) > 1;
 
     // Safari browser (excluding alternative iOS browsers and embedded WebViews).
-    final isSafariBrowser = ua.contains('safari') &&
+    final isSafariBrowser =
+        ua.contains('safari') &&
         !ua.contains('chrome') &&
         !ua.contains('crios') &&
         !ua.contains('fxios') &&
@@ -64,9 +66,7 @@ bool isIosSafariWeb() {
 bool isIosOrSafariWeb() => isIosSafariWeb();
 
 /// Factory function to create [WebIosPlayerEngine] on web.
-PlayerEngine createWebIosPlayerEngine({
-  PlaybackBufferMode? initialBufferMode,
-}) {
+PlayerEngine createWebIosPlayerEngine({PlaybackBufferMode? initialBufferMode}) {
   return WebIosPlayerEngine();
 }
 
@@ -211,7 +211,10 @@ class WebIosPlayerEngine implements PlayerEngine {
     _attachEventListeners(video);
     _startMetricsTimer();
 
-    AppLogger.info('WebIosPlayerEngine initialized (viewId: $_viewTypeId)', feature: 'player');
+    AppLogger.info(
+      'WebIosPlayerEngine initialized (viewId: $_viewTypeId)',
+      feature: 'player',
+    );
   }
 
   void _attachEventListeners(html.VideoElement video) {
@@ -252,14 +255,19 @@ class WebIosPlayerEngine implements PlayerEngine {
           final buffered = video.buffered;
           if (buffered.length > 0) {
             final endSec = buffered.end(buffered.length - 1);
-            _bufferController.add(Duration(milliseconds: (endSec * 1000).round()));
+            _bufferController.add(
+              Duration(milliseconds: (endSec * 1000).round()),
+            );
           }
         } catch (_) {}
       }),
       video.onEnded.listen((_) => _setStatus(PlayerStatus.completed)),
       video.onError.listen((_) {
         final err = video.error;
-        AppLogger.warning('WebIosPlayerEngine error: code=${err?.code} message=${err?.message}', feature: 'player');
+        AppLogger.warning(
+          'WebIosPlayerEngine error: code=${err?.code} message=${err?.message}',
+          feature: 'player',
+        );
         _handleError(err);
       }),
     ]);
@@ -397,7 +405,10 @@ class WebIosPlayerEngine implements PlayerEngine {
     try {
       await video.play();
     } catch (e) {
-      AppLogger.warning('Web iOS Player autoplay deferred or restricted: $e', feature: 'player');
+      AppLogger.warning(
+        'Web iOS Player autoplay deferred or restricted: $e',
+        feature: 'player',
+      );
       // If autoplay was rejected by iOS policy due to user gesture requirement,
       // it will play once user triggers interaction.
     }
@@ -422,12 +433,12 @@ class WebIosPlayerEngine implements PlayerEngine {
         await _openDirect(video, streamUrl);
         return;
       }
-      AppLogger.info(
-        'Web iOS Player VOD via native helper',
+      AppLogger.info('Web iOS Player VOD via native helper', feature: 'player');
+    } catch (e) {
+      AppLogger.warning(
+        'Web iOS native VOD helper failed: $e',
         feature: 'player',
       );
-    } catch (e) {
-      AppLogger.warning('Web iOS native VOD helper failed: $e', feature: 'player');
       _usingNativeVodHelper = false;
       // Some panels report an MKV/AVI extension while returning an MP4
       // container. Give native AVPlayer a final direct attempt and let its
@@ -536,7 +547,9 @@ class WebIosPlayerEngine implements PlayerEngine {
   }
 
   @override
-  Future<void> applySoftwareDecodeEscalation(SoftwareDecodeFallbackTier tier) async {
+  Future<void> applySoftwareDecodeEscalation(
+    SoftwareDecodeFallbackTier tier,
+  ) async {
     // Hardware decoding escalation is not applicable to iOS AVPlayer.
   }
 

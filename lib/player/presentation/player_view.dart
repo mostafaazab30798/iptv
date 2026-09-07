@@ -132,10 +132,7 @@ class PlayerView extends StatelessWidget {
 
           if (scale > 1.001) {
             videoWidget = ClipRect(
-              child: Transform.scale(
-                scale: scale,
-                child: videoWidget,
-              ),
+              child: Transform.scale(scale: scale, child: videoWidget),
             );
           }
 

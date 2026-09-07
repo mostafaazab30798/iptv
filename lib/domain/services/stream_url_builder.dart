@@ -16,8 +16,7 @@ class StreamUrlBuilder {
   }) {
     // Safari/iOS native <video> needs HLS (.m3u8). MediaKit on desktop web
     // handles progressive MPEG-TS more reliably than proxied HLS right now.
-    final ext = extension ??
-        (kIsWeb && isIosSafariWeb() ? 'm3u8' : 'ts');
+    final ext = extension ?? (kIsWeb && isIosSafariWeb() ? 'm3u8' : 'ts');
     final base = UrlHelpers.normalizeServerUrl(serverUrl);
     final raw = '$base/live/$username/$password/$streamId.$ext';
     return UrlHelpers.wrapWebProxy(raw);
@@ -54,38 +53,35 @@ class StreamUrlBuilder {
     ServerConfig session, {
     required int streamId,
     String? extension,
-  }) =>
-      live(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: streamId,
-        extension: extension,
-      );
+  }) => live(
+    serverUrl: session.serverUrl,
+    username: session.username,
+    password: session.password,
+    streamId: streamId,
+    extension: extension,
+  );
 
   String vodForSession(
     ServerConfig session, {
     required int streamId,
     String extension = 'mp4',
-  }) =>
-      vod(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: streamId,
-        extension: extension,
-      );
+  }) => vod(
+    serverUrl: session.serverUrl,
+    username: session.username,
+    password: session.password,
+    streamId: streamId,
+    extension: extension,
+  );
 
   String seriesForSession(
     ServerConfig session, {
     required int streamId,
     String extension = 'mp4',
-  }) =>
-      series(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: streamId,
-        extension: extension,
-      );
+  }) => series(
+    serverUrl: session.serverUrl,
+    username: session.username,
+    password: session.password,
+    streamId: streamId,
+    extension: extension,
+  );
 }
