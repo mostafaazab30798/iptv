@@ -16,8 +16,7 @@ class StreamUrlBuilder {
   }) {
     // Safari/iOS native <video> needs HLS (.m3u8). MediaKit on desktop web
     // handles progressive MPEG-TS more reliably than proxied HLS right now.
-    final ext = extension ??
-        (kIsWeb && isIosOrSafariWeb() ? 'm3u8' : 'ts');
+    final ext = extension ?? (kIsWeb && isIosSafariWeb() ? 'm3u8' : 'ts');
     final base = UrlHelpers.normalizeServerUrl(serverUrl);
     final raw = '$base/live/$username/$password/$streamId.$ext';
     return UrlHelpers.wrapWebProxy(raw);
@@ -32,7 +31,10 @@ class StreamUrlBuilder {
   }) {
     final base = UrlHelpers.normalizeServerUrl(serverUrl);
     final raw = '$base/movie/$username/$password/$streamId.$extension';
-    return UrlHelpers.wrapWebProxy(raw);
+    // Native iOS playback and the MKV compatibility remux both rely on byte
+    // ranges. The same-origin proxy preserves Range headers and avoids CORS
+    // failures on HTTPS panel/CDN URLs.
+    return UrlHelpers.wrapWebProxy(raw, proxyAllHttpTargets: true);
   }
 
   String series({
@@ -44,45 +46,42 @@ class StreamUrlBuilder {
   }) {
     final base = UrlHelpers.normalizeServerUrl(serverUrl);
     final raw = '$base/series/$username/$password/$streamId.$extension';
-    return UrlHelpers.wrapWebProxy(raw);
+    return UrlHelpers.wrapWebProxy(raw, proxyAllHttpTargets: true);
   }
 
   String liveForSession(
     ServerConfig session, {
     required int streamId,
     String? extension,
-  }) =>
-      live(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: streamId,
-        extension: extension,
-      );
+  }) => live(
+    serverUrl: session.serverUrl,
+    username: session.username,
+    password: session.password,
+    streamId: streamId,
+    extension: extension,
+  );
 
   String vodForSession(
     ServerConfig session, {
     required int streamId,
     String extension = 'mp4',
-  }) =>
-      vod(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: streamId,
-        extension: extension,
-      );
+  }) => vod(
+    serverUrl: session.serverUrl,
+    username: session.username,
+    password: session.password,
+    streamId: streamId,
+    extension: extension,
+  );
 
   String seriesForSession(
     ServerConfig session, {
     required int streamId,
     String extension = 'mp4',
-  }) =>
-      series(
-        serverUrl: session.serverUrl,
-        username: session.username,
-        password: session.password,
-        streamId: streamId,
-        extension: extension,
-      );
+  }) => series(
+    serverUrl: session.serverUrl,
+    username: session.username,
+    password: session.password,
+    streamId: streamId,
+    extension: extension,
+  );
 }

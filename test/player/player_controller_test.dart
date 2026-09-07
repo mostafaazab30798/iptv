@@ -40,9 +40,21 @@ void main() {
     });
 
     test('switches channels correctly in playlist sequence', () async {
-      final ch1 = PlayerSource.live(url: 'http://ch1.m3u8', title: 'Channel 1', channelId: 1);
-      final ch2 = PlayerSource.live(url: 'http://ch2.m3u8', title: 'Channel 2', channelId: 2);
-      final ch3 = PlayerSource.live(url: 'http://ch3.m3u8', title: 'Channel 3', channelId: 3);
+      final ch1 = PlayerSource.live(
+        url: 'http://ch1.m3u8',
+        title: 'Channel 1',
+        channelId: 1,
+      );
+      final ch2 = PlayerSource.live(
+        url: 'http://ch2.m3u8',
+        title: 'Channel 2',
+        channelId: 2,
+      );
+      final ch3 = PlayerSource.live(
+        url: 'http://ch3.m3u8',
+        title: 'Channel 3',
+        channelId: 3,
+      );
 
       controller.setChannelPlaylist([ch1, ch2, ch3], initialIndex: 0);
       await controller.load(ch1);
@@ -71,7 +83,11 @@ void main() {
       await controller.mute(true);
       expect(controller.state.isMuted, isTrue);
 
-      const track = PlayerAudioTrack(id: '2', title: 'Arabic [5.1]', language: 'ara');
+      const track = PlayerAudioTrack(
+        id: '2',
+        title: 'Arabic [5.1]',
+        language: 'ara',
+      );
       await controller.setAudioTrack(track);
       expect(controller.state.currentAudioTrack, equals(track));
       expect(fakeEngine.selectedAudioTrack, equals(track));
@@ -128,6 +144,8 @@ void main() {
       await controller.finishSeekScrub(const Duration(minutes: 25));
 
       expect(fakeEngine.currentPosition, const Duration(minutes: 25));
+      expect(controller.positionListenable.value, const Duration(minutes: 25));
+      expect(controller.state.position, const Duration(minutes: 25));
       expect(fakeEngine.currentStatus, PlayerStatus.playing);
       expect(controller.state.isPlaying, isTrue);
     });
@@ -172,55 +190,61 @@ void main() {
       expect(fakeEngine.currentStatus, equals(PlayerStatus.stopped));
     });
 
-    test('rapid load keeps only the latest channel (stale open discarded)', () async {
-      fakeEngine.openDelay = const Duration(milliseconds: 40);
+    test(
+      'rapid load keeps only the latest channel (stale open discarded)',
+      () async {
+        fakeEngine.openDelay = const Duration(milliseconds: 40);
 
-      final first = PlayerSource.live(
-        url: 'http://ch1.m3u8',
-        title: 'Channel 1',
-        channelId: 1,
-      );
-      final second = PlayerSource.live(
-        url: 'http://ch2.m3u8',
-        title: 'Channel 2',
-        channelId: 2,
-      );
+        final first = PlayerSource.live(
+          url: 'http://ch1.m3u8',
+          title: 'Channel 1',
+          channelId: 1,
+        );
+        final second = PlayerSource.live(
+          url: 'http://ch2.m3u8',
+          title: 'Channel 2',
+          channelId: 2,
+        );
 
-      final firstLoad = controller.load(first);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      final secondLoad = controller.load(second);
-      await Future.wait([firstLoad, secondLoad]);
+        final firstLoad = controller.load(first);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final secondLoad = controller.load(second);
+        await Future.wait([firstLoad, secondLoad]);
 
-      expect(controller.state.source?.title, equals('Channel 2'));
-      expect(controller.state.source?.channelId, equals(2));
-      expect(fakeEngine.currentSource?.channelId, equals(2));
-    });
+        expect(controller.state.source?.title, equals('Channel 2'));
+        expect(controller.state.source?.channelId, equals(2));
+        expect(fakeEngine.currentSource?.channelId, equals(2));
+      },
+    );
 
-    test('stop() and cancelAutoReconnect clear stuck isRetrying HUD state', () async {
-      final source = PlayerSource.live(
-        url: 'http://live.stream/ch.m3u8',
-        title: 'Live Stream',
-        channelId: 9,
-      );
-      await controller.load(source);
+    test(
+      'stop() and cancelAutoReconnect clear stuck isRetrying HUD state',
+      () async {
+        final source = PlayerSource.live(
+          url: 'http://live.stream/ch.m3u8',
+          title: 'Live Stream',
+          channelId: 9,
+        );
+        await controller.load(source);
 
-      fakeEngine.simulateError(PlayerErrorType.networkUnavailable);
-      await Future<void>.delayed(Duration.zero);
-      expect(controller.state.isRetrying, isTrue);
+        fakeEngine.simulateError(PlayerErrorType.networkUnavailable);
+        await Future<void>.delayed(Duration.zero);
+        expect(controller.state.isRetrying, isTrue);
 
-      controller.cancelAutoReconnect();
-      expect(controller.state.isRetrying, isFalse);
-      expect(controller.state.retryAttempt, equals(0));
-      expect(controller.state.source?.channelId, equals(9));
+        controller.cancelAutoReconnect();
+        expect(controller.state.isRetrying, isFalse);
+        expect(controller.state.retryAttempt, equals(0));
+        expect(controller.state.source?.channelId, equals(9));
 
-      fakeEngine.simulateError(PlayerErrorType.networkUnavailable);
-      await Future<void>.delayed(Duration.zero);
-      expect(controller.state.isRetrying, isTrue);
+        fakeEngine.simulateError(PlayerErrorType.networkUnavailable);
+        await Future<void>.delayed(Duration.zero);
+        expect(controller.state.isRetrying, isTrue);
 
-      await controller.stop();
-      expect(controller.state.isRetrying, isFalse);
-      expect(controller.state.retryAttempt, equals(0));
-      expect(controller.state.source, isNull);
-    });
+        await controller.stop();
+        expect(controller.state.isRetrying, isFalse);
+        expect(controller.state.retryAttempt, equals(0));
+        expect(controller.state.source, isNull);
+      },
+    );
   });
 }

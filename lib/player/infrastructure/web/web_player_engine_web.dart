@@ -16,12 +16,12 @@ import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/domain/enums/software_decode_fallback_tier.dart';
 import 'package:iptv/player/domain/interfaces/player_engine.dart';
 import 'package:iptv/player/infrastructure/web/native_vod_bridge.dart';
+import 'package:iptv/player/infrastructure/web/native_vod_policy.dart';
 
 int _instanceIdCounter = 0;
 
-/// Detects whether the current web browser is running on an iOS device (iPhone/iPad)
-/// or is Safari capable of native hardware HLS playback via AVPlayer.
-bool isIosOrSafariWeb() {
+/// Detects iOS/iPadOS Safari, where native AVPlayer playback is preferred.
+bool isIosSafariWeb() {
   try {
     // Hardware/Native HLS capability probe:
     // Safari on Apple platforms (iOS/iPadOS/macOS) responds with 'probably' or 'maybe'
@@ -29,7 +29,7 @@ bool isIosOrSafariWeb() {
     final probe = html.VideoElement();
     final canPlayHls =
         probe.canPlayType('application/vnd.apple.mpegurl').isNotEmpty ||
-            probe.canPlayType('application/x-mpegurl').isNotEmpty;
+        probe.canPlayType('application/x-mpegurl').isNotEmpty;
 
     if (!canPlayHls) {
       return false;
@@ -42,25 +42,31 @@ bool isIosOrSafariWeb() {
         ua.contains('iphone') || ua.contains('ipad') || ua.contains('ipod');
 
     // iPadOS 13+ desktop-class Safari reports as Macintosh with multi-touch points
-    final isIpadOs = ua.contains('macintosh') &&
+    final isIpadOs =
+        ua.contains('macintosh') &&
         (html.window.navigator.maxTouchPoints ?? 0) > 1;
 
-    // Safari browser (excluding Chrome / Chromium / Android WebKit)
-    final isSafariBrowser = ua.contains('safari') &&
+    // Safari browser (excluding alternative iOS browsers and embedded WebViews).
+    final isSafariBrowser =
+        ua.contains('safari') &&
         !ua.contains('chrome') &&
         !ua.contains('crios') &&
+        !ua.contains('fxios') &&
+        !ua.contains('edgios') &&
+        !ua.contains('opios') &&
         !ua.contains('android');
 
-    return isIosDevice || isIpadOs || isSafariBrowser;
+    return (isIosDevice || isIpadOs) && isSafariBrowser;
   } catch (_) {
     return false;
   }
 }
 
+/// Backwards-compatible alias for existing callers.
+bool isIosOrSafariWeb() => isIosSafariWeb();
+
 /// Factory function to create [WebIosPlayerEngine] on web.
-PlayerEngine createWebIosPlayerEngine({
-  PlaybackBufferMode? initialBufferMode,
-}) {
+PlayerEngine createWebIosPlayerEngine({PlaybackBufferMode? initialBufferMode}) {
   return WebIosPlayerEngine();
 }
 
@@ -96,6 +102,8 @@ class WebIosPlayerEngine implements PlayerEngine {
   PlayerStatus _status = PlayerStatus.idle;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+  Duration _bufferedPosition = Duration.zero;
+  Duration? _pendingStartPosition;
   PlayerSource? _currentSource;
   PlayerMetrics _metrics = PlayerMetrics.empty;
   bool _isDisposed = false;
@@ -182,21 +190,17 @@ class WebIosPlayerEngine implements PlayerEngine {
     _handle = WebVideoHandle(
       viewTypeId: _viewTypeId,
       videoElement: video,
-      onAspectRatioChanged: (index, [scale = 1.0]) {
+      onAspectRatioChanged: (index, [_ = 1.0]) {
         if (index == 2) {
           // Fill (100% cover)
           video.style.objectFit = 'cover';
-          video.style.transform = 'none';
-        } else if (index == 0) {
-          // Best Fit (Smart contained zoom to eliminate/reduce black edges without content clipping)
-          video.style.objectFit = 'contain';
-          video.style.transformOrigin = 'center center';
-          video.style.transform = scale > 1.001 ? 'scale($scale)' : 'none';
         } else {
-          // 1: Fit (contain 1.0x), 3: 16:9, 4: 4:3
+          // Preserve the source ratio for Best Fit, Fit, 16:9, and 4:3.
+          // The Flutter view constrains forced-ratio modes; CSS only decides
+          // how the native video is fitted inside that box.
           video.style.objectFit = 'contain';
-          video.style.transform = 'none';
         }
+        video.style.transform = 'none';
       },
     );
 
@@ -209,12 +213,19 @@ class WebIosPlayerEngine implements PlayerEngine {
     _attachEventListeners(video);
     _startMetricsTimer();
 
-    AppLogger.info('WebIosPlayerEngine initialized (viewId: $_viewTypeId)', feature: 'player');
+    AppLogger.info(
+      'WebIosPlayerEngine initialized (viewId: $_viewTypeId)',
+      feature: 'player',
+    );
   }
 
   void _attachEventListeners(html.VideoElement video) {
     _eventSubscriptions.addAll([
-      video.onLoadedMetadata.listen((_) => _emitDimensions(video)),
+      video.onLoadedMetadata.listen((_) {
+        _emitDimensions(video);
+        _syncTimeline(video);
+        _applyPendingStartPosition(video);
+      }),
       video.onResize.listen((_) => _emitDimensions(video)),
       video.onPlay.listen((_) => _setStatus(PlayerStatus.playing)),
       video.onPlaying.listen((_) => _setStatus(PlayerStatus.playing)),
@@ -230,37 +241,83 @@ class WebIosPlayerEngine implements PlayerEngine {
           _setStatus(PlayerStatus.buffering);
         }
       }),
-      video.onTimeUpdate.listen((_) {
-        if (_isDisposed) return;
-        final currentSec = video.currentTime;
-        _position = Duration(milliseconds: (currentSec * 1000).round());
-        _positionController.add(_position);
-      }),
-      video.onDurationChange.listen((_) {
-        if (_isDisposed) return;
-        final d = video.duration;
-        if (d.isFinite && d > 0) {
-          _duration = Duration(milliseconds: (d * 1000).round());
-          _durationController.add(_duration);
-        }
-      }),
-      video.on['progress'].listen((_) {
-        if (_isDisposed) return;
-        try {
-          final buffered = video.buffered;
-          if (buffered.length > 0) {
-            final endSec = buffered.end(buffered.length - 1);
-            _bufferController.add(Duration(milliseconds: (endSec * 1000).round()));
-          }
-        } catch (_) {}
-      }),
+      video.onTimeUpdate.listen((_) => _syncPosition(video)),
+      video.onSeeked.listen((_) => _syncTimeline(video)),
+      video.onDurationChange.listen((_) => _syncDuration(video)),
+      video.on['progress'].listen((_) => _syncBufferedPosition(video)),
       video.onEnded.listen((_) => _setStatus(PlayerStatus.completed)),
       video.onError.listen((_) {
         final err = video.error;
-        AppLogger.warning('WebIosPlayerEngine error: code=${err?.code} message=${err?.message}', feature: 'player');
+        AppLogger.warning(
+          'WebIosPlayerEngine error: code=${err?.code} message=${err?.message}',
+          feature: 'player',
+        );
         _handleError(err);
       }),
     ]);
+  }
+
+  void _syncTimeline(html.VideoElement video) {
+    _syncDuration(video);
+    _syncPosition(video);
+    _syncBufferedPosition(video);
+  }
+
+  void _syncPosition(html.VideoElement video) {
+    if (_isDisposed) return;
+    final seconds = video.currentTime;
+    if (!seconds.isFinite || seconds < 0) return;
+    final position = Duration(milliseconds: (seconds * 1000).round());
+    if (_position == position) return;
+    _position = position;
+    _positionController.add(position);
+  }
+
+  void _syncDuration(html.VideoElement video) {
+    if (_isDisposed) return;
+    final seconds = video.duration;
+    if (!seconds.isFinite || seconds <= 0) return;
+    final duration = Duration(milliseconds: (seconds * 1000).round());
+    if (_duration == duration) return;
+    _duration = duration;
+    _durationController.add(duration);
+  }
+
+  void _syncBufferedPosition(html.VideoElement video) {
+    if (_isDisposed) return;
+    try {
+      final ranges = video.buffered;
+      final playhead = video.currentTime;
+      var bufferedEnd = playhead.isFinite && playhead > 0 ? playhead : 0.0;
+
+      // A scalar slider can only show one contiguous buffered region. Report
+      // the range containing the playhead rather than painting over gaps.
+      for (var index = 0; index < ranges.length; index++) {
+        final start = ranges.start(index);
+        final end = ranges.end(index);
+        if (playhead >= start - 0.05 && playhead <= end + 0.05) {
+          bufferedEnd = end;
+          break;
+        }
+      }
+
+      if (_duration > Duration.zero) {
+        bufferedEnd = bufferedEnd.clamp(0.0, _duration.inMilliseconds / 1000.0);
+      }
+      final buffered = Duration(milliseconds: (bufferedEnd * 1000).round());
+      if (_bufferedPosition == buffered) return;
+      _bufferedPosition = buffered;
+      _bufferController.add(buffered);
+    } catch (_) {
+      // Safari may invalidate TimeRanges while replacing a media source.
+    }
+  }
+
+  void _applyPendingStartPosition(html.VideoElement video) {
+    final pending = _pendingStartPosition;
+    if (pending == null) return;
+    _pendingStartPosition = null;
+    _setCurrentPosition(video, pending);
   }
 
   void _emitDimensions(html.VideoElement video) {
@@ -347,6 +404,7 @@ class WebIosPlayerEngine implements PlayerEngine {
     _metricsTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_isDisposed || _videoElement == null) return;
       final video = _videoElement!;
+      _syncTimeline(video);
       _metrics = PlayerMetrics(
         videoWidth: video.videoWidth > 0 ? video.videoWidth : null,
         videoHeight: video.videoHeight > 0 ? video.videoHeight : null,
@@ -366,6 +424,11 @@ class WebIosPlayerEngine implements PlayerEngine {
     _currentSource = source;
     _position = Duration.zero;
     _duration = Duration.zero;
+    _bufferedPosition = Duration.zero;
+    _pendingStartPosition =
+        source.isVod && (source.startAt ?? Duration.zero) > Duration.zero
+        ? source.startAt
+        : null;
     _setStatus(PlayerStatus.buffering);
 
     String streamUrl = source.url;
@@ -379,39 +442,33 @@ class WebIosPlayerEngine implements PlayerEngine {
     // Movies/series are often Matroska (.mkv). AVPlayer cannot demux MKV, so
     // remux into fragmented MP4 via HopeTvNativeVod while still using this
     // native <video> element (hardware decode on iOS).
-    if (_shouldUseNativeVodHelper(source, streamUrl)) {
+    if (_shouldUseNativeVodHelper(streamUrl)) {
       await _openWithNativeVodHelper(video, streamUrl);
       return;
     }
 
     _usingNativeVodHelper = false;
+    await _openDirect(video, streamUrl);
+  }
+
+  Future<void> _openDirect(html.VideoElement video, String streamUrl) async {
     video.src = streamUrl;
     video.load();
 
     try {
       await video.play();
     } catch (e) {
-      AppLogger.warning('Web iOS Player autoplay deferred or restricted: $e', feature: 'player');
+      AppLogger.warning(
+        'Web iOS Player autoplay deferred or restricted: $e',
+        feature: 'player',
+      );
       // If autoplay was rejected by iOS policy due to user gesture requirement,
       // it will play once user triggers interaction.
     }
   }
 
-  bool _shouldUseNativeVodHelper(PlayerSource source, String streamUrl) {
-    if (source.isVod) return true;
-    final target = _unwrapProxyTarget(streamUrl).toLowerCase();
-    return target.contains('/movie/') ||
-        target.contains('/series/') ||
-        target.contains('.mkv') ||
-        target.contains('.avi');
-  }
-
-  String _unwrapProxyTarget(String url) {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return url;
-    if (!uri.path.contains('/proxy')) return url;
-    return uri.queryParameters['url'] ?? url;
-  }
+  bool _shouldUseNativeVodHelper(String streamUrl) =>
+      requiresIosVodRemux(streamUrl);
 
   Future<void> _openWithNativeVodHelper(
     html.VideoElement video,
@@ -426,22 +483,20 @@ class WebIosPlayerEngine implements PlayerEngine {
           feature: 'player',
         );
         _usingNativeVodHelper = false;
-        video.src = streamUrl;
-        video.load();
-        try {
-          await video.play();
-        } catch (_) {}
+        await _openDirect(video, streamUrl);
         return;
       }
-      AppLogger.info(
-        'Web iOS Player VOD via native helper',
+      AppLogger.info('Web iOS Player VOD via native helper', feature: 'player');
+    } catch (e) {
+      AppLogger.warning(
+        'Web iOS native VOD helper failed: $e',
         feature: 'player',
       );
-    } catch (e) {
-      AppLogger.warning('Web iOS native VOD helper failed: $e', feature: 'player');
       _usingNativeVodHelper = false;
-      _setStatus(PlayerStatus.error);
-      _errorController.add(PlayerErrorType.unsupportedFormat);
+      // Some panels report an MKV/AVI extension while returning an MP4
+      // container. Give native AVPlayer a final direct attempt and let its
+      // media error provide the authoritative failure classification.
+      await _openDirect(video, streamUrl);
     }
   }
 
@@ -474,6 +529,8 @@ class WebIosPlayerEngine implements PlayerEngine {
     _currentSource = null;
     _position = Duration.zero;
     _duration = Duration.zero;
+    _bufferedPosition = Duration.zero;
+    _pendingStartPosition = null;
     _setStatus(PlayerStatus.idle);
   }
 
@@ -490,14 +547,44 @@ class WebIosPlayerEngine implements PlayerEngine {
   @override
   Future<void> seek(Duration position) async {
     if (_isDisposed || _videoElement == null) return;
-    _videoElement!.currentTime = position.inMilliseconds / 1000.0;
+    _setCurrentPosition(_videoElement!, position);
   }
 
   @override
   Future<void> seekRelative(Duration offset) async {
     if (_isDisposed || _videoElement == null) return;
-    final current = _videoElement!.currentTime;
-    _videoElement!.currentTime = current + (offset.inMilliseconds / 1000.0);
+    final current = Duration(
+      milliseconds: (_videoElement!.currentTime * 1000).round(),
+    );
+    _setCurrentPosition(_videoElement!, current + offset);
+  }
+
+  void _setCurrentPosition(html.VideoElement video, Duration requested) {
+    var milliseconds = requested.inMilliseconds;
+    if (milliseconds < 0) milliseconds = 0;
+
+    final nativeDuration = video.duration;
+    final maxMilliseconds = nativeDuration.isFinite && nativeDuration > 0
+        ? (nativeDuration * 1000).round()
+        : _duration.inMilliseconds;
+    if (maxMilliseconds > 0 && milliseconds > maxMilliseconds) {
+      milliseconds = maxMilliseconds;
+    }
+
+    try {
+      video.currentTime = milliseconds / 1000.0;
+      final position = Duration(milliseconds: milliseconds);
+      _position = position;
+      _positionController.add(position);
+    } catch (error) {
+      // Metadata is not ready yet. Apply resume/seek as soon as Safari exposes
+      // its VOD timeline instead of silently leaving the thumb at zero.
+      _pendingStartPosition = Duration(milliseconds: milliseconds);
+      AppLogger.warning(
+        'Web iOS Player deferred seek until metadata: $error',
+        feature: 'player',
+      );
+    }
   }
 
   @override
@@ -545,7 +632,9 @@ class WebIosPlayerEngine implements PlayerEngine {
   }
 
   @override
-  Future<void> applySoftwareDecodeEscalation(SoftwareDecodeFallbackTier tier) async {
+  Future<void> applySoftwareDecodeEscalation(
+    SoftwareDecodeFallbackTier tier,
+  ) async {
     // Hardware decoding escalation is not applicable to iOS AVPlayer.
   }
 
