@@ -12,7 +12,11 @@ JSObject? _hopeTvNativeVod() {
 
 /// Calls `window.HopeTvNativeVod.play(video, url)`.
 /// Returns `false` when the helper script is not loaded.
-Future<bool> nativeVodPlay(Object videoElement, String url) async {
+Future<bool> nativeVodPlay(
+  Object videoElement,
+  String url, {
+  Duration startAt = Duration.zero,
+}) async {
   final helper = _hopeTvNativeVod();
   if (helper == null) {
     return false;
@@ -21,11 +25,27 @@ Future<bool> nativeVodPlay(Object videoElement, String url) async {
   final result = helper.callMethodVarArgs('play'.toJS, <JSAny?>[
     videoElement as JSAny,
     url.toJS,
+    (startAt.inMilliseconds / 1000).toJS,
   ]);
   if (result != null && result.isA<JSPromise>()) {
     await (result as JSPromise).toDart;
   }
   return true;
+}
+
+/// Performs a seek through the compatibility helper. For a remuxed MKV/AVI,
+/// the helper rebuilds the fragmented stream at the requested timestamp.
+Future<void> nativeVodSeek(Object videoElement, Duration position) async {
+  final helper = _hopeTvNativeVod();
+  if (helper == null) return;
+
+  final result = helper.callMethodVarArgs('seek'.toJS, <JSAny?>[
+    videoElement as JSAny,
+    (position.inMilliseconds / 1000).toJS,
+  ]);
+  if (result != null && result.isA<JSPromise>()) {
+    await (result as JSPromise).toDart;
+  }
 }
 
 /// Calls `window.HopeTvNativeVod.stop(video)`.

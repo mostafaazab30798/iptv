@@ -602,7 +602,8 @@ class _HomeFavoritesSliver extends ConsumerWidget {
                   final existingMovie = featuredMovies.firstWhereOrNull(
                     (m) => m.streamId == fav.itemId,
                   );
-                  final movie = existingMovie ??
+                  final movie =
+                      existingMovie ??
                       Movie(
                         id: fav.itemId,
                         serverId: 0,
@@ -620,10 +621,10 @@ class _HomeFavoritesSliver extends ConsumerWidget {
 
                 case FavoriteType.series:
                   final existingSeries = popularSeries.firstWhereOrNull(
-                    (s) =>
-                        (s.seriesId != 0 ? s.seriesId : s.id) == fav.itemId,
+                    (s) => (s.seriesId != 0 ? s.seriesId : s.id) == fav.itemId,
                   );
-                  final series = existingSeries ??
+                  final series =
+                      existingSeries ??
                       Series(
                         id: fav.itemId,
                         serverId: 0,
@@ -643,7 +644,8 @@ class _HomeFavoritesSliver extends ConsumerWidget {
                   final existingChannel = liveChannels.firstWhereOrNull(
                     (c) => c.streamId == fav.itemId,
                   );
-                  final channel = existingChannel ??
+                  final channel =
+                      existingChannel ??
                       Channel(
                         id: fav.itemId,
                         serverId: 0,
@@ -657,11 +659,8 @@ class _HomeFavoritesSliver extends ConsumerWidget {
                     width: poster.width,
                     height: poster.posterHeight,
                     showBadge: true,
-                    onTap: () => _HomePlayback.playChannel(
-                      context,
-                      ref,
-                      channel,
-                    ),
+                    onTap: () =>
+                        _HomePlayback.playChannel(context, ref, channel),
                   );
               }
             },
@@ -691,10 +690,9 @@ abstract final class _HomePlayback {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final streamUrl = ref.read(streamUrlBuilderProvider).liveForSession(
-      session,
-      streamId: channel.streamId,
-    );
+    final streamUrl = ref
+        .read(streamUrlBuilderProvider)
+        .liveForSession(session, streamId: channel.streamId);
 
     final homeState = ref.read(homeControllerProvider);
     final List<Channel> channels =
@@ -710,10 +708,9 @@ abstract final class _HomePlayback {
     playerNotifier.setLazyLivePlaylist(
       channels: channels,
       initialIndex: initialIndex >= 0 ? initialIndex : 0,
-      urlFor: (c) => ref.read(streamUrlBuilderProvider).liveForSession(
-      session,
-      streamId: c.streamId,
-    ),
+      urlFor: (c) => ref
+          .read(streamUrlBuilderProvider)
+          .liveForSession(session, streamId: c.streamId),
     );
 
     playerNotifier.load(
@@ -732,11 +729,13 @@ abstract final class _HomePlayback {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
-      session,
-      streamId: movie.streamId,
-      extension: movie.containerExtension ?? 'mp4',
-    );
+    final streamUrl = ref
+        .read(streamUrlBuilderProvider)
+        .vodForSession(
+          session,
+          streamId: movie.streamId,
+          extension: movie.containerExtension ?? 'mp4',
+        );
 
     ref
         .read(playerControllerProvider.notifier)
@@ -765,10 +764,9 @@ abstract final class _HomePlayback {
         : Duration.zero;
 
     if (entry.type == WatchHistoryType.movie) {
-      final streamUrl = ref.read(streamUrlBuilderProvider).vodForSession(
-      session,
-      streamId: entry.itemId,
-    );
+      final streamUrl = ref
+          .read(streamUrlBuilderProvider)
+          .vodForSession(session, streamId: entry.itemId);
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -781,10 +779,9 @@ abstract final class _HomePlayback {
             ),
           );
     } else if (entry.type == WatchHistoryType.episode) {
-      final streamUrl = ref.read(streamUrlBuilderProvider).seriesForSession(
-      session,
-      streamId: entry.itemId,
-    );
+      final streamUrl = ref
+          .read(streamUrlBuilderProvider)
+          .seriesForSession(session, streamId: entry.itemId);
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -810,18 +807,20 @@ abstract final class _HomePlayback {
 
     context.push(Routes.player);
   }
-
 }
 
 /// Poster row metrics keyed by [FormFactor]. Phone keeps prior 215×120.
-({double height, double itemWidth}) _homePosterRowMetrics(BuildContext context) =>
-    PosterCardLayout.posterRowMetricsOf(context);
+({double height, double itemWidth}) _homePosterRowMetrics(
+  BuildContext context,
+) => PosterCardLayout.posterRowMetricsOf(context);
 
 /// Channel / favorites row metrics. Phone keeps prior 135×148.
-({double height, double itemWidth}) _homeChannelRowMetrics(BuildContext context) {
+({double height, double itemWidth}) _homeChannelRowMetrics(
+  BuildContext context,
+) {
   switch (FormFactorResolver.of(context)) {
     case FormFactor.tv:
-      return (height: 145, itemWidth: 160);
+      return (height: 130, itemWidth: 144);
     case FormFactor.tablet:
       return (height: 128, itemWidth: 140);
     case FormFactor.desktop:

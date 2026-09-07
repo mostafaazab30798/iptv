@@ -83,6 +83,7 @@ class WebIosPlayerEngine implements PlayerEngine {
   late final int _instanceId;
   late final String _viewTypeId;
   html.VideoElement? _videoElement;
+  html.DivElement? _hostElement;
   WebVideoHandle? _handle;
 
   final _statusController = StreamController<PlayerStatus>.broadcast();
@@ -183,10 +184,15 @@ class WebIosPlayerEngine implements PlayerEngine {
       ..style.width = '100%'
       ..style.height = '100%'
       ..style.overflow = 'hidden'
-      ..style.backgroundColor = 'black';
+      ..style.backgroundColor = 'black'
+      // The host div otherwise intercepts touches even though the child video
+      // has pointer-events:none. That makes Flutter controls react only in the
+      // letterboxed area outside the platform view on iOS Safari.
+      ..style.pointerEvents = 'none';
     host.append(video);
 
     _videoElement = video;
+    _hostElement = host;
     _handle = WebVideoHandle(
       viewTypeId: _viewTypeId,
       videoElement: video,
@@ -372,13 +378,16 @@ class WebIosPlayerEngine implements PlayerEngine {
 
   void _handleError(html.MediaError? err) {
     if (_isDisposed) return;
+
+    // Replacing src, retrying, and tearing down MediaSource legitimately emit
+    // MEDIA_ERR_ABORTED. It is cancellation, not a playback failure.
+    if (err?.code == 1) return;
+
     _setStatus(PlayerStatus.error);
 
     PlayerErrorType errorType = PlayerErrorType.unknown;
     if (err != null) {
       switch (err.code) {
-        case 1: // MEDIA_ERR_ABORTED
-          return;
         case 2: // MEDIA_ERR_NETWORK
           errorType = PlayerErrorType.timeout;
           break;
@@ -421,7 +430,16 @@ class WebIosPlayerEngine implements PlayerEngine {
       await initialize();
     }
 
+    final video = _videoElement!;
+
+    // Cancel an old MKV/AVI conversion before replacing its media source.
+    // Without this, episode switches and retries leave the previous network
+    // reader and converter running in the background.
+    await _stopNativeVodHelper();
+    video.pause();
+
     _currentSource = source;
+    _configureControlsForSource(video, source);
     _position = Duration.zero;
     _duration = Duration.zero;
     _bufferedPosition = Duration.zero;
@@ -437,18 +455,38 @@ class WebIosPlayerEngine implements PlayerEngine {
     // Convert Xtream .ts live URLs to .m3u8 so Safari can play via native HLS.
     streamUrl = _ensureNativeHlsUrl(streamUrl);
 
-    final video = _videoElement!;
-
     // Movies/series are often Matroska (.mkv). AVPlayer cannot demux MKV, so
     // remux into fragmented MP4 via HopeTvNativeVod while still using this
     // native <video> element (hardware decode on iOS).
     if (_shouldUseNativeVodHelper(streamUrl)) {
-      await _openWithNativeVodHelper(video, streamUrl);
+      final startAt = _pendingStartPosition ?? Duration.zero;
+      _pendingStartPosition = null;
+      await _openWithNativeVodHelper(video, streamUrl, startAt: startAt);
       return;
     }
 
     _usingNativeVodHelper = false;
     await _openDirect(video, streamUrl);
+  }
+
+  void _configureControlsForSource(
+    html.VideoElement video,
+    PlayerSource source,
+  ) {
+    final useNativeControls = source.isVod;
+    video.controls = useNativeControls;
+    video.style.pointerEvents = useNativeControls ? 'auto' : 'none';
+    _hostElement?.style.pointerEvents = useNativeControls ? 'auto' : 'none';
+
+    if (useNativeControls) {
+      // Long-form VOD on iPhone enters Apple's native fullscreen player. On
+      // iPad it may remain inline, but still uses Safari/AVPlayer controls.
+      video.removeAttribute('playsinline');
+      video.removeAttribute('webkit-playsinline');
+    } else {
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+    }
   }
 
   Future<void> _openDirect(html.VideoElement video, String streamUrl) async {
@@ -472,11 +510,12 @@ class WebIosPlayerEngine implements PlayerEngine {
 
   Future<void> _openWithNativeVodHelper(
     html.VideoElement video,
-    String streamUrl,
-  ) async {
+    String streamUrl, {
+    Duration startAt = Duration.zero,
+  }) async {
     _usingNativeVodHelper = true;
     try {
-      final ok = await nativeVodPlay(video, streamUrl);
+      final ok = await nativeVodPlay(video, streamUrl, startAt: startAt);
       if (!ok) {
         AppLogger.warning(
           'HopeTvNativeVod helper missing; falling back to direct src',
@@ -547,7 +586,23 @@ class WebIosPlayerEngine implements PlayerEngine {
   @override
   Future<void> seek(Duration position) async {
     if (_isDisposed || _videoElement == null) return;
-    _setCurrentPosition(_videoElement!, position);
+    final target = _clampPosition(_videoElement!, position);
+    if (_usingNativeVodHelper) {
+      try {
+        await nativeVodSeek(_videoElement!, target);
+        _emitOptimisticPosition(target);
+        return;
+      } catch (error) {
+        AppLogger.warning(
+          'Web iOS compatibility seek failed: $error',
+          feature: 'player',
+        );
+        _setStatus(PlayerStatus.error);
+        _errorController.add(PlayerErrorType.codecError);
+        return;
+      }
+    }
+    _setCurrentPosition(_videoElement!, target);
   }
 
   @override
@@ -556,10 +611,10 @@ class WebIosPlayerEngine implements PlayerEngine {
     final current = Duration(
       milliseconds: (_videoElement!.currentTime * 1000).round(),
     );
-    _setCurrentPosition(_videoElement!, current + offset);
+    await seek(current + offset);
   }
 
-  void _setCurrentPosition(html.VideoElement video, Duration requested) {
+  Duration _clampPosition(html.VideoElement video, Duration requested) {
     var milliseconds = requested.inMilliseconds;
     if (milliseconds < 0) milliseconds = 0;
 
@@ -570,16 +625,24 @@ class WebIosPlayerEngine implements PlayerEngine {
     if (maxMilliseconds > 0 && milliseconds > maxMilliseconds) {
       milliseconds = maxMilliseconds;
     }
+    return Duration(milliseconds: milliseconds);
+  }
+
+  void _emitOptimisticPosition(Duration position) {
+    _position = position;
+    _positionController.add(position);
+  }
+
+  void _setCurrentPosition(html.VideoElement video, Duration requested) {
+    final target = _clampPosition(video, requested);
 
     try {
-      video.currentTime = milliseconds / 1000.0;
-      final position = Duration(milliseconds: milliseconds);
-      _position = position;
-      _positionController.add(position);
+      video.currentTime = target.inMilliseconds / 1000.0;
+      _emitOptimisticPosition(target);
     } catch (error) {
       // Metadata is not ready yet. Apply resume/seek as soon as Safari exposes
       // its VOD timeline instead of silently leaving the thumb at zero.
-      _pendingStartPosition = Duration(milliseconds: milliseconds);
+      _pendingStartPosition = target;
       AppLogger.warning(
         'Web iOS Player deferred seek until metadata: $error',
         feature: 'player',
@@ -666,6 +729,7 @@ class WebIosPlayerEngine implements PlayerEngine {
       } catch (_) {}
       _videoElement!.load();
       _videoElement = null;
+      _hostElement = null;
     }
 
     await _statusController.close();

@@ -656,7 +656,9 @@ class PlayerController extends StateNotifier<PlayerState> {
     await seek(position);
     if (shouldResume && mounted) {
       await _smartEngine.play();
-      if (mounted) state = state.copyWith(status: PlayerStatus.playing);
+      if (mounted && _engine.currentStatus == PlayerStatus.playing) {
+        state = state.copyWith(status: PlayerStatus.playing);
+      }
     }
   }
 
@@ -673,6 +675,11 @@ class PlayerController extends StateNotifier<PlayerState> {
 
     final frameBeforeSeek = await _smartEngine.captureFrame();
     if (!mounted || !_seekScrubActive) return null;
+    // HTML video on iOS cannot be captured when the IPTV stream is
+    // cross-origin. Do not seek the real player for a preview that can never
+    // be displayed: doing so on every pointer update floods AVPlayer with
+    // seeks and can strand progressive/remuxed VOD in buffering.
+    if (frameBeforeSeek == null || frameBeforeSeek.isEmpty) return null;
     await _smartEngine.seekForPreview(position);
     if (!mounted || !_seekScrubActive) return null;
     // Some backends briefly resume after a seek even if they were paused.
@@ -705,8 +712,7 @@ class PlayerController extends StateNotifier<PlayerState> {
       latestFrame = await _smartEngine.captureFrame();
       if (latestFrame != null &&
           latestFrame.isNotEmpty &&
-          (frameBeforeSeek == null ||
-              !listEquals(latestFrame, frameBeforeSeek))) {
+          !listEquals(latestFrame, frameBeforeSeek)) {
         return latestFrame;
       }
     }

@@ -28,8 +28,10 @@
   <meta property="og:url" content="https://hope-tv.site/">
 
   <!-- iOS meta tags & icons -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HOPE TV">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
@@ -39,7 +41,7 @@
   <title>HOPE TV</title>
   <link rel="manifest" href="manifest.json">
   <!-- Native iOS/Safari VOD helper: remuxes MKV into fMP4 for AVPlayer -->
-  <script src="js/hope_tv_native_vod.js"></script>
+  <script src="js/hope_tv_native_vod.js?v=20260907-2"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {

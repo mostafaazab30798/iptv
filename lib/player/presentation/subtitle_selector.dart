@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 /// Modal dialog / bottom sheet to select a subtitle track.
 class SubtitleSelectorModal extends StatelessWidget {
@@ -61,32 +62,59 @@ class SubtitleSelectorModal extends StatelessWidget {
             if (tracks.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16),
-                child: Text('No subtitle tracks available', style: TextStyle(color: Colors.white70)),
+                child: Text(
+                  'No subtitle tracks available',
+                  style: TextStyle(color: Colors.white70),
+                ),
               )
             else
-              ...tracks.map((track) {
+              ...tracks.asMap().entries.map((entry) {
+                final index = entry.key;
+                final track = entry.value;
                 final isSelected = currentTrack?.id == track.id;
-                return ListTile(
-                  leading: HugeIcon(
-                    icon: AppIcons.subtitles,
-                    color: isSelected ? AppColors.accent : Colors.white70,
-                    size: 22,
-                  ),
-                  title: Text(
-                    track.title,
-                    style: TextStyle(
-                      color: isSelected ? AppColors.accent : Colors.white,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                void selectTrack() {
+                  onSelect(track);
+                  Navigator.of(context).pop();
+                }
+
+                return TvFocusable(
+                  autofocus: index == 0,
+                  entry: index == 0,
+                  debugLabel: 'subtitle-track-${track.id}',
+                  onSelect: selectTrack,
+                  scale: 1.02,
+                  child: ListTile(
+                    leading: HugeIcon(
+                      icon: AppIcons.subtitles,
+                      color: isSelected ? AppColors.accent : Colors.white70,
+                      size: 22,
                     ),
+                    title: Text(
+                      track.title,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.accent : Colors.white,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    subtitle: track.language != null
+                        ? Text(
+                            track.language!.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                            ),
+                          )
+                        : null,
+                    trailing: isSelected
+                        ? const HugeIcon(
+                            icon: AppIcons.checkSimple,
+                            color: AppColors.accent,
+                            size: 20,
+                          )
+                        : null,
                   ),
-                  subtitle: track.language != null
-                      ? Text(track.language!.toUpperCase(), style: const TextStyle(color: Colors.white38, fontSize: 12))
-                      : null,
-                  trailing: isSelected ? const HugeIcon(icon: AppIcons.checkSimple, color: AppColors.accent, size: 20) : null,
-                  onTap: () {
-                    onSelect(track);
-                    Navigator.of(context).pop();
-                  },
                 );
               }),
           ],

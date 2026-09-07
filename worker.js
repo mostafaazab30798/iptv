@@ -63,6 +63,10 @@ function setCachedRedirect(urlKey, targetHref) {
   });
 }
 
+function deleteCachedRedirect(urlKey) {
+  redirectCache.delete(urlKey);
+}
+
 function isHlsPlaylistRequest(targetParsed, proxyPathname) {
   const path = (targetParsed.pathname || '').toLowerCase();
   return (
@@ -187,7 +191,18 @@ export default {
         const responseHeaders = new Headers(upstreamResponse.headers);
         applyCors(responseHeaders, cors);
         responseHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Location');
-        responseHeaders.set('Accept-Ranges', 'bytes');
+        // Never advertise byte seeking when the upstream does not support it.
+        // Safari trusts this header and can otherwise enter a permanent wait
+        // after issuing a range request that receives a full 200 response.
+        const upstreamAcceptRanges = upstreamResponse.headers.get('accept-ranges');
+        if (upstreamResponse.status === 206 || upstreamAcceptRanges) {
+          responseHeaders.set(
+            'Accept-Ranges',
+            upstreamAcceptRanges || 'bytes'
+          );
+        } else {
+          responseHeaders.delete('Accept-Ranges');
+        }
 
         // Prefer explicit Content-Length for media_kit seeking when upstream had one.
         const upstreamLength = upstreamResponse.headers.get('content-length');
@@ -287,7 +302,8 @@ export default {
         url.pathname === '/' ||
         url.pathname === '/index.html' ||
         url.pathname.endsWith('flutter_bootstrap.js') ||
-        url.pathname.endsWith('flutter_service_worker.js')
+        url.pathname.endsWith('flutter_service_worker.js') ||
+        url.pathname.endsWith('/js/hope_tv_native_vod.js')
       ) {
         const h = new Headers(resp.headers);
         h.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -436,6 +452,13 @@ function buildUpstreamHeaders(request, targetUrl) {
   const range = request.headers.get('range');
   if (range) {
     upstreamHeaders.set('Range', range);
+    // Avoid compressed byte offsets, which make Content-Range unusable for
+    // native media seeking.
+    upstreamHeaders.set('Accept-Encoding', 'identity');
+  }
+  const ifRange = request.headers.get('if-range');
+  if (ifRange) {
+    upstreamHeaders.set('If-Range', ifRange);
   }
   return upstreamHeaders;
 }
@@ -543,6 +566,11 @@ async function fetchFromIpSocket(targetUrl, request, originalHost = null) {
   const range = request.headers.get('range');
   if (range) {
     reqLines += `Range: ${range}\r\n`;
+    reqLines += `Accept-Encoding: identity\r\n`;
+  }
+  const ifRange = request.headers.get('if-range');
+  if (ifRange) {
+    reqLines += `If-Range: ${ifRange}\r\n`;
   }
   reqLines += `\r\n`;
 
@@ -718,6 +746,16 @@ async function fetchWithRedirectGuard(initialUrl, request, options = {}) {
       );
       if (socketResp) {
         response = socketResp;
+      } else if (cachedTarget && current.href === cachedTarget) {
+        // CDN tokens can expire before the cache entry. Retry through the
+        // panel so it can issue a fresh redirect instead of failing every
+        // subsequent Range seek against the stale CDN URL.
+        deleteCachedRedirect(cacheKey);
+        current = initialUrl;
+        panelHostHeader = isIpAddress(initialUrl.hostname)
+          ? null
+          : initialUrl.host;
+        continue;
       } else {
         throw fetchErr;
       }
@@ -763,6 +801,19 @@ async function fetchWithRedirectGuard(initialUrl, request, options = {}) {
       }
 
       current = next;
+      continue;
+    }
+
+    if (
+      cachedTarget &&
+      current.href === cachedTarget &&
+      shouldTrySocketFallback(response.status)
+    ) {
+      deleteCachedRedirect(cacheKey);
+      current = initialUrl;
+      panelHostHeader = isIpAddress(initialUrl.hostname)
+        ? null
+        : initialUrl.host;
       continue;
     }
 

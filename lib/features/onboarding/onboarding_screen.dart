@@ -44,6 +44,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   late ServerPreset _selectedPreset;
   bool _isCustomServer = false;
   bool _obscurePassword = true;
+  bool _hasSavedCredentials = false;
+  bool _savedAccountExpired = false;
   String? _errorMessage;
   String? _m3uSuccessNotice;
 
@@ -70,8 +72,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _urlController.text = saved.serverUrl;
         _userController.text = saved.username;
         _passController.text = saved.password;
+        _hasSavedCredentials = true;
+        _savedAccountExpired =
+            saved.serverExpiresAt?.isBefore(DateTime.now().toUtc()) ?? false;
       });
     }
+  }
+
+  Future<void> _clearSavedLogin() async {
+    await ref.read(sessionProvider.notifier).clearSession();
+    if (!mounted) return;
+    setState(() {
+      _hasSavedCredentials = false;
+      _savedAccountExpired = false;
+      _errorMessage = null;
+      _userController.clear();
+      _passController.clear();
+    });
   }
 
   @override
@@ -157,7 +174,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _signIn() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    setState(() => _errorMessage = null);
+    setState(() {
+      _errorMessage = null;
+      _savedAccountExpired = false;
+    });
 
     final serverUrl = _isCustomServer
         ? _urlController.text.trim()
@@ -747,7 +767,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
 
           // Error Banner
-          if (_errorMessage != null) ...[
+          if (_savedAccountExpired || _errorMessage != null) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
               padding: const EdgeInsets.all(12),
@@ -768,7 +788,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _errorMessage!,
+                      _savedAccountExpired
+                          ? context.l10n.iptvAccountExpired
+                          : _errorMessage!,
                       style: const TextStyle(
                         color: AppColors.error,
                         fontSize: 12,
@@ -846,6 +868,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             ),
           ),
+          if (_hasSavedCredentials) ...[
+            const SizedBox(height: AppSpacing.sm),
+            TextButton.icon(
+              onPressed: isLoading ? null : _clearSavedLogin,
+              icon: const HugeIcon(
+                icon: AppIcons.logout,
+                color: AppColors.textSecondary,
+                size: 18,
+              ),
+              label: Text(context.l10n.settingsConfirmSignOut),
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
             onPressed: isLoading ? null : _openM3uConverterDialog,

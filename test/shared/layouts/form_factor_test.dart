@@ -71,11 +71,11 @@ void main() {
       expect(phone.heroFraction, 0.38);
     });
 
-    test('tv budgets use compact header and 0.45 hero', () {
+    test('tv budgets use compact header and a zoomed-out hero', () {
       final tv = ChromeHeights.forFactor(FormFactor.tv);
       expect(tv.header, 56);
       expect(tv.dock, 0);
-      expect(tv.heroFraction, 0.45);
+      expect(tv.heroFraction, 0.40);
     });
   });
 }

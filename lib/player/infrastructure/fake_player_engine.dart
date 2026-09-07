@@ -16,8 +16,10 @@ class FakePlayerEngine implements PlayerEngine {
   final _durationController = StreamController<Duration>.broadcast();
   final _bufferController = StreamController<Duration>.broadcast();
   final _errorController = StreamController<PlayerErrorType>.broadcast();
-  final _audioTracksController = StreamController<List<PlayerAudioTrack>>.broadcast();
-  final _subtitleTracksController = StreamController<List<PlayerSubtitleTrack>>.broadcast();
+  final _audioTracksController =
+      StreamController<List<PlayerAudioTrack>>.broadcast();
+  final _subtitleTracksController =
+      StreamController<List<PlayerSubtitleTrack>>.broadcast();
   final _metricsController = StreamController<PlayerMetrics>.broadcast();
 
   PlayerStatus _status = PlayerStatus.idle;
@@ -32,9 +34,12 @@ class FakePlayerEngine implements PlayerEngine {
   bool shouldFailOnOpen = false;
   PlayerErrorType failureErrorType = PlayerErrorType.networkUnavailable;
   Duration openDelay = Duration.zero;
+  Uint8List? capturedFrame;
+  int previewSeekCount = 0;
 
   /// Tracks the last tier applied via [applySoftwareDecodeEscalation] for test assertions.
-  SoftwareDecodeFallbackTier lastAppliedSwDecodeTier = SoftwareDecodeFallbackTier.none;
+  SoftwareDecodeFallbackTier lastAppliedSwDecodeTier =
+      SoftwareDecodeFallbackTier.none;
 
   /// Last buffer mode applied via [setBufferMode].
   PlaybackBufferMode? lastBufferMode;
@@ -83,10 +88,12 @@ class FakePlayerEngine implements PlayerEngine {
   Stream<PlayerErrorType> get errorStream => _errorController.stream;
 
   @override
-  Stream<List<PlayerAudioTrack>> get audioTracksStream => _audioTracksController.stream;
+  Stream<List<PlayerAudioTrack>> get audioTracksStream =>
+      _audioTracksController.stream;
 
   @override
-  Stream<List<PlayerSubtitleTrack>> get subtitleTracksStream => _subtitleTracksController.stream;
+  Stream<List<PlayerSubtitleTrack>> get subtitleTracksStream =>
+      _subtitleTracksController.stream;
 
   @override
   Stream<PlayerMetrics> get metricsStream => _metricsController.stream;
@@ -118,8 +125,13 @@ class FakePlayerEngine implements PlayerEngine {
     openCount++;
     _emitStatus(PlayerStatus.playing);
     _emitPosition(const Duration(seconds: 1));
+    _durationController.add(_duration);
     _audioTracksController.add([
-      const PlayerAudioTrack(id: '1', title: 'English [Stereo]', language: 'eng'),
+      const PlayerAudioTrack(
+        id: '1',
+        title: 'English [Stereo]',
+        language: 'eng',
+      ),
       const PlayerAudioTrack(id: '2', title: 'Arabic [5.1]', language: 'ara'),
     ]);
     _subtitleTracksController.add([
@@ -166,10 +178,13 @@ class FakePlayerEngine implements PlayerEngine {
   }
 
   @override
-  Future<void> seekForPreview(Duration position) => seek(position);
+  Future<void> seekForPreview(Duration position) {
+    previewSeekCount++;
+    return seek(position);
+  }
 
   @override
-  Future<Uint8List?> captureFrame() async => null;
+  Future<Uint8List?> captureFrame() async => capturedFrame;
 
   @override
   Future<void> setPlaybackRate(double rate) async {
@@ -206,7 +221,9 @@ class FakePlayerEngine implements PlayerEngine {
   }
 
   @override
-  Future<void> applySoftwareDecodeEscalation(SoftwareDecodeFallbackTier tier) async {
+  Future<void> applySoftwareDecodeEscalation(
+    SoftwareDecodeFallbackTier tier,
+  ) async {
     lastAppliedSwDecodeTier = tier;
   }
 
@@ -245,6 +262,7 @@ class FakePlayerEngine implements PlayerEngine {
     _emitStatus(PlayerStatus.error);
     if (!_errorController.isClosed) _errorController.add(err);
   }
+
   void simulateCompleted() => _emitStatus(PlayerStatus.completed);
 
   void _emitStatus(PlayerStatus status) {

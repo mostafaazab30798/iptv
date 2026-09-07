@@ -7,10 +7,7 @@ void main() {
     test('scales poster height from width by default aspect', () {
       final fitted = PosterCardLayout.fit(maxWidth: 104);
       expect(fitted.width, 104);
-      expect(
-        fitted.posterHeight,
-        closeTo(104 * (175 / 120), 0.01),
-      );
+      expect(fitted.posterHeight, closeTo(104 * (175 / 120), 0.01));
     });
 
     test('clamps poster so title strip fits maxHeight', () {
@@ -29,10 +26,10 @@ void main() {
   });
 
   group('PosterCardLayout.posterRowMetrics', () {
-    test('TV uses comfortable 10-foot poster row', () {
+    test('TV uses a compact 10-foot poster row', () {
       final m = PosterCardLayout.posterRowMetrics(FormFactor.tv);
-      expect(m.itemWidth, 135);
-      expect(m.height, 225);
+      expect(m.itemWidth, 120);
+      expect(m.height, 200);
     });
 
     test('phone keeps legacy 215×120', () {
@@ -48,6 +45,9 @@ void main() {
     const cellW = 140.0;
     const cellH = cellW / PosterCardLayout.gridChildAspectRatio;
     final fitted = PosterCardLayout.fit(maxWidth: cellW, maxHeight: cellH);
-    expect(fitted.posterHeight + PosterCardLayout.titleStrip, lessThanOrEqualTo(cellH + 0.5));
+    expect(
+      fitted.posterHeight + PosterCardLayout.titleStrip,
+      lessThanOrEqualTo(cellH + 0.5),
+    );
   });
 }

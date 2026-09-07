@@ -19,6 +19,8 @@ class TvFocusable extends StatelessWidget {
     this.enabled = true,
     this.entry = false,
     this.scale = 1.08,
+    this.debugLabel,
+    this.tapToSelect = true,
   });
 
   final Widget child;
@@ -30,6 +32,12 @@ class TvFocusable extends StatelessWidget {
   final bool enabled;
   final bool entry;
   final double scale;
+  final String? debugLabel;
+
+  /// Disable the wrapper's tap recognizer for controls such as [Slider]
+  /// that must keep ownership of pointer gestures while still exposing one
+  /// D-pad focus stop.
+  final bool tapToSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -44,43 +52,45 @@ class TvFocusable extends StatelessWidget {
         onSelect: onSelect,
         onFocusChange: onFocusChange,
         onDirection: onDirection,
-      builder: (context, state, child) {
-        final visual = RemoteFocus.visualOf(context, state);
-        final focused = visual.focused;
-        final pressed = visual.pressed;
+        debugLabel: debugLabel,
+        tapToSelect: tapToSelect,
+        builder: (context, state, child) {
+          final visual = RemoteFocus.visualOf(context, state);
+          final focused = visual.focused;
+          final pressed = visual.pressed;
 
-        if (!focused && !pressed) {
-          return child;
-        }
+          if (!focused && !pressed) {
+            return child;
+          }
 
-        return AnimatedScale(
-          scale: pressed ? 0.94 : scale,
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOutCubic,
-          child: AnimatedContainer(
+          return AnimatedScale(
+            scale: pressed ? 0.94 : scale,
             duration: const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: focused ? AppColors.accent : Colors.transparent,
-                width: 2,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: focused ? AppColors.accent : Colors.transparent,
+                  width: 2,
+                ),
+                boxShadow: focused
+                    ? [
+                        BoxShadow(
+                          color: AppColors.accent.withValues(alpha: 0.45),
+                          blurRadius: 12,
+                          spreadRadius: 0.5,
+                        ),
+                      ]
+                    : null,
               ),
-              boxShadow: focused
-                  ? [
-                      BoxShadow(
-                        color: AppColors.accent.withValues(alpha: 0.45),
-                        blurRadius: 12,
-                        spreadRadius: 0.5,
-                      ),
-                    ]
-                  : null,
+              child: child,
             ),
-            child: child,
-          ),
-        );
-      },
-      child: child,
+          );
+        },
+        child: child,
       ),
     );
   }

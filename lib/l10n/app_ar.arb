@@ -613,6 +613,7 @@
   "companionEnterPairingCode": "أدخل رمز الاقتران",
   "companionPairingDialogBody": "أدخل عنوان IP للتلفاز ورمز PIN المكوّن من 4 أرقام الظاهر على الشاشة.",
   "companionIpHintExample": "مثال: 192.168.1.50",
-  "companionPinCodeLabel": "رمز PIN المكوّن من 4 أرقام"
+  "companionPinCodeLabel": "رمز PIN المكوّن من 4 أرقام",
+  "iptvAccountExpired": "انتهت صلاحية حساب IPTV هذا. سجّل الدخول بمستخدم آخر أو افصل بيانات الدخول المحفوظة."
 }
 

@@ -25,7 +25,7 @@ void main() {
       );
     });
 
-    test('only tracks Barcelona, Real Madrid, and the Premier League Big Six', () {
+    test('only tracks Barcelona, Real Madrid, PL Big Six, Ahly, and Zamalek', () {
       expect(BigMatchDetector.teamsIn('Bayern Munich'), isEmpty);
       expect(BigMatchDetector.teamsIn('PSG'), isEmpty);
       expect(
@@ -35,6 +35,40 @@ void main() {
       expect(
         BigMatchDetector.teamsIn('Arsenal vs Manchester City').map((t) => t.id),
         ['man_city', 'arsenal'],
+      );
+      expect(
+        BigMatchDetector.teamsIn('الأهلي ضد الزمالك').map((t) => t.id),
+        ['ahly', 'zamalek'],
+      );
+    });
+
+    test('does not treat Real Sociedad / Real Betis as Real Madrid', () {
+      expect(BigMatchDetector.teamsIn('ريال سوسيداد'), isEmpty);
+      expect(BigMatchDetector.teamsIn('ريال بيتيس'), isEmpty);
+      expect(BigMatchDetector.teamsIn('Real Sociedad'), isEmpty);
+      expect(BigMatchDetector.teamsIn('Real Betis'), isEmpty);
+      expect(
+        BigMatchDetector.teamsIn('ريال بيتيس ضد ريال مدريد').map((t) => t.id),
+        ['real_madrid'],
+      );
+      expect(
+        BigMatchDetector.teamsIn('الريال ضد خيتافي').map((t) => t.id),
+        ['real_madrid'],
+      );
+    });
+
+    test('does not treat National Bank / Jeddah Ahli as Al Ahly SC', () {
+      expect(BigMatchDetector.teamsIn('البنك الأهلي'), isEmpty);
+      expect(BigMatchDetector.teamsIn('البنك الأهلي ضد غزل المحلة'), isEmpty);
+      expect(BigMatchDetector.teamsIn('أهلي جدة'), isEmpty);
+      expect(BigMatchDetector.teamsIn('شباب الأهلي'), isEmpty);
+      expect(
+        BigMatchDetector.teamsIn('الأهلي ضد بيراميدز').map((t) => t.id),
+        ['ahly'],
+      );
+      expect(
+        BigMatchDetector.teamsIn('Al Ahly SC vs Pyramids').map((t) => t.id),
+        ['ahly'],
       );
     });
 

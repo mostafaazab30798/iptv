@@ -1542,4 +1542,8 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get companionPinCodeLabel => 'رمز PIN المكوّن من 4 أرقام';
+
+  @override
+  String get iptvAccountExpired =>
+      'انتهت صلاحية حساب IPTV هذا. سجّل الدخول بمستخدم آخر أو افصل بيانات الدخول المحفوظة.';
 }

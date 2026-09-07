@@ -251,5 +251,68 @@ void main() {
 
       controller.dispose();
     });
+
+    test('movie hero excludes titles without a picture', () async {
+      final movies = [
+        const Movie(
+          id: 1,
+          serverId: 1,
+          streamId: 1,
+          name: 'No Art Blockbuster',
+          rating: '9.9',
+          releaseYear: 2024,
+        ),
+        const Movie(
+          id: 2,
+          serverId: 1,
+          streamId: 2,
+          name: 'Poster Hit',
+          rating: '8.5',
+          releaseYear: 2023,
+          streamIcon: 'https://cdn.example/poster-hit.jpg',
+        ),
+        const Movie(
+          id: 3,
+          serverId: 1,
+          streamId: 3,
+          name: 'Backdrop Only',
+          rating: '9.0',
+          releaseYear: 2022,
+          backdropPaths: ['https://cdn.example/backdrop-only.jpg'],
+        ),
+      ];
+
+      final controller = HomeController(
+        liveRepo: FakeLiveRepository(),
+        vodRepo: FakeVodRepository(movies: movies),
+        seriesRepo: FakeSeriesRepository(),
+        favoritesRepo: _FakeFavoritesRepository(),
+        historyRepo: _FakeHistoryRepository(),
+      );
+
+      HomeHeroItem? movieHero;
+      for (var i = 0; i < 50; i++) {
+        final hero = controller.state.heroItem;
+        if (hero != null && hero.type == HeroItemType.movie) {
+          movieHero = hero;
+          break;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+
+      expect(movieHero, isNotNull);
+      expect(
+        controller.state.heroItems.map((h) => h.title),
+        isNot(contains('No Art Blockbuster')),
+      );
+      expect(
+        controller.state.heroItems.map((h) => h.title),
+        containsAll(['Poster Hit', 'Backdrop Only']),
+      );
+      expect(movieHero!.backdropUrl, isNotNull);
+      expect(movieHero.backdropUrl, isNotEmpty);
+
+      controller.dispose();
+    });
   });
 }

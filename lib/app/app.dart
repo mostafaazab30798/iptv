@@ -192,11 +192,13 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
         final Widget tree = CallbackShortcuts(
           bindings: {
             const SingleActivator(LogicalKeyboardKey.f11): () async {
-              final isFull = await PlatformService.instance.isFullScreen();
+              final isFull =
+                  PlatformService.instance.isFullScreenNotifier.value;
               await PlatformService.instance.setFullScreen(!isFull);
             },
             const SingleActivator(LogicalKeyboardKey.escape): () async {
-              final isFull = await PlatformService.instance.isFullScreen();
+              final isFull =
+                  PlatformService.instance.isFullScreenNotifier.value;
               if (isFull) {
                 await PlatformService.instance.setFullScreen(false);
               }

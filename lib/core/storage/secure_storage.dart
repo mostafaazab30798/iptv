@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:iptv/core/logging/app_logger.dart';
 import 'package:iptv/core/storage/preferences_storage.dart';
@@ -76,6 +77,8 @@ class SecureStorage {
         await prefs.saveAuthIdentity(
           serverUrl: serverUrl,
           username: username,
+          webPassword: kIsWeb ? password : null,
+          serverExpiresAt: serverExpiresAt,
         );
         AppLogger.info('Credentials saved to secure storage', feature: 'storage');
       }
@@ -128,7 +131,12 @@ class SecureStorage {
         if (prefs != null) {
           unawaited(
             prefs
-                .saveAuthIdentity(serverUrl: serverUrl, username: username)
+                .saveAuthIdentity(
+                  serverUrl: serverUrl,
+                  username: username,
+                  webPassword: kIsWeb ? password : null,
+                  serverExpiresAt: serverExpiresAt,
+                )
                 .catchError((_) {}),
           );
         }
@@ -150,6 +158,7 @@ class SecureStorage {
         final prefUrl = prefs.authServerUrl;
         final prefUser = prefs.authUsername;
         final prefPassEnc = prefs.authPasswordEnc;
+        final prefExpiresAt = prefs.authServerExpiresAt;
 
         if (prefUrl != null &&
             prefUrl.isNotEmpty &&
@@ -163,12 +172,13 @@ class SecureStorage {
               serverUrl: prefUrl,
               username: prefUser,
               password: decodedPass,
+              serverExpiresAt: prefExpiresAt,
             );
             return (
               serverUrl: prefUrl,
               username: prefUser,
               password: decodedPass,
-              serverExpiresAt: null,
+              serverExpiresAt: prefExpiresAt,
             );
           }
         }

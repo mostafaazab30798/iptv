@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show PlatformViewHitTestBehavior;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
@@ -56,6 +57,7 @@ class PlayerView extends StatelessWidget {
     super.key,
     required this.aspectRatioIndex,
     required this.platformHandle,
+    this.useNativeControls = false,
     this.videoWidth,
     this.videoHeight,
   });
@@ -63,6 +65,9 @@ class PlayerView extends StatelessWidget {
   /// 0: Best Fit, 1: Fit, 2: Fill, 3: 16:9, 4: 4:3
   final int aspectRatioIndex;
   final dynamic platformHandle;
+
+  /// Lets Safari's native video controls receive touch input for iOS VOD.
+  final bool useNativeControls;
   final int? videoWidth;
   final int? videoHeight;
 
@@ -178,7 +183,14 @@ class PlayerView extends StatelessWidget {
           // HtmlElementView has no intrinsic size. Centering it under loose
           // constraints collapses the platform view to 0×0 (audio still plays).
           Widget videoWidget = kIsWeb
-              ? HtmlElementView(viewType: webHandle.viewTypeId)
+              ? HtmlElementView(
+                  viewType: webHandle.viewTypeId,
+                  // VOD uses Safari's own controls and must receive touches.
+                  // Live TV keeps the Flutter overlay above a passive surface.
+                  hitTestBehavior: useNativeControls
+                      ? PlatformViewHitTestBehavior.opaque
+                      : PlatformViewHitTestBehavior.transparent,
+                )
               : const SizedBox.expand();
           videoWidget = SizedBox.expand(child: videoWidget);
 

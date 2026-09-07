@@ -47,9 +47,11 @@ class PlatformService {
   final ValueNotifier<bool> isFullScreenNotifier = ValueNotifier<bool>(false);
 
   /// Sets true borderless fullscreen mode on Windows/macOS/Linux, Web, and Android/iOS.
-  Future<void> setFullScreen(bool isFullScreen) async {
+  Future<bool> setFullScreen(bool isFullScreen) async {
     await plat.setPlatformFullScreen(isFullScreen);
-    isFullScreenNotifier.value = isFullScreen;
+    final actual = await plat.isPlatformFullScreen();
+    isFullScreenNotifier.value = actual;
+    return actual;
   }
 
   /// Checks if true fullscreen mode is currently active.

@@ -171,7 +171,14 @@ class _MovieVod implements VodRepository {
     int? categoryId,
     bool forceRefresh = false,
   }) async => const Ok([
-    Movie(id: 99, serverId: 1, streamId: 99, name: 'The Matrix', rating: '9.0'),
+    Movie(
+      id: 99,
+      serverId: 1,
+      streamId: 99,
+      name: 'The Matrix',
+      rating: '9.0',
+      streamIcon: 'https://cdn.example/matrix.jpg',
+    ),
   ]);
 
   @override

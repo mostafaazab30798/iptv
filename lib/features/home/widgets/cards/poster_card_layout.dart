@@ -26,8 +26,7 @@ abstract final class PosterCardLayout {
     required double maxWidth,
     double? maxHeight,
   }) {
-    final width =
-        maxWidth.isFinite && maxWidth > 0 ? maxWidth : defaultWidth;
+    final width = maxWidth.isFinite && maxWidth > 0 ? maxWidth : defaultWidth;
     var posterHeight = posterHeightForWidth(width);
     if (maxHeight != null && maxHeight.isFinite) {
       final available = maxHeight - titleStrip;
@@ -45,7 +44,9 @@ abstract final class PosterCardLayout {
   ) {
     switch (factor) {
       case FormFactor.tv:
-        return (height: 225, itemWidth: 135);
+        // Slightly denser than the phone-derived TV pass so more of Home is
+        // visible without making the poster titles hard to read.
+        return (height: 200, itemWidth: 120);
       case FormFactor.tablet:
         return (height: 200, itemWidth: 112);
       case FormFactor.desktop:
@@ -56,6 +57,5 @@ abstract final class PosterCardLayout {
 
   static ({double height, double itemWidth}) posterRowMetricsOf(
     BuildContext context,
-  ) =>
-      posterRowMetrics(FormFactorResolver.of(context));
+  ) => posterRowMetrics(FormFactorResolver.of(context));
 }

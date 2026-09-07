@@ -1538,4 +1538,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get companionPinCodeLabel => '4-Digit PIN Code';
+
+  @override
+  String get iptvAccountExpired =>
+      'This IPTV account has expired. Sign in with another user or disconnect this saved login.';
 }

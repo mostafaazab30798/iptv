@@ -433,11 +433,11 @@ class HomeController extends StateNotifier<HomeState> {
   List<HomeHeroItem> _computeHeroItems(List<Movie> movies) {
     if (movies.isEmpty) return const [];
 
+    // Hero slides only render artwork from backdrop/poster URLs — skip
+    // movies with no usable picture so the carousel never shows a blank card.
     final validMovies = movies
         .where((m) =>
-            m.name.trim().isNotEmpty &&
-            ((m.streamIcon != null && m.streamIcon!.isNotEmpty) ||
-                (m.backdropPaths != null && m.backdropPaths!.isNotEmpty)))
+            m.name.trim().isNotEmpty && _heroImageUrlFor(m) != null)
         .toList();
 
     if (validMovies.isEmpty) return const [];
@@ -476,6 +476,7 @@ class HomeController extends StateNotifier<HomeState> {
       final ratingStr = (r != null && r > 0.0) ? m.rating : null;
       final yearStr = m.releaseYear != null && m.releaseYear! > 0 ? '${m.releaseYear}' : null;
       final genreStr = m.genre ?? 'Action';
+      final imageUrl = _heroImageUrlFor(m)!;
 
       final subtitleParts = <String>[];
       if (genreStr.isNotEmpty) subtitleParts.add(genreStr);
@@ -492,11 +493,25 @@ class HomeController extends StateNotifier<HomeState> {
         description:
             m.plot ??
             'Stream in ultra high definition on your favorite screen.',
-        backdropUrl: m.streamIcon,
-        posterUrl: m.streamIcon,
+        backdropUrl: imageUrl,
+        posterUrl: imageUrl,
         movie: m,
       );
     }).toList();
+  }
+
+  /// Poster/backdrop URL used by the Home hero, or null when none exists.
+  static String? _heroImageUrlFor(Movie movie) {
+    final icon = movie.streamIcon?.trim();
+    if (icon != null && icon.isNotEmpty) return icon;
+
+    final backdrops = movie.backdropPaths;
+    if (backdrops == null) return null;
+    for (final path in backdrops) {
+      final url = path.trim();
+      if (url.isNotEmpty) return url;
+    }
+    return null;
   }
 
   bool get _hasLiveMatchHero =>

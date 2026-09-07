@@ -674,7 +674,8 @@
   "companionEnterPairingCode": "Enter Pairing Code",
   "companionPairingDialogBody": "Enter the TV IP address and 4-digit PIN displayed on your TV screen.",
   "companionIpHintExample": "e.g. 192.168.1.50",
-  "companionPinCodeLabel": "4-Digit PIN Code"
+  "companionPinCodeLabel": "4-Digit PIN Code",
+  "iptvAccountExpired": "This IPTV account has expired. Sign in with another user or disconnect this saved login."
 }
 
 

@@ -223,7 +223,11 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
     if (eligibleBigMatches.isNotEmpty) {
       try {
         final targetTeams = eligibleBigMatches
-            .expand((f) => [f.homeName, f.awayName, ...f.teams.map((t) => t.toString())])
+            .expand((f) => [
+                  f.homeName,
+                  f.awayName,
+                  ...f.teams.map((t) => t.displayName),
+                ])
             .where((t) => t.trim().isNotEmpty)
             .toSet();
         final fotmobMatches = await _fotmob.fetchMatches(

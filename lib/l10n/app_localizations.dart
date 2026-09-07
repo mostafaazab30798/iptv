@@ -2845,6 +2845,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'4-Digit PIN Code'**
   String get companionPinCodeLabel;
+
+  /// No description provided for @iptvAccountExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This IPTV account has expired. Sign in with another user or disconnect this saved login.'**
+  String get iptvAccountExpired;
 }
 
 class _AppLocalizationsDelegate

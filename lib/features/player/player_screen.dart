@@ -21,10 +21,13 @@ class PlayerScreen extends ConsumerStatefulWidget {
   ConsumerState<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBindingObserver {
+class _PlayerScreenState extends ConsumerState<PlayerScreen>
+    with WidgetsBindingObserver {
   PlayerController? _controller;
+
   /// Cached so exit logic still works after system-back dispose (ref unusable).
   bool _isLiveSource = false;
+
   /// Guards against PopScope + overlay both invoking leave on the same pop.
   bool _isLeaving = false;
 
@@ -32,7 +35,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    PlatformService.instance.isFullScreenNotifier.addListener(_onFullscreenChanged);
+    PlatformService.instance.isFullScreenNotifier.addListener(
+      _onFullscreenChanged,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _controller = ref.read(playerControllerProvider.notifier);
@@ -53,7 +58,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // On Windows, `inactive` fires on every focus change (including clicks
     // inside the window) and must not be treated as going to background.
-    final leaving = state == AppLifecycleState.paused ||
+    final leaving =
+        state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached ||
         (state == AppLifecycleState.inactive &&
@@ -71,26 +77,26 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
 
   Future<void> _enterFullscreenMode() async {
     _controller ??= ref.read(playerControllerProvider.notifier);
-    _controller?.setFullscreen(true);
     if (PlatformService.instance.isAndroid) {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ]);
     }
-    await PlatformService.instance.setFullScreen(true);
+    final isFull = await PlatformService.instance.setFullScreen(true);
+    _controller?.setFullscreen(isFull);
   }
 
   Future<void> _exitFullscreenMode() async {
     _controller ??= ref.read(playerControllerProvider.notifier);
-    _controller?.setFullscreen(false);
     if (PlatformService.instance.isAndroid) {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
       ]);
     }
-    await PlatformService.instance.setFullScreen(false);
+    final isFull = await PlatformService.instance.setFullScreen(false);
+    _controller?.setFullscreen(isFull);
   }
 
   void _restoreDefaultOrientations() {
@@ -107,14 +113,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   Future<void> _toggleFullscreen() async {
     final isMobile = PlatformService.instance.isAndroid;
     if (isMobile) {
-      final isLandscape = MediaQuery.maybeOrientationOf(context) == Orientation.landscape;
+      final isLandscape =
+          MediaQuery.maybeOrientationOf(context) == Orientation.landscape;
       if (isLandscape) {
         await _exitFullscreenMode();
       } else {
         await _enterFullscreenMode();
       }
     } else {
-      final isPlatformFull = await PlatformService.instance.isFullScreen();
+      final isPlatformFull =
+          PlatformService.instance.isFullScreenNotifier.value;
       final isCurrentlyFull = ref.read(playerControllerProvider).isFullscreen;
       final shouldExit = isPlatformFull || isCurrentlyFull;
       if (shouldExit) {
@@ -128,11 +136,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    PlatformService.instance.isFullScreenNotifier.removeListener(_onFullscreenChanged);
+    PlatformService.instance.isFullScreenNotifier.removeListener(
+      _onFullscreenChanged,
+    );
     _restoreDefaultOrientations();
     PlatformService.instance.setFullScreen(false);
     final controller = _controller;
-    final shouldStopOnDispose = kIsWeb || !_isLiveSource ||
+    final shouldStopOnDispose =
+        kIsWeb ||
+        !_isLiveSource ||
         !(controller?.hasLivePreviewHandoff ?? false);
     super.dispose();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -167,7 +179,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     // Keep playback only when Live TV is actively hosting the mini-preview.
     // On Flutter Web the HTML5 <video> keeps playing after HtmlElementView
     // unmounts, so never retain there — always stop on exit.
-    final retainForMiniPreview = !kIsWeb &&
+    final retainForMiniPreview =
+        !kIsWeb &&
         _isLiveSource &&
         (_controller?.hasLivePreviewHandoff ?? false);
     if (retainForMiniPreview) {
@@ -191,13 +204,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
 
   void _handleBack() => _leavePlayer(alreadyPopped: false);
 
-
   @override
   Widget build(BuildContext context) {
     // Narrow selectors — each widget only rebuilds on the fields it actually needs.
     // This prevents the entire Stack from rebuilding on every position tick from mpv.
     final isBufferingOrLoading = ref.watch(
-      playerControllerProvider.select((s) => s.isBuffering || s.isLoading || s.isRetrying),
+      playerControllerProvider.select(
+        (s) => s.isBuffering || s.isLoading || s.isRetrying,
+      ),
     );
     final hasError = ref.watch(
       playerControllerProvider.select((s) => s.hasError),
@@ -217,32 +231,37 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
     // The overlay rebuilds on control-related state changes (status, tracks, etc.)
     // but NOT on position ticks alone.
     final playerState = ref.watch(
-      playerControllerProvider.select((s) => (
-        status: s.status,
-        source: s.source,
-        isPlaying: s.isPlaying,
-        isLive: s.isLive,
-        volume: s.volume,
-        isMuted: s.isMuted,
-        isFullscreen: s.isFullscreen,
-        aspectRatioIndex: s.aspectRatioIndex,
-        playbackRate: s.playbackRate,
-        isLocked: s.isLocked,
-        bufferMode: s.bufferMode,
-        error: s.error,
-        errorMessage: s.errorMessage,
-        currentAudioTrack: s.currentAudioTrack,
-        currentSubtitleTrack: s.currentSubtitleTrack,
-        availableAudioTracks: s.availableAudioTracks,
-        availableSubtitleTracks: s.availableSubtitleTracks,
-        capabilities: s.capabilities,
-        metrics: s.metrics,
-      )),
+      playerControllerProvider.select(
+        (s) => (
+          status: s.status,
+          source: s.source,
+          isPlaying: s.isPlaying,
+          isLive: s.isLive,
+          volume: s.volume,
+          isMuted: s.isMuted,
+          isFullscreen: s.isFullscreen,
+          aspectRatioIndex: s.aspectRatioIndex,
+          playbackRate: s.playbackRate,
+          isLocked: s.isLocked,
+          bufferMode: s.bufferMode,
+          error: s.error,
+          errorMessage: s.errorMessage,
+          currentAudioTrack: s.currentAudioTrack,
+          currentSubtitleTrack: s.currentSubtitleTrack,
+          availableAudioTracks: s.availableAudioTracks,
+          availableSubtitleTracks: s.availableSubtitleTracks,
+          capabilities: s.capabilities,
+          metrics: s.metrics,
+        ),
+      ),
     );
     // Reconstruct a full PlayerState for widgets that need it.
     final fullPlayerState = ref.read(playerControllerProvider);
     final controller = ref.read(playerControllerProvider.notifier);
     _isLiveSource = fullPlayerState.isLive;
+    final platformHandle = controller.engine.platformHandle;
+    final usesNativeIosVodControls =
+        kIsWeb && !fullPlayerState.isLive && platformHandle is WebVideoHandle;
 
     return PopScope(
       // Own the pop so leave cleanup (stop / mini-preview handoff) always runs
@@ -274,6 +293,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
                 final videoHeight = ref.watch(
                   playerControllerProvider.select((s) => s.metrics.videoHeight),
                 );
+                final isLive = ref.watch(
+                  playerControllerProvider.select((s) => s.isLive),
+                );
                 // Stay detached until this route owns the Texture. Mounting
                 // mkv.Video while LiveMiniPreview is still bound produces a
                 // zero-size GLES viewport on Huawei/Honor GPUs.
@@ -282,7 +304,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
                 }
                 return PlayerView(
                   aspectRatioIndex: aspectRatioIndex,
-                  platformHandle: controller.engine.platformHandle,
+                  platformHandle: platformHandle,
+                  useNativeControls:
+                      kIsWeb && !isLive && platformHandle is WebVideoHandle,
                   videoWidth: videoWidth,
                   videoHeight: videoHeight,
                 );
@@ -298,37 +322,52 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> with WidgetsBinding
             ),
 
             // 3. Interactive Controls Overlay & Diagnostics HUD
-            PlayerOverlay(
-              playerState: fullPlayerState,
-              positionListenable: controller.positionListenable,
-              bufferedPositionListenable:
-                  controller.bufferedPositionListenable,
-              onPlayPause: () {
-                if (playerState.isPlaying) {
-                  controller.pause();
-                } else {
-                  controller.play();
-                }
-              },
-              onSeek: controller.seek,
-              onRequestSeekPreview: controller.createSeekPreview,
-              onScrubStart: controller.beginSeekScrub,
-              onScrubEnd: controller.finishSeekScrub,
-              onSeekRelative: controller.seekRelative,
-              onSelectPlaybackRate: controller.setPlaybackRate,
-              onVolumeChanged: controller.setVolume,
-              onToggleMute: controller.toggleMute,
-              onNextChannel: controller.nextChannel,
-              onPreviousChannel: controller.previousChannel,
-              onCycleAspectRatio: controller.cycleAspectRatio,
-              onSelectAspectRatio: controller.setAspectRatio,
-              onSelectAudioTrack: controller.setAudioTrack,
-              onSelectSubtitleTrack: controller.setSubtitleTrack,
-              onSelectBufferMode: controller.setBufferMode,
-              onToggleLock: controller.toggleLock,
-              onToggleFullscreen: _toggleFullscreen,
-              onClose: _handleBack,
-            ),
+            if (!usesNativeIosVodControls)
+              PlayerOverlay(
+                playerState: fullPlayerState,
+                positionListenable: controller.positionListenable,
+                bufferedPositionListenable:
+                    controller.bufferedPositionListenable,
+                onPlayPause: () {
+                  if (playerState.isPlaying) {
+                    controller.pause();
+                  } else {
+                    controller.play();
+                  }
+                },
+                onSeek: controller.seek,
+                onRequestSeekPreview: controller.createSeekPreview,
+                onScrubStart: controller.beginSeekScrub,
+                onScrubEnd: controller.finishSeekScrub,
+                onSeekRelative: controller.seekRelative,
+                onSelectPlaybackRate: controller.setPlaybackRate,
+                onVolumeChanged: controller.setVolume,
+                onToggleMute: controller.toggleMute,
+                onNextChannel: controller.nextChannel,
+                onPreviousChannel: controller.previousChannel,
+                onCycleAspectRatio: controller.cycleAspectRatio,
+                onSelectAspectRatio: controller.setAspectRatio,
+                onSelectAudioTrack: controller.setAudioTrack,
+                onSelectSubtitleTrack: controller.setSubtitleTrack,
+                onSelectBufferMode: controller.setBufferMode,
+                onToggleLock: controller.toggleLock,
+                onToggleFullscreen: _toggleFullscreen,
+                onClose: _handleBack,
+              )
+            else
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: IconButton.filledTonal(
+                      tooltip: 'Back',
+                      onPressed: _handleBack,
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    ),
+                  ),
+                ),
+              ),
 
             // 4. Classified Error Overlay — only rendered when hasError is true.
             if (hasError)

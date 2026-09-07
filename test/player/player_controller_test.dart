@@ -150,6 +150,31 @@ void main() {
       expect(controller.state.isPlaying, isTrue);
     });
 
+    test(
+      'scrub preview does not seek when the engine cannot capture frames',
+      () async {
+        final source = PlayerSource.vod(
+          url: 'http://test.vod/movie.mp4',
+          title: 'Safari Preview Safety',
+          movieId: 507,
+        );
+        await controller.load(source);
+        await Future<void>.delayed(Duration.zero);
+
+        controller.beginSeekScrub();
+        final preview = await controller.createSeekPreview(
+          const Duration(minutes: 40),
+        );
+
+        expect(preview, isNull);
+        expect(fakeEngine.previewSeekCount, 0);
+        expect(fakeEngine.currentPosition, const Duration(seconds: 1));
+
+        await controller.finishSeekScrub(const Duration(minutes: 40));
+        expect(fakeEngine.currentPosition, const Duration(minutes: 40));
+      },
+    );
+
     test('setPlaybackRate updates playback speed', () async {
       expect(controller.state.playbackRate, equals(1.0));
       await controller.setPlaybackRate(1.5);

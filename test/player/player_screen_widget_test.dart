@@ -1,4 +1,6 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/domain/entities/channel.dart';
@@ -14,6 +16,7 @@ import 'package:iptv/player/presentation/buffering_indicator.dart';
 import 'package:iptv/player/presentation/player_error_view.dart';
 import 'package:iptv/player/presentation/player_controls.dart';
 import 'package:iptv/player/presentation/player_view.dart';
+import 'package:iptv/shared/focus/remote_focus.dart';
 
 void main() {
   group('PlayerScreen Widget Tests', () {
@@ -51,6 +54,21 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           locale: locale,
           home: const PlayerScreen(),
+        ),
+      );
+    }
+
+    Widget createRemoteTestApp() {
+      return ProviderScope(
+        overrides: [playerControllerProvider.overrideWith((_) => controller)],
+        child: RemoteFocusScope(
+          child: MaterialApp(
+            builder: Dpad.wrap(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const PlayerScreen(),
+          ),
         ),
       );
     }
@@ -255,6 +273,49 @@ void main() {
 
       await finishPlayerTest(tester);
     });
+
+    testWidgets(
+      'remote OK reveals chrome before activating play and hidden focus is safe',
+      (tester) async {
+        final source = PlayerSource.vod(
+          url: 'http://test.vod/remote.mp4',
+          title: 'Remote Control Test',
+          movieId: 818,
+        );
+        await controller.load(source);
+        await tester.pumpWidget(createRemoteTestApp());
+        await tester.pump();
+
+        expect(
+          FocusManager.instance.primaryFocus?.debugLabel,
+          'player-play-pause',
+        );
+        expect(controller.state.isPlaying, isTrue);
+
+        // Auto-hide moves focus off the now-invisible button.
+        await tester.pump(const Duration(seconds: 5));
+        expect(
+          FocusManager.instance.primaryFocus?.debugLabel,
+          'player-surface',
+        );
+
+        // First OK only restores visible chrome and its predictable landing
+        // target; a second OK activates Play/Pause.
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
+        await tester.pump();
+        expect(
+          FocusManager.instance.primaryFocus?.debugLabel,
+          'player-play-pause',
+        );
+        expect(controller.state.isPlaying, isTrue);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
+        await tester.pump();
+        expect(controller.state.isPlaying, isFalse);
+
+        await finishPlayerTest(tester);
+      },
+    );
 
     testWidgets('renders Next and Previous channel buttons and handles taps', (
       tester,
@@ -509,4 +570,70 @@ void main() {
       );
     },
   );
+
+  testWidgets('D-pad focuses the VOD timeline and seeks with left/right', (
+    tester,
+  ) async {
+    final relativeSeeks = <Duration>[];
+    final source = PlayerSource.vod(
+      url: 'http://test.vod/remote-seek.mp4',
+      title: 'Remote Seek Test',
+      movieId: 100,
+    );
+    final state = PlayerState(
+      status: PlayerStatus.playing,
+      source: source,
+      position: const Duration(minutes: 10),
+      duration: const Duration(minutes: 90),
+      bufferedPosition: const Duration(minutes: 30),
+    );
+
+    await tester.pumpWidget(
+      RemoteFocusScope(
+        child: MaterialApp(
+          builder: Dpad.wrap(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: PlayerControls(
+              playerState: state,
+              onPlayPause: () {},
+              onRequestSeekPreview: (_) async => null,
+              onScrubStart: () {},
+              onScrubEnd: (_) {},
+              onSeekRelative: relativeSeeks.add,
+              onVolumeChanged: (_) {},
+              onToggleMute: () {},
+              onNextChannel: () {},
+              onPreviousChannel: () {},
+              onCycleAspectRatio: () {},
+              onSelectPlaybackRate: (_) {},
+              onOpenAudioTracks: () {},
+              onOpenSubtitles: () {},
+              onToggleLock: () {},
+              onOpenQuickSettings: () {},
+              onToggleFullscreen: () {},
+              onClose: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'player-play-pause');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'player-seek-bar');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+
+    expect(relativeSeeks, const [
+      Duration(seconds: 10),
+      Duration(seconds: -10),
+    ]);
+  });
 }

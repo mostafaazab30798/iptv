@@ -350,12 +350,10 @@ class ShellFullscreenToggleButton extends StatelessWidget {
           isActive: isFullScreen,
           tooltip: isFullScreen ? 'Exit Fullscreen (F11 / Esc)' : 'Fullscreen (F11)',
           onTap: () async {
-            final isFull = await PlatformService.instance.isFullScreen();
-            await PlatformService.instance.setFullScreen(!isFull);
+            await PlatformService.instance.setFullScreen(!isFullScreen);
           },
         );
       },
     );
   }
 }
-

@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv/core/logging/app_logger.dart';
 
@@ -43,6 +46,7 @@ class PreferencesStorage {
   static const String _keyAuthServerUrl = 'auth_server_url';
   static const String _keyAuthUsername = 'auth_username';
   static const String _keyAuthPasswordEnc = 'auth_password_enc';
+  static const String _keyAuthServerExpiresAt = 'auth_server_expires_at';
   static const String _keyPendingOtpEmail = 'pending_otp_email';
 
   // ---------------------------------------------------------------------------
@@ -52,18 +56,42 @@ class PreferencesStorage {
   String? get authServerUrl => _prefs.getString(_keyAuthServerUrl);
   String? get authUsername => _prefs.getString(_keyAuthUsername);
 
-  /// Legacy Base64 password blob; read only for one-time migration then cleared.
+  /// Durable browser fallback for iOS PWAs, and a legacy migration source.
+  ///
+  /// On web, `flutter_secure_storage` and SharedPreferences are both backed by
+  /// origin-scoped browser storage. Keeping this fallback prevents a WebCrypto
+  /// failure from turning every PWA relaunch into a new login prompt.
   String? get authPasswordEnc => _prefs.getString(_keyAuthPasswordEnc);
 
-  /// Persists server URL + username for UX; always clears any legacy password.
+  DateTime? get authServerExpiresAt => DateTime.tryParse(
+    _prefs.getString(_keyAuthServerExpiresAt) ?? '',
+  )?.toUtc();
+
+  /// Persists the server identity and, on web only, a durable credential
+  /// fallback for browsers where WebCrypto storage cannot be restored.
   Future<void> saveAuthIdentity({
     required String serverUrl,
     required String username,
+    String? webPassword,
+    DateTime? serverExpiresAt,
   }) async {
     await Future.wait([
       _prefs.setString(_keyAuthServerUrl, serverUrl),
       _prefs.setString(_keyAuthUsername, username),
-      _prefs.remove(_keyAuthPasswordEnc),
+      if (kIsWeb && webPassword != null)
+        _prefs.setString(
+          _keyAuthPasswordEnc,
+          base64Encode(utf8.encode(webPassword)),
+        )
+      else
+        _prefs.remove(_keyAuthPasswordEnc),
+      if (serverExpiresAt != null)
+        _prefs.setString(
+          _keyAuthServerExpiresAt,
+          serverExpiresAt.toUtc().toIso8601String(),
+        )
+      else
+        _prefs.remove(_keyAuthServerExpiresAt),
     ]);
   }
 
@@ -74,6 +102,7 @@ class PreferencesStorage {
       _prefs.remove(_keyAuthServerUrl),
       _prefs.remove(_keyAuthUsername),
       _prefs.remove(_keyAuthPasswordEnc),
+      _prefs.remove(_keyAuthServerExpiresAt),
     ]);
   }
 

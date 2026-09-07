@@ -40,6 +40,7 @@ class PlayerControls extends StatelessWidget {
     required this.onToggleFullscreen,
     this.onAudioHandoff,
     required this.onClose,
+    this.primaryFocusNode,
     this.positionListenable,
     this.bufferedPositionListenable,
   });
@@ -64,6 +65,10 @@ class PlayerControls extends StatelessWidget {
   final VoidCallback? onAudioHandoff;
   final VoidCallback onClose;
 
+  /// Stable landing target whenever the player chrome is revealed by a
+  /// remote. Owned by [PlayerOverlay] so it survives control rebuilds.
+  final FocusNode? primaryFocusNode;
+
   /// High-frequency playback clock for seek UI; falls back to [playerState.position].
   final ValueListenable<Duration>? positionListenable;
 
@@ -78,13 +83,13 @@ class PlayerControls extends StatelessWidget {
   }
 
   String _getAspectRatioLabel(int index) => switch (index) {
-        0 => 'Best Fit',
-        1 => 'Fit',
-        2 => 'Fill',
-        3 => '16:9',
-        4 => '4:3',
-        _ => 'Best Fit',
-      };
+    0 => 'Best Fit',
+    1 => 'Fit',
+    2 => 'Fill',
+    3 => '16:9',
+    4 => '4:3',
+    _ => 'Best Fit',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +116,10 @@ class PlayerControls extends StatelessWidget {
               left: 0,
               right: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -167,7 +175,10 @@ class PlayerControls extends StatelessWidget {
                               const SizedBox(height: 1),
                               Text(
                                 source.currentProgramTitle ??
-                                    (playerState.metrics.videoParams ?? (isLive ? 'Live Broadcast' : 'Video on Demand')),
+                                    (playerState.metrics.videoParams ??
+                                        (isLive
+                                            ? 'Live Broadcast'
+                                            : 'Video on Demand')),
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.7),
                                   fontSize: 10.5,
@@ -192,7 +203,9 @@ class PlayerControls extends StatelessWidget {
                           tooltip: 'Playback Speed',
                           onPressed: () {
                             final speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-                            final nextIdx = (speeds.indexOf(playerState.playbackRate) + 1) % speeds.length;
+                            final nextIdx =
+                                (speeds.indexOf(playerState.playbackRate) + 1) %
+                                speeds.length;
                             onSelectPlaybackRate(speeds[nextIdx]);
                           },
                         ),
@@ -203,7 +216,9 @@ class PlayerControls extends StatelessWidget {
                       if (caps.aspectRatio && isWide) ...[
                         _CompactGlassActionButton(
                           icon: AppIcons.aspectRatio,
-                          label: _getAspectRatioLabel(playerState.aspectRatioIndex),
+                          label: _getAspectRatioLabel(
+                            playerState.aspectRatioIndex,
+                          ),
                           tooltip: 'Aspect Ratio',
                           onPressed: onCycleAspectRatio,
                         ),
@@ -248,13 +263,16 @@ class PlayerControls extends StatelessWidget {
                       tooltip: context.l10n.playerReplay10,
                       size: 46,
                       iconSize: 24,
-                      onPressed: () => onSeekRelative(const Duration(seconds: -10)),
+                      onPressed: () =>
+                          onSeekRelative(const Duration(seconds: -10)),
                     ),
                     const SizedBox(width: 16),
 
                     // Main Play / Pause Button
                     TvFocusable(
                       autofocus: true,
+                      focusNode: primaryFocusNode,
+                      debugLabel: 'player-play-pause',
                       onSelect: onPlayPause,
                       scale: 1.12,
                       child: Container(
@@ -273,7 +291,9 @@ class PlayerControls extends StatelessWidget {
                         ),
                         child: Center(
                           child: HugeIcon(
-                            icon: playerState.isPlaying ? AppIcons.pause : AppIcons.play,
+                            icon: playerState.isPlaying
+                                ? AppIcons.pause
+                                : AppIcons.play,
                             color: Colors.black,
                             size: 32,
                           ),
@@ -288,7 +308,8 @@ class PlayerControls extends StatelessWidget {
                       tooltip: context.l10n.playerForward10,
                       size: 46,
                       iconSize: 24,
-                      onPressed: () => onSeekRelative(const Duration(seconds: 10)),
+                      onPressed: () =>
+                          onSeekRelative(const Duration(seconds: 10)),
                     ),
                   ],
                 ),
@@ -322,11 +343,13 @@ class PlayerControls extends StatelessWidget {
                           fallbackPosition: playerState.position,
                           fallbackBuffered: playerState.bufferedPosition,
                           positionListenable: positionListenable,
-                          bufferedPositionListenable: bufferedPositionListenable,
+                          bufferedPositionListenable:
+                              bufferedPositionListenable,
                           formatDuration: _formatDuration,
                           onRequestSeekPreview: onRequestSeekPreview,
                           onScrubStart: onScrubStart,
                           onScrubEnd: onScrubEnd,
+                          onSeekRelative: onSeekRelative,
                         ),
                       ],
 
@@ -353,12 +376,13 @@ class PlayerControls extends StatelessWidget {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.redAccent,
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.redAccent.withValues(
-                                                alpha: 0.4,
-                                              ),
+                                              color: Colors.redAccent
+                                                  .withValues(alpha: 0.4),
                                               blurRadius: 5,
                                             ),
                                           ],
@@ -391,7 +415,8 @@ class PlayerControls extends StatelessWidget {
                                     ],
                                     if (caps.audioTracks &&
                                         playerState
-                                            .availableAudioTracks.isNotEmpty)
+                                            .availableAudioTracks
+                                            .isNotEmpty)
                                       _CompactGlassButton(
                                         icon: AppIcons.audioTrack,
                                         tooltip: 'Audio Tracks',
@@ -400,7 +425,8 @@ class PlayerControls extends StatelessWidget {
                                         onPressed: onOpenAudioTracks,
                                       ),
                                     if (caps.subtitles &&
-                                        playerState.availableSubtitleTracks
+                                        playerState
+                                            .availableSubtitleTracks
                                             .isNotEmpty) ...[
                                       const SizedBox(width: 6),
                                       _CompactGlassButton(
@@ -446,7 +472,8 @@ class PlayerControls extends StatelessWidget {
                                           _CompactGlassButton(
                                             icon: AppIcons.previous,
                                             tooltip: context
-                                                .l10n.playerPreviousChannel,
+                                                .l10n
+                                                .playerPreviousChannel,
                                             size: 32,
                                             iconSize: 16,
                                             onPressed: onPreviousChannel,
@@ -467,24 +494,18 @@ class PlayerControls extends StatelessWidget {
 
                                     // Volume (slider hidden when compact / TV)
                                     if (caps.volume) ...[
-                                      IconButton(
-                                        icon: HugeIcon(
-                                          icon: playerState.isMuted ||
-                                                  playerState.volume == 0.0
-                                              ? AppIcons.volumeMute
-                                              : AppIcons.volumeHigh,
-                                          color: Colors.white,
-                                          size: 19,
-                                        ),
+                                      _CompactGlassButton(
+                                        icon:
+                                            playerState.isMuted ||
+                                                playerState.volume == 0.0
+                                            ? AppIcons.volumeMute
+                                            : AppIcons.volumeHigh,
                                         tooltip: playerState.isMuted
                                             ? 'Unmute'
                                             : 'Mute',
+                                        size: 32,
+                                        iconSize: 19,
                                         onPressed: onToggleMute,
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(
-                                          minWidth: 30,
-                                          minHeight: 30,
-                                        ),
                                       ),
                                       if (!isNarrow)
                                         SizedBox(
@@ -494,16 +515,17 @@ class PlayerControls extends StatelessWidget {
                                             child: SliderTheme(
                                               data: SliderTheme.of(context)
                                                   .copyWith(
-                                                activeTrackColor: Colors.white,
-                                                inactiveTrackColor:
-                                                    Colors.white24,
-                                                thumbColor: Colors.white,
-                                                thumbShape:
-                                                    const RoundSliderThumbShape(
-                                                  enabledThumbRadius: 4,
-                                                ),
-                                                trackHeight: 2.5,
-                                              ),
+                                                    activeTrackColor:
+                                                        Colors.white,
+                                                    inactiveTrackColor:
+                                                        Colors.white24,
+                                                    thumbColor: Colors.white,
+                                                    thumbShape:
+                                                        const RoundSliderThumbShape(
+                                                          enabledThumbRadius: 4,
+                                                        ),
+                                                    trackHeight: 2.5,
+                                                  ),
                                               child: Slider(
                                                 value: playerState.isMuted
                                                     ? 0.0
@@ -520,23 +542,24 @@ class PlayerControls extends StatelessWidget {
                                     if (caps.fullscreen) ...[
                                       Builder(
                                         builder: (context) {
-                                          final isMobile =
-                                              PlatformService.instance.isAndroid;
+                                          final isMobile = PlatformService
+                                              .instance
+                                              .isAndroid;
                                           final isLandscape =
                                               MediaQuery.maybeOrientationOf(
-                                                    context,
-                                                  ) ==
-                                                  Orientation.landscape;
+                                                context,
+                                              ) ==
+                                              Orientation.landscape;
                                           final isFullscreenActive = isMobile
                                               ? isLandscape
                                               : playerState.isFullscreen;
                                           final tooltip = isMobile
                                               ? (isLandscape
-                                                  ? 'Portrait'
-                                                  : 'Fullscreen (Landscape)')
+                                                    ? 'Portrait'
+                                                    : 'Fullscreen (Landscape)')
                                               : (playerState.isFullscreen
-                                                  ? 'Exit Fullscreen'
-                                                  : 'Fullscreen');
+                                                    ? 'Exit Fullscreen'
+                                                    : 'Fullscreen');
 
                                           return _CompactGlassButton(
                                             icon: isFullscreenActive
@@ -591,7 +614,11 @@ class _CompactGlassButton extends StatelessWidget {
     final isRtl = Directionality.maybeOf(context) == TextDirection.rtl;
     final shouldFlip = matchTextDirection && isRtl;
 
-    Widget iconWidget = HugeIcon(icon: icon as List<List<dynamic>>, color: Colors.white, size: iconSize);
+    Widget iconWidget = HugeIcon(
+      icon: icon as List<List<dynamic>>,
+      color: Colors.white,
+      size: iconSize,
+    );
     if (shouldFlip) {
       iconWidget = Transform.flip(flipX: true, child: iconWidget);
     }
@@ -607,7 +634,10 @@ class _CompactGlassButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.12),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 0.8),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.16),
+              width: 0.8,
+            ),
           ),
           child: Center(child: iconWidget),
         ),
@@ -630,6 +660,7 @@ class _CompactGlassButton extends StatelessWidget {
 
     return TvFocusable(
       onSelect: onPressed,
+      debugLabel: tooltip,
       child: interactiveVisual,
     );
   }
@@ -661,14 +692,21 @@ class _CompactGlassActionButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 0.8),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.16),
+                width: 0.8,
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  HugeIcon(icon: icon as List<List<dynamic>>, color: Colors.white, size: 13),
+                  HugeIcon(
+                    icon: icon as List<List<dynamic>>,
+                    color: Colors.white,
+                    size: 13,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     label,
@@ -700,6 +738,7 @@ class _SeekTimelineRow extends StatelessWidget {
     required this.onRequestSeekPreview,
     required this.onScrubStart,
     required this.onScrubEnd,
+    required this.onSeekRelative,
   });
 
   final Duration duration;
@@ -711,6 +750,7 @@ class _SeekTimelineRow extends StatelessWidget {
   final SeekPreviewCallback onRequestSeekPreview;
   final VoidCallback onScrubStart;
   final ValueChanged<Duration> onScrubEnd;
+  final ValueChanged<Duration> onSeekRelative;
 
   @override
   Widget build(BuildContext context) {
@@ -752,6 +792,7 @@ class _SeekTimelineRow extends StatelessWidget {
                 onRequestSeekPreview: onRequestSeekPreview,
                 onScrubStart: onScrubStart,
                 onScrubEnd: onScrubEnd,
+                onSeekRelative: onSeekRelative,
               ),
             ),
             const SizedBox(width: 8),
@@ -811,6 +852,7 @@ class _InteractiveSeekBar extends StatefulWidget {
     required this.onRequestSeekPreview,
     required this.onScrubStart,
     required this.onScrubEnd,
+    required this.onSeekRelative,
   });
 
   final Duration position;
@@ -820,6 +862,7 @@ class _InteractiveSeekBar extends StatefulWidget {
   final SeekPreviewCallback onRequestSeekPreview;
   final VoidCallback onScrubStart;
   final ValueChanged<Duration> onScrubEnd;
+  final ValueChanged<Duration> onSeekRelative;
 
   @override
   State<_InteractiveSeekBar> createState() => _InteractiveSeekBarState();
@@ -841,13 +884,13 @@ class _InteractiveSeekBarState extends State<_InteractiveSeekBar> {
     if (_isScrubbing && _scrubMilliseconds != null) {
       return _scrubMilliseconds!.clamp(0.0, _maxMilliseconds);
     }
-    return widget.position.inMilliseconds
-        .toDouble()
-        .clamp(0.0, _maxMilliseconds);
+    return widget.position.inMilliseconds.toDouble().clamp(
+      0.0,
+      _maxMilliseconds,
+    );
   }
 
-  double? get _previewMilliseconds =>
-      _isScrubbing ? _scrubMilliseconds : null;
+  double? get _previewMilliseconds => _isScrubbing ? _scrubMilliseconds : null;
 
   void _startScrubbing(double value) {
     _previewSession++;
@@ -883,6 +926,20 @@ class _InteractiveSeekBarState extends State<_InteractiveSeekBar> {
     }
   }
 
+  bool _handleRemoteDirection(TraversalDirection direction) {
+    switch (direction) {
+      case TraversalDirection.left:
+        widget.onSeekRelative(const Duration(seconds: -10));
+        return true;
+      case TraversalDirection.right:
+        widget.onSeekRelative(const Duration(seconds: 10));
+        return true;
+      case TraversalDirection.up:
+      case TraversalDirection.down:
+        return false;
+    }
+  }
+
   Future<void> _drainPreviewRequests(int session) async {
     _previewRequestRunning = true;
     try {
@@ -909,20 +966,21 @@ class _InteractiveSeekBarState extends State<_InteractiveSeekBar> {
 
   @override
   Widget build(BuildContext context) {
-    final buffered = widget.bufferedPosition.inMilliseconds
-        .toDouble()
-        .clamp(0.0, _maxMilliseconds);
+    final buffered = widget.bufferedPosition.inMilliseconds.toDouble().clamp(
+      0.0,
+      _maxMilliseconds,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final previewValue = _previewMilliseconds;
-        final availablePreviewTravel =
-            (constraints.maxWidth - _previewWidth).clamp(0.0, double.infinity);
+        final availablePreviewTravel = (constraints.maxWidth - _previewWidth)
+            .clamp(0.0, double.infinity);
         final previewLeft = previewValue == null
             ? 0.0
             : ((previewValue / _maxMilliseconds) * constraints.maxWidth -
-                    _previewWidth / 2)
-                .clamp(0.0, availablePreviewTravel);
+                      _previewWidth / 2)
+                  .clamp(0.0, availablePreviewTravel);
 
         return MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -932,34 +990,43 @@ class _InteractiveSeekBarState extends State<_InteractiveSeekBar> {
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackShape: const _ModernPlayerSliderTrackShape(),
-                      thumbShape: const _ModernPlayerSliderThumbShape(),
-                      overlayShape: const RoundSliderOverlayShape(
-                        overlayRadius: 15,
+                  child: TvFocusable(
+                    debugLabel: 'player-seek-bar',
+                    onDirection: _handleRemoteDirection,
+                    tapToSelect: false,
+                    scale: 1,
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackShape: const _ModernPlayerSliderTrackShape(),
+                        thumbShape: const _ModernPlayerSliderThumbShape(),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 15,
+                        ),
+                        overlayColor: AppColors.accent.withValues(alpha: 0.13),
+                        activeTrackColor: AppColors.accent,
+                        secondaryActiveTrackColor: Colors.white.withValues(
+                          alpha: 0.35,
+                        ),
+                        inactiveTrackColor: Colors.white.withValues(
+                          alpha: 0.16,
+                        ),
+                        thumbColor: AppColors.accent,
+                        trackHeight: 4.5,
                       ),
-                      overlayColor: AppColors.accent.withValues(alpha: 0.13),
-                      activeTrackColor: AppColors.accent,
-                      secondaryActiveTrackColor:
-                          Colors.white.withValues(alpha: 0.35),
-                      inactiveTrackColor: Colors.white.withValues(alpha: 0.16),
-                      thumbColor: AppColors.accent,
-                      trackHeight: 4.5,
-                    ),
-                    child: Semantics(
-                      label: 'Playback position',
-                      value: widget.formatDuration(
-                        Duration(milliseconds: _displayMilliseconds.round()),
-                      ),
-                      child: Slider(
-                        key: const ValueKey('interactive-player-seek-bar'),
-                        value: _displayMilliseconds,
-                        secondaryTrackValue: buffered,
-                        max: _maxMilliseconds,
-                        onChangeStart: _startScrubbing,
-                        onChanged: _updateScrubbing,
-                        onChangeEnd: _finishScrubbing,
+                      child: Semantics(
+                        label: 'Playback position',
+                        value: widget.formatDuration(
+                          Duration(milliseconds: _displayMilliseconds.round()),
+                        ),
+                        child: Slider(
+                          key: const ValueKey('interactive-player-seek-bar'),
+                          value: _displayMilliseconds,
+                          secondaryTrackValue: buffered,
+                          max: _maxMilliseconds,
+                          onChangeStart: _startScrubbing,
+                          onChanged: _updateScrubbing,
+                          onChangeEnd: _finishScrubbing,
+                        ),
                       ),
                     ),
                   ),
@@ -996,11 +1063,7 @@ class _InteractiveSeekBarState extends State<_InteractiveSeekBar> {
 }
 
 class _SeekPreviewCard extends StatelessWidget {
-  const _SeekPreviewCard({
-    super.key,
-    required this.frame,
-    required this.time,
-  });
+  const _SeekPreviewCard({super.key, required this.frame, required this.time});
 
   final Uint8List? frame;
   final String time;
@@ -1014,7 +1077,11 @@ class _SeekPreviewCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
         boxShadow: const [
-          BoxShadow(color: Color(0x99000000), blurRadius: 14, offset: Offset(0, 5)),
+          BoxShadow(
+            color: Color(0x99000000),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -1068,7 +1135,8 @@ class _SeekPreviewCard extends StatelessWidget {
 }
 
 /// Modern custom slider track shape that draws rounded inactive, buffered, and active tracks.
-class _ModernPlayerSliderTrackShape extends SliderTrackShape with BaseSliderTrackShape {
+class _ModernPlayerSliderTrackShape extends SliderTrackShape
+    with BaseSliderTrackShape {
   const _ModernPlayerSliderTrackShape();
 
   @override
@@ -1120,10 +1188,19 @@ class _ModernPlayerSliderTrackShape extends SliderTrackShape with BaseSliderTrac
 
     // 2. Buffered / Secondary track
     if (secondaryOffset != null && secondaryOffset.dx > trackRect.left) {
-      final bufferWidth = (secondaryOffset.dx - trackRect.left).clamp(0.0, trackRect.width);
-      final bufferRect = Rect.fromLTWH(trackRect.left, trackRect.top, bufferWidth, trackRect.height);
+      final bufferWidth = (secondaryOffset.dx - trackRect.left).clamp(
+        0.0,
+        trackRect.width,
+      );
+      final bufferRect = Rect.fromLTWH(
+        trackRect.left,
+        trackRect.top,
+        bufferWidth,
+        trackRect.height,
+      );
       final bufferPaint = Paint()
-        ..color = sliderTheme.secondaryActiveTrackColor ?? const Color(0x59FFFFFF);
+        ..color =
+            sliderTheme.secondaryActiveTrackColor ?? const Color(0x59FFFFFF);
       context.canvas.drawRRect(
         RRect.fromRectAndRadius(bufferRect, radius),
         bufferPaint,
@@ -1131,9 +1208,17 @@ class _ModernPlayerSliderTrackShape extends SliderTrackShape with BaseSliderTrac
     }
 
     // 3. Active played track
-    final activeWidth = (thumbCenter.dx - trackRect.left).clamp(0.0, trackRect.width);
+    final activeWidth = (thumbCenter.dx - trackRect.left).clamp(
+      0.0,
+      trackRect.width,
+    );
     if (activeWidth > 0) {
-      final activeRect = Rect.fromLTWH(trackRect.left, trackRect.top, activeWidth, trackRect.height);
+      final activeRect = Rect.fromLTWH(
+        trackRect.left,
+        trackRect.top,
+        activeWidth,
+        trackRect.height,
+      );
       final activePaint = Paint()
         ..color = sliderTheme.activeTrackColor ?? AppColors.accent;
       context.canvas.drawRRect(
@@ -1152,7 +1237,8 @@ class _ModernPlayerSliderThumbShape extends SliderComponentShape {
   static const double glowRadius = 10.0;
 
   @override
-  Size getPreferredSize(bool isEnabled, bool isDiscrete) => const Size.fromRadius(glowRadius);
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
+      const Size.fromRadius(glowRadius);
 
   @override
   void paint(

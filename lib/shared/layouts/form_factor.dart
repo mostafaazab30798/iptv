@@ -121,7 +121,10 @@ class ChromeHeights {
           formFactor: FormFactor.tv,
           header: 56,
           dock: 0,
-          heroFraction: 0.45,
+          // Keep more of the first content rail visible on 960x540/tvdpi
+          // screens. The previous 0.45 budget still felt phone-sized at a
+          // typical ten-foot viewing distance.
+          heroFraction: 0.40,
           overscan: overscanLogicalPx,
         );
     }

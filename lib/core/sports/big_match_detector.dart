@@ -202,6 +202,7 @@ class BigTeam {
     required this.id,
     required this.displayName,
     required this.aliases,
+    this.exclusions = const [],
   });
 
   final String id;
@@ -211,17 +212,32 @@ class BigTeam {
   /// single tokens require a word boundary so `city` does not match everything.
   final List<String> aliases;
 
+  /// Phrases that must not count as this club (e.g. National Bank / Real Sociedad).
+  /// Matched substrings are stripped from the haystack before alias checks.
+  final List<String> exclusions;
+
   bool matchesNormalized(String normalizedHaystack) {
-    final hay = ' $normalizedHaystack ';
+    var cleaned = normalizedHaystack;
+    for (final exclusion in exclusions) {
+      if (exclusion.isEmpty) continue;
+      cleaned = cleaned.replaceAll(exclusion, ' ');
+    }
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (cleaned.isEmpty) return false;
+
+    final hay = ' $cleaned ';
     for (final alias in aliases) {
       if (alias.contains(' ')) {
-        if (normalizedHaystack.contains(alias)) return true;
+        if (cleaned.contains(alias)) return true;
       } else if (hay.contains(' $alias ')) {
         return true;
       }
     }
     return false;
   }
+
+  @override
+  String toString() => displayName;
 }
 
 const _teams = <BigTeam>[
@@ -242,6 +258,7 @@ const _teams = <BigTeam>[
   BigTeam(
     id: 'real_madrid',
     displayName: 'Real Madrid',
+    // Do not use bare "ريال" — it matches Real Betis / Real Sociedad.
     aliases: [
       'real madrid',
       'real madrid cf',
@@ -249,7 +266,6 @@ const _teams = <BigTeam>[
       'rmcf',
       'ريال مدريد',
       'الريال',
-      'ريال',
     ],
   ),
   BigTeam(
@@ -319,26 +335,53 @@ const _teams = <BigTeam>[
   ),
   BigTeam(
     id: 'ahly',
-    displayName: 'Al Ahly',
+    displayName: 'Al Ahly SC',
     aliases: [
+      'al ahly sc',
       'al ahly',
       'alahly',
+      'ahly sc',
       'ahly',
       'الأهلي',
       'الاهلي',
       'الأهلى',
       'الاهلى',
       'الأهلي المصري',
+      'الاهلي المصري',
       'النادي الأهلي',
+      'النادي الاهلي',
       'الشياطين الحمر',
+    ],
+    // Strip lookalikes before matching "الأهلي" / "ahly".
+    exclusions: [
+      'البنك الأهلي',
+      'البنك الاهلي',
+      'البنك الأهلى',
+      'البنك الاهلى',
+      'national bank',
+      'ahly bank',
+      'al ahli bank',
+      'أهلي جدة',
+      'اهلي جدة',
+      'أهلي جده',
+      'اهلي جده',
+      'الأهلي جدة',
+      'الاهلي جدة',
+      'الأهلي جده',
+      'الاهلي جده',
+      'al ahli jeddah',
+      'al ahli saudi',
+      'شباب الأهلي',
+      'شباب الاهلي',
+      'shabab al ahli',
     ],
   ),
   BigTeam(
     id: 'zamalek',
-    displayName: 'Zamalek',
+    displayName: 'Zamalek SC',
     aliases: [
-      'zamalek',
       'zamalek sc',
+      'zamalek',
       'الزمالك',
       'نادي الزمالك',
       'الفارس الأبيض',

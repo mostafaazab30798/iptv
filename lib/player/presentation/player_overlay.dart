@@ -22,6 +22,7 @@ import 'package:iptv/player/presentation/software_decode_badge.dart';
 import 'package:iptv/player/presentation/subtitle_selector.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 
 /// Clean and compact overlay shell managing touch gestures (double-tap 10s seek, vertical/horizontal drags),
@@ -107,7 +108,10 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   Timer? _tapDebounceTimer;
   bool _controlsVisible = true;
   bool _showDiagnostics = false;
-  final FocusNode _focusNode = FocusNode();
+  final FocusNode _focusNode = FocusNode(debugLabel: 'player-surface');
+  final FocusNode _primaryControlFocusNode = FocusNode(
+    debugLabel: 'player-play-pause',
+  );
 
   // Double-tap seek state
   DoubleTapSeekSide? _activeSeekSide;
@@ -115,8 +119,9 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   Timer? _seekResetTimer;
 
   // Gesture HUD — ValueNotifier so drag ticks do not rebuild PlayerControls.
-  final ValueNotifier<_GestureHudData> _gestureHud =
-      ValueNotifier(_GestureHudData.hidden);
+  final ValueNotifier<_GestureHudData> _gestureHud = ValueNotifier(
+    _GestureHudData.hidden,
+  );
   bool _isDragging = false;
   bool _isVolumeDrag = false;
   bool _isBrightnessDrag = false;
@@ -144,7 +149,8 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   }
 
   Future<void> _initDeviceLevels() async {
-    final isMobile = !PlatformService.instance.isWindows && !PlatformService.instance.isWeb;
+    final isMobile =
+        !PlatformService.instance.isWindows && !PlatformService.instance.isWeb;
     if (isMobile) {
       try {
         final brightness = await ScreenBrightness.instance.application;
@@ -174,8 +180,25 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(const Duration(seconds: 4), () {
       if (mounted && !widget.playerState.isLocked) {
-        setState(() => _controlsVisible = false);
+        _hideOverlay();
       }
+    });
+  }
+
+  void _hideOverlay() {
+    _hideControlsTimer?.cancel();
+    if (_controlsVisible && mounted) {
+      setState(() => _controlsVisible = false);
+    }
+    // Never leave focus parked on an invisible control. The full-screen
+    // surface becomes the remote-key target until OK reveals the chrome.
+    _focusNode.requestFocus();
+  }
+
+  void _focusPrimaryControl() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controlsVisible || widget.playerState.isLocked) return;
+      _primaryControlFocusNode.requestFocus();
     });
   }
 
@@ -184,6 +207,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     // Only rebuild when visibility actually flips; always refresh auto-hide.
     if (!_controlsVisible) {
       setState(() => _controlsVisible = true);
+      _focusPrimaryControl();
     }
     _scheduleHide();
   }
@@ -191,8 +215,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   void _toggleOverlay() {
     if (widget.playerState.isLocked) return;
     if (_controlsVisible) {
-      _hideControlsTimer?.cancel();
-      setState(() => _controlsVisible = false);
+      _hideOverlay();
     } else {
       _showOverlay();
     }
@@ -272,12 +295,16 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
         platform == TargetPlatform.macOS;
   }
 
-  void _handleDoubleTapDown(TapDownDetails details, BoxConstraints constraints) {
+  void _handleDoubleTapDown(
+    TapDownDetails details,
+    BoxConstraints constraints,
+  ) {
     if (widget.playerState.isLocked) return;
     _tapDebounceTimer?.cancel();
 
     // On Desktop (Windows / Linux / macOS) and Web, double click anywhere toggles fullscreen (standard player UX)
-    final isDesktopOrWeb = kIsWeb ||
+    final isDesktopOrWeb =
+        kIsWeb ||
         Theme.of(context).platform == TargetPlatform.windows ||
         Theme.of(context).platform == TargetPlatform.linux ||
         Theme.of(context).platform == TargetPlatform.macOS;
@@ -327,36 +354,47 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     }
   }
 
-  void _handleVerticalDragStart(DragStartDetails details, BoxConstraints constraints) {
+  void _handleVerticalDragStart(
+    DragStartDetails details,
+    BoxConstraints constraints,
+  ) {
     if (widget.playerState.isLocked) return;
     _hudDismissTimer?.cancel();
     _isDragging = true;
 
-    final isMobile = !PlatformService.instance.isWindows && !PlatformService.instance.isWeb;
+    final isMobile =
+        !PlatformService.instance.isWindows && !PlatformService.instance.isWeb;
     final xRatio = details.localPosition.dx / constraints.maxWidth;
     if (xRatio < 0.5 && isMobile) {
       _isBrightnessDrag = true;
       _isVolumeDrag = false;
-      ScreenBrightness.instance.application.then((b) {
-        if (mounted) {
-          _brightnessLevel = b.clamp(0.01, 1.0);
-          if (_isBrightnessDrag) _publishGestureHud();
-        }
-      }).catchError((_) {});
+      ScreenBrightness.instance.application
+          .then((b) {
+            if (mounted) {
+              _brightnessLevel = b.clamp(0.01, 1.0);
+              if (_isBrightnessDrag) _publishGestureHud();
+            }
+          })
+          .catchError((_) {});
     } else {
       _isVolumeDrag = true;
       _isBrightnessDrag = false;
-      FlutterVolumeController.getVolume().then((v) {
-        if (v != null && mounted) {
-          _currentVolume = v.clamp(0.0, 1.0);
-          if (_isVolumeDrag) _publishGestureHud();
-        }
-      }).catchError((_) {});
+      FlutterVolumeController.getVolume()
+          .then((v) {
+            if (v != null && mounted) {
+              _currentVolume = v.clamp(0.0, 1.0);
+              if (_isVolumeDrag) _publishGestureHud();
+            }
+          })
+          .catchError((_) {});
     }
     _publishGestureHud();
   }
 
-  void _handleVerticalDragUpdate(DragUpdateDetails details, BoxConstraints constraints) {
+  void _handleVerticalDragUpdate(
+    DragUpdateDetails details,
+    BoxConstraints constraints,
+  ) {
     if (!_isDragging || widget.playerState.isLocked) return;
 
     final dy = details.delta.dy;
@@ -365,7 +403,9 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       final newLevel = (_brightnessLevel + delta).clamp(0.01, 1.0);
       _brightnessLevel = newLevel;
       _publishGestureHud();
-      ScreenBrightness.instance.setApplicationScreenBrightness(newLevel).catchError((_) {});
+      ScreenBrightness.instance
+          .setApplicationScreenBrightness(newLevel)
+          .catchError((_) {});
     } else if (_isVolumeDrag) {
       final delta = -dy / (constraints.maxHeight * 0.65);
       _currentVolume = (_currentVolume + delta).clamp(0.0, 1.0);
@@ -386,7 +426,10 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     });
   }
 
-  void _handleHorizontalDragStart(DragStartDetails details, BoxConstraints constraints) {
+  void _handleHorizontalDragStart(
+    DragStartDetails details,
+    BoxConstraints constraints,
+  ) {
     if (widget.playerState.isLocked || widget.playerState.isLive) return;
     _hudDismissTimer?.cancel();
     _isDragging = true;
@@ -396,7 +439,10 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     _publishGestureHud();
   }
 
-  void _handleHorizontalDragUpdate(DragUpdateDetails details, BoxConstraints constraints) {
+  void _handleHorizontalDragUpdate(
+    DragUpdateDetails details,
+    BoxConstraints constraints,
+  ) {
     if (!_isDragging || widget.playerState.isLocked || !_isScrubDrag) return;
     final dx = details.delta.dx;
     final deltaSecs = (dx / (constraints.maxWidth * 0.3) * 60).toInt();
@@ -408,7 +454,8 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     if (!_isDragging || widget.playerState.isLocked || !_isScrubDrag) return;
 
     if (_scrubOffsetSeconds != 0) {
-      final target = _scrubStartPosition + Duration(seconds: _scrubOffsetSeconds);
+      final target =
+          _scrubStartPosition + Duration(seconds: _scrubOffsetSeconds);
       final maxDur = widget.playerState.duration;
       final clampedTarget = _clampDuration(target, Duration.zero, maxDur);
       widget.onSeek(clampedTarget);
@@ -438,10 +485,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
           ? 'Sleep timer set: $label'
           : 'Sleep timer set for ${duration.inMinutes} minutes';
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-        ),
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
       );
     } else {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
@@ -472,8 +516,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
         return KeyEventResult.handled;
       }
       if (_controlsVisible) {
-        setState(() => _controlsVisible = false);
-        _focusNode.requestFocus();
+        _hideOverlay();
         return KeyEventResult.handled;
       }
       // On desktop / PC, pressing Escape while in fullscreen exits fullscreen first.
@@ -504,7 +547,8 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.gameButtonSelect ||
         key == LogicalKeyboardKey.gameButtonA) {
-      widget.onPlayPause();
+      // With hidden chrome, OK reveals the controls. Playback changes only
+      // after the user focuses and activates the play/pause button.
       _showOverlay();
       return KeyEventResult.handled;
     }
@@ -535,13 +579,13 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     }
 
     if (key == LogicalKeyboardKey.arrowUp) {
-      widget.onNextChannel();
+      widget.onPreviousChannel();
       _showOverlay();
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowDown) {
-      widget.onPreviousChannel();
+      widget.onNextChannel();
       _showOverlay();
       return KeyEventResult.handled;
     }
@@ -565,8 +609,12 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     _activeSleepTimer?.cancel();
     _gestureHud.dispose();
     _focusNode.dispose();
-    if (!PlatformService.instance.isWindows && !PlatformService.instance.isWeb) {
-      ScreenBrightness.instance.resetApplicationScreenBrightness().catchError((_) {});
+    _primaryControlFocusNode.dispose();
+    if (!PlatformService.instance.isWindows &&
+        !PlatformService.instance.isWeb) {
+      ScreenBrightness.instance.resetApplicationScreenBrightness().catchError(
+        (_) {},
+      );
     }
     super.dispose();
   }
@@ -578,7 +626,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
 
     return Focus(
       focusNode: _focusNode,
-      autofocus: true,
+      autofocus: false,
       skipTraversal: _controlsVisible && !widget.playerState.isLocked,
       onKeyEvent: _handleKeyEvent,
       child: LayoutBuilder(
@@ -601,13 +649,18 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapUp: (d) => _handleTapUp(d, constraints),
-                    onDoubleTapDown: (d) => _handleDoubleTapDown(d, constraints),
+                    onDoubleTapDown: (d) =>
+                        _handleDoubleTapDown(d, constraints),
                     onDoubleTap: () {},
-                    onVerticalDragStart: (d) => _handleVerticalDragStart(d, constraints),
-                    onVerticalDragUpdate: (d) => _handleVerticalDragUpdate(d, constraints),
+                    onVerticalDragStart: (d) =>
+                        _handleVerticalDragStart(d, constraints),
+                    onVerticalDragUpdate: (d) =>
+                        _handleVerticalDragUpdate(d, constraints),
                     onVerticalDragEnd: _handleVerticalDragEnd,
-                    onHorizontalDragStart: (d) => _handleHorizontalDragStart(d, constraints),
-                    onHorizontalDragUpdate: (d) => _handleHorizontalDragUpdate(d, constraints),
+                    onHorizontalDragStart: (d) =>
+                        _handleHorizontalDragStart(d, constraints),
+                    onHorizontalDragUpdate: (d) =>
+                        _handleHorizontalDragUpdate(d, constraints),
                     onHorizontalDragEnd: _handleHorizontalDragEnd,
                   ),
                 ),
@@ -623,99 +676,112 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                         memoryKey: 'player/chrome',
                         debugLabel: 'player-chrome',
                         child: PlayerControls(
-                        playerState: widget.playerState,
-                        positionListenable: widget.positionListenable,
-                        bufferedPositionListenable:
-                            widget.bufferedPositionListenable,
-                        onPlayPause: widget.onPlayPause,
-                        onRequestSeekPreview: widget.onRequestSeekPreview,
-                        onScrubStart: () {
-                          _hideControlsTimer?.cancel();
-                          if (!_controlsVisible && mounted) {
-                            setState(() => _controlsVisible = true);
-                          }
-                          widget.onScrubStart();
-                        },
-                        onScrubEnd: (position) {
-                          widget.onScrubEnd(position);
-                          _scheduleHide();
-                        },
-                        onSeekRelative: (offset) {
-                          widget.onSeekRelative(offset);
-                          _showSeekRippleOnly(
-                            offset.isNegative ? DoubleTapSeekSide.left : DoubleTapSeekSide.right,
-                          );
-                        },
-                        onVolumeChanged: widget.onVolumeChanged,
-                        onToggleMute: widget.onToggleMute,
-                        onNextChannel: widget.onNextChannel,
-                        onPreviousChannel: widget.onPreviousChannel,
-                        onCycleAspectRatio: widget.onCycleAspectRatio,
-                        onSelectPlaybackRate: widget.onSelectPlaybackRate,
-                        onOpenAudioTracks: () {
-                          _hideControlsTimer?.cancel();
-                          AudioTrackSelectorModal.show(
-                            context,
-                            tracks: widget.playerState.availableAudioTracks,
-                            currentTrack: widget.playerState.currentAudioTrack,
-                            onSelect: widget.onSelectAudioTrack,
-                          ).then((_) => _scheduleHide());
-                        },
-                        onOpenSubtitles: () {
-                          _hideControlsTimer?.cancel();
-                          SubtitleSelectorModal.show(
-                            context,
-                            tracks: widget.playerState.availableSubtitleTracks,
-                            currentTrack: widget.playerState.currentSubtitleTrack,
-                            onSelect: widget.onSelectSubtitleTrack,
-                          ).then((_) => _scheduleHide());
-                        },
-                        onToggleLock: widget.onToggleLock,
-                        onOpenQuickSettings: () {
-                          _hideControlsTimer?.cancel();
-                          PlayerQuickSettingsSheet.show(
-                            context,
-                            playerState: widget.playerState,
-                            onSelectPlaybackRate: widget.onSelectPlaybackRate,
-                            onSelectAspectRatio: widget.onSelectAspectRatio,
-                            onOpenAudioTracks: () {
-                              AudioTrackSelectorModal.show(
-                                context,
-                                tracks: widget.playerState.availableAudioTracks,
-                                currentTrack: widget.playerState.currentAudioTrack,
-                                onSelect: widget.onSelectAudioTrack,
-                              );
-                            },
-                            onOpenSubtitles: () {
-                              SubtitleSelectorModal.show(
-                                context,
-                                tracks: widget.playerState.availableSubtitleTracks,
-                                currentTrack: widget.playerState.currentSubtitleTrack,
-                                onSelect: widget.onSelectSubtitleTrack,
-                              );
-                            },
-                            onSelectBufferMode: widget.onSelectBufferMode,
-                            onSetSleepTimer: _setSleepTimer,
-                            onAudioHandoff: isPhone
-                                ? null
-                                : () {
-                                    AudioHandoffTvDialog.show(context)
-                                        .then((_) => _scheduleHide());
-                                  },
-                            activeSleepLabel: _activeSleepLabel,
-                            activeSleepDuration: _activeSleepDuration,
-                          ).then((_) => _scheduleHide());
-                        },
-                        onToggleFullscreen: widget.onToggleFullscreen,
-                        onAudioHandoff: isPhone
-                            ? null
-                            : () {
-                                _hideControlsTimer?.cancel();
-                                AudioHandoffTvDialog.show(context)
-                                    .then((_) => _scheduleHide());
+                          playerState: widget.playerState,
+                          primaryFocusNode: _primaryControlFocusNode,
+                          positionListenable: widget.positionListenable,
+                          bufferedPositionListenable:
+                              widget.bufferedPositionListenable,
+                          onPlayPause: widget.onPlayPause,
+                          onRequestSeekPreview: widget.onRequestSeekPreview,
+                          onScrubStart: () {
+                            _hideControlsTimer?.cancel();
+                            if (!_controlsVisible && mounted) {
+                              setState(() => _controlsVisible = true);
+                            }
+                            widget.onScrubStart();
+                          },
+                          onScrubEnd: (position) {
+                            widget.onScrubEnd(position);
+                            _scheduleHide();
+                          },
+                          onSeekRelative: (offset) {
+                            widget.onSeekRelative(offset);
+                            _showSeekRippleOnly(
+                              offset.isNegative
+                                  ? DoubleTapSeekSide.left
+                                  : DoubleTapSeekSide.right,
+                            );
+                          },
+                          onVolumeChanged: widget.onVolumeChanged,
+                          onToggleMute: widget.onToggleMute,
+                          onNextChannel: widget.onNextChannel,
+                          onPreviousChannel: widget.onPreviousChannel,
+                          onCycleAspectRatio: widget.onCycleAspectRatio,
+                          onSelectPlaybackRate: widget.onSelectPlaybackRate,
+                          onOpenAudioTracks: () {
+                            _hideControlsTimer?.cancel();
+                            AudioTrackSelectorModal.show(
+                              context,
+                              tracks: widget.playerState.availableAudioTracks,
+                              currentTrack:
+                                  widget.playerState.currentAudioTrack,
+                              onSelect: widget.onSelectAudioTrack,
+                            ).then((_) => _scheduleHide());
+                          },
+                          onOpenSubtitles: () {
+                            _hideControlsTimer?.cancel();
+                            SubtitleSelectorModal.show(
+                              context,
+                              tracks:
+                                  widget.playerState.availableSubtitleTracks,
+                              currentTrack:
+                                  widget.playerState.currentSubtitleTrack,
+                              onSelect: widget.onSelectSubtitleTrack,
+                            ).then((_) => _scheduleHide());
+                          },
+                          onToggleLock: widget.onToggleLock,
+                          onOpenQuickSettings: () {
+                            _hideControlsTimer?.cancel();
+                            PlayerQuickSettingsSheet.show(
+                              context,
+                              playerState: widget.playerState,
+                              onSelectPlaybackRate: widget.onSelectPlaybackRate,
+                              onSelectAspectRatio: widget.onSelectAspectRatio,
+                              onOpenAudioTracks: () {
+                                AudioTrackSelectorModal.show(
+                                  context,
+                                  tracks:
+                                      widget.playerState.availableAudioTracks,
+                                  currentTrack:
+                                      widget.playerState.currentAudioTrack,
+                                  onSelect: widget.onSelectAudioTrack,
+                                );
                               },
-                        onClose: widget.onClose,
-                      ),
+                              onOpenSubtitles: () {
+                                SubtitleSelectorModal.show(
+                                  context,
+                                  tracks: widget
+                                      .playerState
+                                      .availableSubtitleTracks,
+                                  currentTrack:
+                                      widget.playerState.currentSubtitleTrack,
+                                  onSelect: widget.onSelectSubtitleTrack,
+                                );
+                              },
+                              onSelectBufferMode: widget.onSelectBufferMode,
+                              onSetSleepTimer: _setSleepTimer,
+                              onAudioHandoff: isPhone
+                                  ? null
+                                  : () {
+                                      AudioHandoffTvDialog.show(
+                                        context,
+                                      ).then((_) => _scheduleHide());
+                                    },
+                              activeSleepLabel: _activeSleepLabel,
+                              activeSleepDuration: _activeSleepDuration,
+                            ).then((_) => _scheduleHide());
+                          },
+                          onToggleFullscreen: widget.onToggleFullscreen,
+                          onAudioHandoff: isPhone
+                              ? null
+                              : () {
+                                  _hideControlsTimer?.cancel();
+                                  AudioHandoffTvDialog.show(
+                                    context,
+                                  ).then((_) => _scheduleHide());
+                                },
+                          onClose: widget.onClose,
+                        ),
                       ),
                     ),
                   ),
@@ -770,11 +836,23 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                               ),
                             ],
                           ),
-                          child: IconButton(
-                            iconSize: 28,
-                            icon: const HugeIcon(icon: AppIcons.lock, color: AppColors.accent, size: 24),
-                            tooltip: 'Tap to unlock screen',
-                            onPressed: widget.onToggleLock,
+                          child: TvFocusable(
+                            autofocus: true,
+                            debugLabel: 'player-unlock',
+                            onSelect: widget.onToggleLock,
+                            child: const Tooltip(
+                              message: 'Unlock screen',
+                              child: SizedBox.square(
+                                dimension: 52,
+                                child: Center(
+                                  child: HugeIcon(
+                                    icon: AppIcons.lock,
+                                    color: AppColors.accent,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -782,7 +860,8 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                   ),
 
                 // 6. Persistent software-decode badge (Top Left, compact)
-                if (widget.playerState.metrics.showSoftwareDecodeBadge && !isLocked)
+                if (widget.playerState.metrics.showSoftwareDecodeBadge &&
+                    !isLocked)
                   Positioned(
                     top: 60,
                     left: 16,
@@ -819,7 +898,8 @@ class _GestureHud extends StatelessWidget {
   final ValueListenable<_GestureHudData> listenable;
   final bool isMuted;
   final Duration totalDuration;
-  final Duration Function(Duration val, Duration min, Duration max) clampDuration;
+  final Duration Function(Duration val, Duration min, Duration max)
+  clampDuration;
 
   @override
   Widget build(BuildContext context) {
@@ -835,8 +915,8 @@ class _GestureHud extends StatelessWidget {
               icon: (isMuted && volume == 0) || volume == 0
                   ? AppIcons.volumeMute
                   : volume < 0.5
-                      ? AppIcons.volumeLow
-                      : AppIcons.volumeHigh,
+                  ? AppIcons.volumeLow
+                  : AppIcons.volumeHigh,
               value: volume,
               label: 'Volume',
             );
