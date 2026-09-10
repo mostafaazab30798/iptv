@@ -5,10 +5,10 @@
     "team_away": "ديروط",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/8/1/Elnasr2018_8_1_16_20.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2016/3/30/22016_3_30_19_49.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "بلدية المحلة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/10/26/Pharco2021_10_26_8_28.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/9/19/12023_9_19_23_45.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "1",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "الداخلية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/10/kahraba2025_8_10_16_41.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Eldakhleya2018_7_24_13_32.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "0",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "السكة الحديد",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/6/Screenshot 2025-08-06 172011_Easy-Resize.com2025_8_6_17_21.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/12/5/el-sekka-el-hadid-sc-logo-png_seeklogo-6312502025_12_5_5_50.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "1",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport"
   },
   {
@@ -53,10 +53,10 @@
     "team_away": "حرس الحدود",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/12/delta club12026_8_12_19_21.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2022/11/5/harras-el-hodoud12022_11_5_0_8.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "2",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -149,11 +149,11 @@
     "team_away": "شباب الأهلي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/527001955_122093570684972004_1405618893921874169_n2026_8_2_20_36.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/ShababAlAhliDubai2018_7_26_11_51.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "16:40",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
+    "status": "انتهت",
+    "channel": "أبوظبي الرياضية - HD 2"
   },
   {
     "league": "الدوري الإماراتي",
@@ -161,11 +161,11 @@
     "team_away": "النصر الإماراتي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/25/AlJazira2018_7_25_14_59.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/12026_8_2_20_23.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "16:40",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
+    "status": "انتهت",
+    "channel": "أبوظبي الرياضية - HD1"
   },
   {
     "league": "الدوري الإماراتي",
@@ -173,11 +173,11 @@
     "team_away": "الوصل",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/10/29/21502024_10_29_19_14.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/25/Alwasl2018_7_25_15_22.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:15",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
+    "status": "الشوط الأول",
+    "channel": "أبوظبي الرياضية - HD1"
   },
   {
     "league": "دوري نجوم قطر",
@@ -185,10 +185,10 @@
     "team_away": "الوكرة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/8/AlShamal2021_9_8_10_36.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/22026_8_5_23_0.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -197,10 +197,10 @@
     "team_away": "السد القطري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/32026_8_5_23_0.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/7/AlSadd2021_9_7_11_27.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:15",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   }
 ]
