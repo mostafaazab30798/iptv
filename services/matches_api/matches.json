@@ -5,10 +5,10 @@
     "team_away": "إيجلز دو كونغو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/ElgaishElrwandy2018_7_24_12_48.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/9/Aigles_du_Congo_logo2026_8_9_19_10.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   },
   {
@@ -77,10 +77,10 @@
     "team_away": "المنصورة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/10/9/Tersana2018_10_9_12_23.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/10/9/Mansoura2018_10_9_12_45.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport"
   },
   {
@@ -89,11 +89,11 @@
     "team_away": "بروكسي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/12/28/team-fc2024_12_28_15_23.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/5/4/42023_5_4_17_47.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "16:30",
-    "status": "لم تبدأ",
-    "channel": "ON Sport MAX"
+    "status": "انتهت",
+    "channel": "ON Sport PLUS"
   },
   {
     "league": "دوري القسم الثاني-أ",
@@ -101,10 +101,10 @@
     "team_away": "لافيينا أف سي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/6/Screenshot 2025-08-06 171737_Easy-Resize.com2025_8_6_17_19.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/7/LaVienaFC2021_9_7_13_43.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "1",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -113,10 +113,10 @@
     "team_away": "الإسماعيلي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/AlentagAlharby2018_7_24_13_33.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Ismaily2018_7_24_13_30.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
@@ -125,10 +125,10 @@
     "team_away": "طنطا‏",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/12/5/telecom-egypt club-logo12025_12_5_6_7.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/31/Tanta2018_7_31_16_51.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "1",
     "time": "16:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -137,10 +137,10 @@
     "team_away": "الاتفـــــاق",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/23/Al_Qadsiah12024_8_23_16_52.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/25/Ettifaq2018_7_25_17_9.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "1",
     "time": "18:25",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "ثمانية 1"
   },
   {
@@ -149,10 +149,10 @@
     "team_away": "الاتحاد",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2022/4/14/AL-FAISALY-FC12022_4_14_11_16.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/7/Ittihad2021_9_7_16_53.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "18:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "ثمانية 2"
   },
   {
@@ -169,39 +169,27 @@
   },
   {
     "league": "الدوري الإماراتي",
-    "team_home": "حتا",
-    "team_away": "الظفرة",
-    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/logoL_1374551152026_8_2_20_26.webp",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Alzafra2018_7_26_11_51.jpg",
-    "score_home": "-",
-    "score_away": "-",
-    "time": "16:40",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
-  },
-  {
-    "league": "الدوري الإماراتي",
     "team_home": "خورفكان",
     "team_away": "بني ياس",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/8/Khorfakkan2021_9_8_10_22.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/BaniYas2018_7_26_11_52.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "16:40",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
+    "status": "انتهت",
+    "channel": "أبوظبي الرياضية - HD1"
   },
   {
     "league": "الدوري الإماراتي",
-    "team_home": "الوحـــدة",
-    "team_away": "الشــارقة",
-    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/3/12/AlWahda2019_3_12_9_56.jpg",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/logoL_14632647842026_8_2_20_22.webp",
-    "score_home": "-",
-    "score_away": "-",
-    "time": "19:15",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
+    "team_home": "حتا",
+    "team_away": "الظفرة",
+    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/logoL_1374551152026_8_2_20_26.webp",
+    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Alzafra2018_7_26_11_51.jpg",
+    "score_home": "1",
+    "score_away": "2",
+    "time": "16:40",
+    "status": "انتهت",
+    "channel": "أبوظبي الرياضية - HD 2"
   },
   {
     "league": "الدوري الإماراتي",
@@ -213,7 +201,19 @@
     "score_away": "-",
     "time": "19:15",
     "status": "لم تبدأ",
-    "channel": "Not Available"
+    "channel": "أبوظبي الرياضية - HD 2"
+  },
+  {
+    "league": "الدوري الإماراتي",
+    "team_home": "الوحـــدة",
+    "team_away": "الشــارقة",
+    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/3/12/AlWahda2019_3_12_9_56.jpg",
+    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/logoL_14632647842026_8_2_20_22.webp",
+    "score_home": "0",
+    "score_away": "0",
+    "time": "19:15",
+    "status": "الشوط الأول",
+    "channel": "أبوظبي الرياضية - HD1"
   },
   {
     "league": "دوري نجوم قطر",
@@ -221,10 +221,10 @@
     "team_away": "نادي لوسيل",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/25/Gharrafa2018_7_25_16_2.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/7/16/lucail sc2026_7_16_23_36.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "الكأس 5"
   },
   {
@@ -233,10 +233,10 @@
     "team_away": "الأهلي القطري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/12026_8_5_22_58.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/AlAhli2018_7_26_12_14.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:15",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "الكأس 6"
   }
 ]
