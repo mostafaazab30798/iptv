@@ -5,10 +5,10 @@
     "team_away": "م. السويس بتروجت",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Elgouna2018_7_24_13_34.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/767101644_4496435057267714_3802005914714408483_n2026_8_5_23_35.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "2",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport PLUS"
   },
   {
@@ -77,10 +77,10 @@
     "team_away": "نيجيريا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/9/4/chad_round_icon_642023_9_4_20_27.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/9/6/nigeria_square_icon_6402026_9_6_0_6.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "3",
     "time": "11:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -89,10 +89,10 @@
     "team_away": "الكونغو الديمقراطية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/9/4/rwanda_round_icon_642023_9_4_20_33.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/9/6/democratic_republic_of_the_congo_square_icon_6402026_9_6_0_3.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "1",
     "time": "14:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -101,10 +101,10 @@
     "team_away": "المغرب",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/9/4/gambia_round_icon_642023_9_4_20_36.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/9/4/morocco_round_icon_642023_9_4_20_32.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "3",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -245,10 +245,10 @@
     "team_away": "كاشيوا ريسول",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/JeonbukHyundai2018_7_26_13_58.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/KashiwaReysol2018_7_26_14_1.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "1",
     "time": "13:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -257,10 +257,10 @@
     "team_away": "فيسيل كوبه",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/ThaiPort2021_7_15_13_2.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/7/26/Vissel12019_7_26_23_22.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "2",
     "time": "15:15",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -300,27 +300,15 @@
     "channel": "بى ان سبورت 4 HD"
   },
   {
-    "league": "الدوري البرتغالي",
-    "team_home": "سبورتينج براجا",
-    "team_away": "جل فيسنتي",
-    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/30/SportingBraga2018_7_30_10_23.jpg",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/5/GilVicente2021_9_5_18_48.jpg",
-    "score_home": "-",
-    "score_away": "-",
-    "time": "22:30",
-    "status": "مؤجل",
-    "channel": "Not Available"
-  },
-  {
     "league": "الدوري التونسي",
     "team_home": "الترجي الجرجيسي",
     "team_away": "الإتحاد المنستيري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/teamlogo/AlTaraggiAlGergesi6-10-2010-21-22-21.png",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/16/Monastir2018_9_16_10_18.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "2",
     "time": "18:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   },
   {
@@ -329,10 +317,10 @@
     "team_away": "الصفاقســــي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/EtihadBenKerdan2018_7_24_12_59.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/25/Sfaxien2018_7_25_15_27.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "18:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   }
 ]
