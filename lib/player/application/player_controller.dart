@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show listEquals, VoidCallback;
 import 'package:flutter/widgets.dart' show ValueNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iptv/app/providers.dart';
+import 'package:iptv/core/storage/preferences_storage.dart';
 import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/watch_history.dart';
 import 'package:iptv/domain/repositories/history_repository.dart';
@@ -12,8 +13,11 @@ import 'package:iptv/player/application/player_capability_service.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/player/application/smart_playback_engine.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
+import 'package:iptv/player/domain/entities/player_metrics.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
+import 'package:iptv/player/domain/enums/player_aspect_ratio_mode.dart';
+import 'package:iptv/player/domain/enums/player_backend.dart';
 import 'package:iptv/player/domain/enums/playback_profile.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
@@ -22,11 +26,14 @@ import 'package:iptv/player/domain/interfaces/player_engine.dart';
 import 'package:iptv/player/handoff/application/audio_handoff_server_controller.dart';
 import 'package:iptv/player/infrastructure/player_engine_factory.dart';
 import 'package:iptv/player/utils/player_logger.dart';
+import 'package:iptv/player/utils/stream_type_detector.dart';
 
 /// Riverpod StateNotifier managing active player state and user playback actions.
 class PlayerController extends StateNotifier<PlayerState> {
   PlayerController({
     PlayerEngine? engine,
+    PlayerBackend? initialBackend,
+    int? initialAspectRatioIndex,
     HistoryRepository? historyRepository,
     PlaybackBufferMode? initialBufferMode,
     Future<bool> Function(PlayerSource source)? canLoadSource,
@@ -34,13 +41,29 @@ class PlayerController extends StateNotifier<PlayerState> {
     void Function(PlayerSource source)? onSourceChanged,
   }) : _engine =
            engine ??
-           createDefaultPlayerEngine(initialBufferMode: initialBufferMode),
+           createDefaultPlayerEngine(
+             initialBufferMode: initialBufferMode,
+             backend:
+                 initialBackend ??
+                 PlayerBackend.fromStorage(
+                   PreferencesStorage.maybeInstance?.playerBackend,
+                 ),
+           ),
        _historyRepository = historyRepository,
        _canLoadSource = canLoadSource,
        _onStopCallback = onStopCallback,
        _onSourceChanged = onSourceChanged,
        super(
          PlayerState.initial.copyWith(
+           backend:
+               initialBackend ??
+               PlayerBackend.fromStorage(
+                 PreferencesStorage.maybeInstance?.playerBackend,
+               ),
+           aspectRatioIndex:
+               initialAspectRatioIndex ??
+               PreferencesStorage.maybeInstance?.playerAspectRatio ??
+               PlayerAspectRatioMode.bestFit.index,
            bufferMode:
                initialBufferMode ??
                (engine == null
@@ -55,12 +78,12 @@ class PlayerController extends StateNotifier<PlayerState> {
     _initSubscriptions();
   }
 
-  final PlayerEngine _engine;
+  PlayerEngine _engine;
   final HistoryRepository? _historyRepository;
   final Future<bool> Function(PlayerSource source)? _canLoadSource;
   final VoidCallback? _onStopCallback;
   final void Function(PlayerSource source)? _onSourceChanged;
-  late final SmartPlaybackEngine _smartEngine;
+  late SmartPlaybackEngine _smartEngine;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
   /// Materialized playlist (tests / non-live callers). Empty when using lazy live IDs.
@@ -101,6 +124,44 @@ class PlayerController extends StateNotifier<PlayerState> {
   DateTime? _lastBufferStateEmit;
 
   PlayerEngine get engine => _engine;
+
+  /// Switches the active Android backend and reopens the current source.
+  Future<void> selectBackend(PlayerBackend backend) async {
+    if (!mounted || state.backend == backend) return;
+    final currentSource = state.source;
+    final resumeAt = !state.isLive ? state.position : null;
+    ++_playbackEpoch;
+    _stopPeriodicProgressSaver();
+    for (final subscription in _subscriptions) {
+      await subscription.cancel();
+    }
+    _subscriptions.clear();
+    await _smartEngine.dispose();
+    if (!mounted) return;
+    _engine = createDefaultPlayerEngine(
+      initialBufferMode: state.bufferMode,
+      backend: backend,
+    );
+    _smartEngine = SmartPlaybackEngine(
+      engine: _engine,
+      initialBufferMode: state.bufferMode,
+    );
+    _initSubscriptions();
+    state = state.copyWith(
+      backend: backend,
+      status: PlayerStatus.loading,
+      metrics: PlayerMetrics.empty,
+      availableAudioTracks: const [],
+      availableSubtitleTracks: const [],
+    );
+    if (PreferencesStorage.maybeInstance case final preferences?) {
+      await preferences.setPlayerBackend(backend.storageValue);
+    }
+    if (currentSource != null && mounted) {
+      await load(currentSource.copyWith(startAt: resumeAt));
+    }
+  }
+
   SmartPlaybackEngine get smartEngine => _smartEngine;
   List<PlayerSource> get channelPlaylist => _channelPlaylist;
 
@@ -140,6 +201,16 @@ class PlayerController extends StateNotifier<PlayerState> {
     _subscriptions.add(
       _engine.statusStream.listen((status) {
         if (!mounted) return;
+        final isPlaybackStatus =
+            status == PlayerStatus.loading ||
+            status == PlayerStatus.buffering ||
+            status == PlayerStatus.playing ||
+            status == PlayerStatus.paused ||
+            status == PlayerStatus.completed;
+        // Async native/fake streams can deliver a queued event from the old
+        // source after stop() has already cleared it. Do not resurrect a
+        // source-less player into a playing or buffering UI state.
+        if (state.source == null && isPlaybackStatus) return;
         state = state.copyWith(
           status: status,
           clearError:
@@ -230,11 +301,21 @@ class PlayerController extends StateNotifier<PlayerState> {
         );
 
         if (!scheduled && mounted && errorEpoch == _playbackEpoch) {
+          final vlcHeaderLimit =
+              state.backend == PlayerBackend.vlc &&
+              err == PlayerErrorType.invalidSource &&
+              (state.source?.headers.keys.any((key) {
+                    final name = key.toLowerCase();
+                    return name != 'user-agent' && name != 'referer';
+                  }) ??
+                  false);
           state = state.copyWith(
             status: PlayerStatus.error,
             error: err,
             isRetrying: false,
-            errorMessage: err.defaultMessage,
+            errorMessage: vlcHeaderLimit
+                ? 'VLC cannot play this stream with its required HTTP headers. Select MediaKit or ExoPlayer.'
+                : err.defaultMessage,
           );
         }
       }),
@@ -434,6 +515,13 @@ class PlayerController extends StateNotifier<PlayerState> {
     }
 
     var effectiveSource = source;
+    if (source.streamType == StreamType.auto ||
+        source.streamType == StreamType.unknown) {
+      final detectedType = StreamTypeDetector.detect(source.url);
+      if (detectedType != StreamType.unknown) {
+        effectiveSource = source.copyWith(streamType: detectedType);
+      }
+    }
 
     // For VOD/Episodes: Check for saved progress if startAt was not explicitly specified
     if (effectiveSource.profile == PlaybackProfile.vod &&
@@ -456,9 +544,19 @@ class PlayerController extends StateNotifier<PlayerState> {
       }
     }
 
-    final capabilities = PlayerCapabilityService.getCapabilities(
+    var capabilities = PlayerCapabilityService.getCapabilities(
       streamType: effectiveSource.streamType,
     );
+    if (effectiveSource.isLive &&
+        effectiveSource.metadata['timeshift'] != true) {
+      capabilities = capabilities.copyWith(liveSeek: false);
+    }
+    if (state.backend == PlayerBackend.media3) {
+      capabilities = capabilities.copyWith(
+        audioTracks: false,
+        subtitles: false,
+      );
+    }
     positionListenable.value = effectiveSource.startAt ?? Duration.zero;
     bufferedPositionListenable.value = Duration.zero;
     _lastPositionStateEmit = null;
@@ -721,6 +819,7 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   /// Relative seek (e.g. -10 seconds or +10 seconds).
   Future<void> seekRelative(Duration offset) async {
+    if (!mounted || !state.canSeek) return;
     final startPos = positionListenable.value;
     var target = startPos + offset;
     if (target < Duration.zero) target = Duration.zero;
@@ -771,14 +870,17 @@ class PlayerController extends StateNotifier<PlayerState> {
   }
 
   void setAspectRatio(int index) {
-    state = state.copyWith(aspectRatioIndex: index.clamp(0, 4));
+    final mode = PlayerAspectRatioMode.fromIndex(index);
+    state = state.copyWith(aspectRatioIndex: mode.index);
+    if (PreferencesStorage.maybeInstance case final preferences?) {
+      unawaited(preferences.setPlayerAspectRatio(mode.index));
+    }
   }
 
   void cycleAspectRatio() {
-    final nextIndex =
-        (state.aspectRatioIndex + 1) %
-        5; // Best Fit -> Fit -> Fill -> 16:9 -> 4:3
-    state = state.copyWith(aspectRatioIndex: nextIndex);
+    setAspectRatio(
+      PlayerAspectRatioMode.fromIndex(state.aspectRatioIndex).next.index,
+    );
   }
 
   void setLocked(bool locked) {

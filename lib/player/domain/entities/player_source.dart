@@ -95,6 +95,30 @@ class PlayerSource extends Equatable {
     );
   }
 
+  /// Helper factory for an archived live programme with a seekable timeline.
+  factory PlayerSource.catchUp({
+    required String url,
+    required String title,
+    required String channelTitle,
+    String? logoUrl,
+    String? epgProgramId,
+    Map<String, String> headers = const {},
+    StreamType streamType = StreamType.auto,
+    Map<String, dynamic> metadata = const {},
+  }) {
+    return PlayerSource(
+      url: url,
+      title: title,
+      profile: PlaybackProfile.catchUp,
+      streamType: streamType,
+      logoUrl: logoUrl,
+      epgProgramId: epgProgramId,
+      currentProgramTitle: channelTitle,
+      headers: headers,
+      metadata: metadata,
+    );
+  }
+
   PlayerSource copyWith({
     String? url,
     String? title,
@@ -131,21 +155,21 @@ class PlayerSource extends Equatable {
 
   @override
   List<Object?> get props => [
-        url,
-        title,
-        streamType,
-        profile,
-        headers,
-        channelId,
-        categoryId,
-        logoUrl,
-        epgProgramId,
-        currentProgramTitle,
-        nextProgramTitle,
-        programProgress,
-        startAt,
-        metadata,
-      ];
+    url,
+    title,
+    streamType,
+    profile,
+    headers,
+    channelId,
+    categoryId,
+    logoUrl,
+    epgProgramId,
+    currentProgramTitle,
+    nextProgramTitle,
+    programProgress,
+    startAt,
+    metadata,
+  ];
 }
 
 /// Backward compatibility class for live channels.
@@ -162,10 +186,10 @@ class LiveSource extends PlayerSource {
     super.programProgress,
     super.metadata,
   }) : super(
-          title: channelName,
-          channelId: channelId,
-          profile: PlaybackProfile.live,
-        );
+         title: channelName,
+         channelId: channelId,
+         profile: PlaybackProfile.live,
+       );
 }
 
 /// Backward compatibility class for VOD movies.
@@ -180,10 +204,10 @@ class VodSource extends PlayerSource {
     super.streamType,
     super.metadata,
   }) : super(
-          channelId: movieId,
-          logoUrl: posterUrl,
-          profile: PlaybackProfile.vod,
-        );
+         channelId: movieId,
+         logoUrl: posterUrl,
+         profile: PlaybackProfile.vod,
+       );
 }
 
 /// Backward compatibility class for series episodes.
@@ -199,10 +223,9 @@ class EpisodeSource extends PlayerSource {
     super.streamType,
     super.metadata,
   }) : super(
-          channelId: episodeId,
-          logoUrl: posterUrl,
-          profile: PlaybackProfile.vod,
-          currentProgramTitle: seriesName,
-        );
+         channelId: episodeId,
+         logoUrl: posterUrl,
+         profile: PlaybackProfile.vod,
+         currentProgramTitle: seriesName,
+       );
 }
-

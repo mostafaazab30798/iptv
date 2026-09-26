@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show PlatformViewHitTestBehavior;
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/domain/entities/web_video_handle.dart';
+import 'package:iptv/player/domain/enums/player_aspect_ratio_mode.dart';
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
+import 'package:video_player/video_player.dart' as native_video;
 
 /// Calculates the optimal scaling factor for the video surface.
 ///
@@ -73,6 +76,40 @@ class PlayerView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mode = PlayerAspectRatioMode.fromIndex(aspectRatioIndex);
+
+    if (platformHandle is native_video.VideoPlayerController) {
+      final controller = platformHandle as native_video.VideoPlayerController;
+      if (!controller.value.isInitialized) {
+        return const ColoredBox(color: Colors.black);
+      }
+      return _BackendVideoSurface(
+        mode: mode,
+        sourceAspectRatio: controller.value.aspectRatio,
+        child: native_video.VideoPlayer(controller),
+      );
+    }
+
+    if (platformHandle is VlcPlayerController) {
+      final controller = platformHandle as VlcPlayerController;
+      return ValueListenableBuilder<VlcPlayerValue>(
+        valueListenable: controller,
+        builder: (context, value, _) {
+          final sourceAspectRatio = value.aspectRatio > 0
+              ? value.aspectRatio
+              : 16 / 9;
+          return _BackendVideoSurface(
+            mode: mode,
+            sourceAspectRatio: sourceAspectRatio,
+            child: VlcPlayer(
+              controller: controller,
+              aspectRatio: sourceAspectRatio,
+            ),
+          );
+        },
+      );
+    }
+
     if (platformHandle is mkv.VideoController) {
       final videoController = platformHandle as mkv.VideoController;
 
@@ -92,41 +129,17 @@ class PlayerView extends StatelessWidget {
             videoHeight: vh,
           );
 
-          BoxFit fit = BoxFit.contain;
-          double? forcedAspectRatio;
-          double scale = 1.0;
-
-          switch (aspectRatioIndex) {
-            case 0: // 0: Best Fit
-              fit = BoxFit.contain;
-              scale = bestFitScale;
-              break;
-            case 1: // 1: Fit (100% original contain)
-              fit = BoxFit.contain;
-              break;
-            case 2: // 2: Fill (100% cover)
-              fit = BoxFit.cover;
-              break;
-            case 3: // 3: 16:9
-              fit = BoxFit.contain;
-              forcedAspectRatio = 16 / 9;
-              break;
-            case 4: // 4: 4:3
-              fit = BoxFit.contain;
-              forcedAspectRatio = 4 / 3;
-              break;
-            default:
-              fit = BoxFit.contain;
-              scale = bestFitScale;
-          }
+          final scale = mode == PlayerAspectRatioMode.bestFit
+              ? bestFitScale
+              : 1.0;
 
           Widget videoWidget = mkv.Video(
             controller: videoController,
-            fit: fit,
+            fit: mode.surfaceFit,
             controls: (state) => const SizedBox.shrink(),
           );
 
-          if (forcedAspectRatio != null) {
+          if (mode.forcedAspectRatio case final forcedAspectRatio?) {
             videoWidget = Center(
               child: AspectRatio(
                 aspectRatio: forcedAspectRatio,
@@ -159,25 +172,6 @@ class PlayerView extends StatelessWidget {
 
       return LayoutBuilder(
         builder: (context, _) {
-          double? forcedAspectRatio;
-
-          switch (aspectRatioIndex) {
-            case 0:
-              break;
-            case 1:
-              break;
-            case 2:
-              break;
-            case 3:
-              forcedAspectRatio = 16 / 9;
-              break;
-            case 4:
-              forcedAspectRatio = 4 / 3;
-              break;
-            default:
-              break;
-          }
-
           webHandle.onAspectRatioChanged?.call(aspectRatioIndex);
 
           // HtmlElementView has no intrinsic size. Centering it under loose
@@ -194,7 +188,7 @@ class PlayerView extends StatelessWidget {
               : const SizedBox.expand();
           videoWidget = SizedBox.expand(child: videoWidget);
 
-          if (forcedAspectRatio != null) {
+          if (mode.forcedAspectRatio case final forcedAspectRatio?) {
             videoWidget = Center(
               child: AspectRatio(
                 aspectRatio: forcedAspectRatio,
@@ -224,6 +218,66 @@ class PlayerView extends StatelessWidget {
           color: AppColors.textDisabled,
           size: 84,
         ),
+      ),
+    );
+  }
+}
+
+/// Gives Media3 and VLC the same five display policies as MediaKit.
+class _BackendVideoSurface extends StatelessWidget {
+  const _BackendVideoSurface({
+    required this.mode,
+    required this.sourceAspectRatio,
+    required this.child,
+  });
+
+  final PlayerAspectRatioMode mode;
+  final double sourceAspectRatio;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final safeSourceAspectRatio =
+              sourceAspectRatio.isFinite && sourceAspectRatio > 0
+              ? sourceAspectRatio
+              : 16 / 9;
+          final frameAspectRatio =
+              mode.forcedAspectRatio ?? safeSourceAspectRatio;
+          final bestFitScale = calculateBestFitScale(
+            viewportWidth: constraints.maxWidth,
+            viewportHeight: constraints.maxHeight,
+            videoWidth: safeSourceAspectRatio,
+            videoHeight: 1,
+          );
+
+          Widget surface = Center(
+            child: AspectRatio(aspectRatio: frameAspectRatio, child: child),
+          );
+          if (mode == PlayerAspectRatioMode.fill) {
+            surface = ClipRect(
+              child: SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: safeSourceAspectRatio * 1000,
+                    height: 1000,
+                    child: child,
+                  ),
+                ),
+              ),
+            );
+          } else if (mode == PlayerAspectRatioMode.bestFit &&
+              bestFitScale > 1.001) {
+            surface = ClipRect(
+              child: Transform.scale(scale: bestFitScale, child: surface),
+            );
+          }
+          return RepaintBoundary(child: surface);
+        },
       ),
     );
   }

@@ -11,8 +11,9 @@ abstract final class LiveMatchFinder {
 
   static List<Channel> allowedChannels(Iterable<Channel> channels) {
     return channels
-        .where((channel) =>
-            BigMatchDetector.isAllowedMatchChannel(channel.name))
+        .where(
+          (channel) => BigMatchDetector.isAllowedMatchChannel(channel.name),
+        )
         .toList();
   }
 
@@ -31,15 +32,14 @@ abstract final class LiveMatchFinder {
       if (key.isEmpty) continue;
       final current = byKey[key];
       if (current == null ||
-          BigMatchDetector.channelQuality(channel.name) >
-              BigMatchDetector.channelQuality(current.name)) {
+          _channelPreferenceScore(channel) > _channelPreferenceScore(current)) {
         byKey[key] = channel;
       }
     }
     final list = byKey.values.toList()
       ..sort(
-        (a, b) => BigMatchDetector.channelQuality(b.name)
-            .compareTo(BigMatchDetector.channelQuality(a.name)),
+        (a, b) =>
+            _channelPreferenceScore(b).compareTo(_channelPreferenceScore(a)),
       );
     if (list.length <= limit) return list;
     return list.sublist(0, limit);
@@ -78,8 +78,7 @@ abstract final class LiveMatchFinder {
           final epgHit =
               epgTitle.isNotEmpty && fixture.matchesBroadcastText(epgTitle);
           if (!nameHit && !epgHit) continue;
-          final score = BigMatchDetector.channelQuality(channel.name) +
-              (epgHit ? 2 : 0);
+          final score = _channelPreferenceScore(channel) + (epgHit ? 2 : 0);
           if (score > bestScore) {
             best = channel;
             bestFromEpg = epgHit && !nameHit;
@@ -114,7 +113,7 @@ abstract final class LiveMatchFinder {
       }
       if (BigMatchDetector.isOfficialClubChannel(channel.name)) continue;
       final n = BigMatchDetector.normalize(channel.name);
-      var score = BigMatchDetector.channelQuality(channel.name);
+      var score = _channelPreferenceScore(channel);
       if (RegExp(r'(^| )1($| )').hasMatch(n)) score += 20;
       if (n.contains('bein')) score += 3;
       if (score > bestScore) {
@@ -123,6 +122,12 @@ abstract final class LiveMatchFinder {
       }
     }
     return best;
+  }
+
+  static int _channelPreferenceScore(Channel channel) {
+    var score = BigMatchDetector.channelQuality(channel.name);
+    if (ChannelMapper.isFrenchVariant(channel.name)) score -= 100;
+    return score;
   }
 
   static int _quality(LiveMatch match) {

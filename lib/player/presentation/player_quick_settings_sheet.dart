@@ -4,6 +4,9 @@ import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
+import 'package:iptv/player/domain/enums/player_aspect_ratio_mode.dart';
+import 'package:iptv/player/domain/enums/player_backend.dart';
+import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
@@ -20,6 +23,7 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
     required this.onOpenAudioTracks,
     required this.onOpenSubtitles,
     required this.onSelectBufferMode,
+    required this.onSelectBackend,
     required this.onSetSleepTimer,
     this.onAudioHandoff,
     this.activeSleepLabel,
@@ -32,6 +36,7 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
   final VoidCallback onOpenAudioTracks;
   final VoidCallback onOpenSubtitles;
   final ValueChanged<PlaybackBufferMode> onSelectBufferMode;
+  final ValueChanged<PlayerBackend> onSelectBackend;
   final SleepTimerCallback onSetSleepTimer;
   final VoidCallback? onAudioHandoff;
   final String? activeSleepLabel;
@@ -45,6 +50,7 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
     required VoidCallback onOpenAudioTracks,
     required VoidCallback onOpenSubtitles,
     required ValueChanged<PlaybackBufferMode> onSelectBufferMode,
+    required ValueChanged<PlayerBackend> onSelectBackend,
     required SleepTimerCallback onSetSleepTimer,
     VoidCallback? onAudioHandoff,
     String? activeSleepLabel,
@@ -61,6 +67,7 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
         onOpenAudioTracks: onOpenAudioTracks,
         onOpenSubtitles: onOpenSubtitles,
         onSelectBufferMode: onSelectBufferMode,
+        onSelectBackend: onSelectBackend,
         onSetSleepTimer: onSetSleepTimer,
         onAudioHandoff: onAudioHandoff,
         activeSleepLabel: activeSleepLabel,
@@ -70,13 +77,15 @@ class PlayerQuickSettingsSheet extends StatefulWidget {
   }
 
   @override
-  State<PlayerQuickSettingsSheet> createState() => _PlayerQuickSettingsSheetState();
+  State<PlayerQuickSettingsSheet> createState() =>
+      _PlayerQuickSettingsSheetState();
 }
 
 class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
   late double _playbackRate;
   late int _aspectRatioIndex;
   late PlaybackBufferMode _bufferMode;
+  late PlayerBackend _backend;
   Duration? _activeSleepDuration;
   String? _activeSleepLabel;
 
@@ -86,6 +95,7 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
     _playbackRate = widget.playerState.playbackRate;
     _aspectRatioIndex = widget.playerState.aspectRatioIndex;
     _bufferMode = widget.playerState.bufferMode;
+    _backend = widget.playerState.backend;
     _activeSleepDuration = widget.activeSleepDuration;
     _activeSleepLabel = widget.activeSleepLabel;
   }
@@ -158,7 +168,11 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                   // 2. Header
                   Row(
                     children: [
-                      const HugeIcon(icon: AppIcons.tune, color: AppColors.accent, size: 20),
+                      const HugeIcon(
+                        icon: AppIcons.tune,
+                        color: AppColors.accent,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         'Playback Settings',
@@ -218,21 +232,15 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                     const _SectionLabel(title: 'ASPECT RATIO'),
                     const SizedBox(height: 6),
                     _SegmentedTrack(
-                      children: [
-                        (0, 'Best Fit'),
-                        (1, 'Fit'),
-                        (2, 'Fill'),
-                        (3, '16:9'),
-                        (4, '4:3'),
-                      ].map((item) {
-                        final isSelected = _aspectRatioIndex == item.$1;
+                      children: PlayerAspectRatioMode.values.map((mode) {
+                        final isSelected = _aspectRatioIndex == mode.index;
                         return Expanded(
                           child: _SegmentPill(
-                            label: item.$2,
+                            label: mode.label,
                             isSelected: isSelected,
                             onTap: () {
-                              setState(() => _aspectRatioIndex = item.$1);
-                              widget.onSelectAspectRatio(item.$1);
+                              setState(() => _aspectRatioIndex = mode.index);
+                              widget.onSelectAspectRatio(mode.index);
                             },
                           ),
                         );
@@ -242,77 +250,114 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                   ],
 
                   // 5. Audio & Subtitles
-                    if (caps.audioTracks || caps.subtitles || widget.onAudioHandoff != null) ...[
-                      Row(
-                        children: [
-                          if (caps.audioTracks)
-                            Expanded(
-                              child: _QuickActionCard(
-                                icon: AppIcons.audioTrack,
-                                label: 'Audio',
-                                value: widget.playerState.currentAudioTrack?.title ?? 'Default',
-                                isRtl: isRtl,
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  widget.onOpenAudioTracks();
-                                },
-                              ),
+                  if (caps.audioTracks ||
+                      caps.subtitles ||
+                      widget.onAudioHandoff != null) ...[
+                    Row(
+                      children: [
+                        if (caps.audioTracks)
+                          Expanded(
+                            child: _QuickActionCard(
+                              icon: AppIcons.audioTrack,
+                              label: 'Audio',
+                              value:
+                                  widget.playerState.currentAudioTrack?.title ??
+                                  'Default',
+                              isRtl: isRtl,
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                widget.onOpenAudioTracks();
+                              },
                             ),
-                          if (caps.audioTracks && (caps.subtitles || widget.onAudioHandoff != null)) const SizedBox(width: 8),
-                          if (caps.subtitles)
-                            Expanded(
-                              child: _QuickActionCard(
-                                icon: AppIcons.subtitles,
-                                label: 'Subtitles',
-                                value: widget.playerState.currentSubtitleTrack?.title ?? 'Off',
-                                isRtl: isRtl,
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  widget.onOpenSubtitles();
-                                },
-                              ),
+                          ),
+                        if (caps.audioTracks &&
+                            (caps.subtitles || widget.onAudioHandoff != null))
+                          const SizedBox(width: 8),
+                        if (caps.subtitles)
+                          Expanded(
+                            child: _QuickActionCard(
+                              icon: AppIcons.subtitles,
+                              label: 'Subtitles',
+                              value:
+                                  widget
+                                      .playerState
+                                      .currentSubtitleTrack
+                                      ?.title ??
+                                  'Off',
+                              isRtl: isRtl,
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                widget.onOpenSubtitles();
+                              },
                             ),
-                          if (caps.subtitles && widget.onAudioHandoff != null) const SizedBox(width: 8),
-                          if (widget.onAudioHandoff != null)
-                            Expanded(
-                              child: _QuickActionCard(
-                                icon: AppIcons.headphones,
-                                label: context.l10n.handoffQuickActionLabel,
-                                value: context.l10n.handoffTvDialogTitle,
-                                isRtl: isRtl,
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  widget.onAudioHandoff!();
-                                },
-                              ),
+                          ),
+                        if (caps.subtitles && widget.onAudioHandoff != null)
+                          const SizedBox(width: 8),
+                        if (widget.onAudioHandoff != null)
+                          Expanded(
+                            child: _QuickActionCard(
+                              icon: AppIcons.headphones,
+                              label: context.l10n.handoffQuickActionLabel,
+                              value: context.l10n.handoffTvDialogTitle,
+                              isRtl: isRtl,
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                widget.onAudioHandoff!();
+                              },
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                    ],
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                  ],
 
-                  // 6. Buffer Mode
+                  if (PlatformService.instance.isAndroid) ...[
+                    const _SectionLabel(title: 'PLAYER ENGINE'),
+                    const SizedBox(height: 6),
+                    _SegmentedTrack(
+                      children: PlayerBackend.values.map((backend) {
+                        return Expanded(
+                          child: _SegmentPill(
+                            label: backend == PlayerBackend.media3
+                                ? 'ExoPlayer'
+                                : backend.label,
+                            isSelected: _backend == backend,
+                            onTap: () {
+                              if (_backend == backend) return;
+                              setState(() => _backend = backend);
+                              Navigator.of(context).pop();
+                              widget.onSelectBackend(backend);
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Buffer Mode
                   const _SectionLabel(title: 'BUFFER PROFILE'),
                   const SizedBox(height: 6),
                   _SegmentedTrack(
-                    children: [
-                      (PlaybackBufferMode.compact, 'Compact'),
-                      (PlaybackBufferMode.lowLatency, 'Low Latency'),
-                      (PlaybackBufferMode.balanced, 'Balanced'),
-                      (PlaybackBufferMode.stability, 'Stability'),
-                    ].map((entry) {
-                      final isSelected = _bufferMode == entry.$1;
-                      return Expanded(
-                        child: _SegmentPill(
-                          label: entry.$2,
-                          isSelected: isSelected,
-                          onTap: () {
-                            setState(() => _bufferMode = entry.$1);
-                            widget.onSelectBufferMode(entry.$1);
-                          },
-                        ),
-                      );
-                    }).toList(),
+                    children:
+                        [
+                          (PlaybackBufferMode.compact, 'Compact'),
+                          (PlaybackBufferMode.lowLatency, 'Low Latency'),
+                          (PlaybackBufferMode.balanced, 'Balanced'),
+                          (PlaybackBufferMode.stability, 'Stability'),
+                        ].map((entry) {
+                          final isSelected = _bufferMode == entry.$1;
+                          return Expanded(
+                            child: _SegmentPill(
+                              label: entry.$2,
+                              isSelected: isSelected,
+                              onTap: () {
+                                setState(() => _bufferMode = entry.$1);
+                                widget.onSelectBufferMode(entry.$1);
+                              },
+                            ),
+                          );
+                        }).toList(),
                   ),
                   const SizedBox(height: 16),
 
@@ -321,16 +366,24 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                     children: [
                       const _SectionLabel(title: 'SLEEP TIMER'),
                       const Spacer(),
-                      if (_activeSleepDuration != null || _activeSleepLabel != null)
+                      if (_activeSleepDuration != null ||
+                          _activeSleepLabel != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.accent.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.accent.withValues(alpha: 0.4), width: 0.8),
+                            border: Border.all(
+                              color: AppColors.accent.withValues(alpha: 0.4),
+                              width: 0.8,
+                            ),
                           ),
                           child: Text(
-                            _activeSleepLabel ?? '${_activeSleepDuration!.inMinutes}m active',
+                            _activeSleepLabel ??
+                                '${_activeSleepDuration!.inMinutes}m active',
                             style: const TextStyle(
                               color: AppColors.accent,
                               fontSize: 10.5,
@@ -444,17 +497,23 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                       // Off Pill
                       _TimerPill(
                         label: 'Off',
-                        isSelected: _activeSleepDuration == null && _activeSleepLabel == null,
+                        isSelected:
+                            _activeSleepDuration == null &&
+                            _activeSleepLabel == null,
                         onTap: () => _handleSelectSleepTimer(null),
                       ),
                       ...[15, 30, 45, 60, 90, 120].map((minutes) {
-                        final isSelected = _activeSleepDuration?.inMinutes == minutes && _activeSleepLabel == null;
+                        final isSelected =
+                            _activeSleepDuration?.inMinutes == minutes &&
+                            _activeSleepLabel == null;
                         return _TimerPill(
                           label: minutes >= 60 && minutes % 60 == 0
                               ? '${minutes ~/ 60} ${minutes ~/ 60 == 1 ? 'hr' : 'hrs'}'
                               : '$minutes m',
                           isSelected: isSelected,
-                          onTap: () => _handleSelectSleepTimer(Duration(minutes: minutes)),
+                          onTap: () => _handleSelectSleepTimer(
+                            Duration(minutes: minutes),
+                          ),
                         );
                       }),
                     ],
@@ -504,9 +563,7 @@ class _SegmentedTrack extends StatelessWidget {
           width: 0.8,
         ),
       ),
-      child: Row(
-        children: children,
-      ),
+      child: Row(children: children),
     );
   }
 }
@@ -540,7 +597,7 @@ class _SegmentPill extends StatelessWidget {
                     color: AppColors.accent.withValues(alpha: 0.35),
                     blurRadius: 8,
                     offset: const Offset(0, 1),
-                  )
+                  ),
                 ]
               : null,
         ),

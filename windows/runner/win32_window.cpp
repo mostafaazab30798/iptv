@@ -331,13 +331,15 @@ void Win32Window::SetFullScreen(bool fullscreen) {
                        WS_POPUP | WS_CLIPCHILDREN | visible_bit);
     ::SetWindowLongPtr(hwnd, GWL_EXSTYLE, WS_EX_APPWINDOW);
 
+    // Mark the state before frame messages are dispatched so non-client
+    // activation cannot repaint a transient caption over the video.
+    is_fullscreen_ = true;
     ::SetWindowPos(hwnd, HWND_TOP,
                    mi.rcMonitor.left, mi.rcMonitor.top,
                    mi.rcMonitor.right - mi.rcMonitor.left,
                    mi.rcMonitor.bottom - mi.rcMonitor.top,
-                   SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_NOACTIVATE);
-
-    is_fullscreen_ = true;
+                   SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_NOACTIVATE |
+                       SWP_SHOWWINDOW);
   } else {
     DWORD target_style = style_prev_ != 0 ? style_prev_ : WS_OVERLAPPEDWINDOW;
     target_style |= WS_CLIPCHILDREN | WS_VISIBLE;
@@ -355,11 +357,23 @@ void Win32Window::SetFullScreen(bool fullscreen) {
       wp_prev_.rcNormalPosition.bottom = 820;
     }
 
+    is_fullscreen_ = false;
     ::SetWindowPlacement(hwnd, &wp_prev_);
     ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-                   SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED | SWP_NOACTIVATE);
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER |
+                       SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
-    is_fullscreen_ = false;
+    // Force DWM and the Flutter child surface to acknowledge the restored
+    // frame immediately. Without this, some Windows/TV GPU drivers retain the
+    // borderless monitor-sized surface until another resize occurs.
+    ::RedrawWindow(hwnd, nullptr, nullptr,
+                   RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+    if (child_content_ != nullptr) {
+      RECT frame = GetClientArea();
+      ::MoveWindow(child_content_, frame.left, frame.top,
+                   frame.right - frame.left, frame.bottom - frame.top, TRUE);
+      ::SetFocus(child_content_);
+    }
   }
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -319,7 +320,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                       ))
               : GridView.builder(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  cacheExtent: 350,
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(350),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 170,
                     childAspectRatio: 2 / 3,
@@ -487,11 +488,13 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
 
     EpisodeSource buildSource(Episode ep, int seasonNum) {
       final streamId = ep.streamId != 0 ? ep.streamId : ep.id;
-      final streamUrl = ref.read(streamUrlBuilderProvider).seriesForSession(
-        session,
-        streamId: streamId,
-        extension: ep.containerExtension ?? 'mp4',
-      );
+      final streamUrl = ref
+          .read(streamUrlBuilderProvider)
+          .seriesForSession(
+            session,
+            streamId: streamId,
+            extension: ep.containerExtension ?? 'mp4',
+          );
       return EpisodeSource(
         url: streamUrl,
         title:
@@ -614,7 +617,14 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
                         Row(
                           children: [
                             if (widget.series.rating != null &&
-                                (double.tryParse(widget.series.rating!.replaceAll(',', '.')) ?? 0.0) > 0.0) ...[
+                                (double.tryParse(
+                                          widget.series.rating!.replaceAll(
+                                            ',',
+                                            '.',
+                                          ),
+                                        ) ??
+                                        0.0) >
+                                    0.0) ...[
                               const HugeIcon(
                                 icon: AppIcons.star,
                                 color: AppColors.warning,

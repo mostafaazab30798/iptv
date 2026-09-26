@@ -1,5 +1,6 @@
 import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/shared/widgets/section_header.dart';
 
@@ -55,7 +56,7 @@ class HomeSectionRow<T> extends StatelessWidget {
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: true,
               // Small cache: decoding/painting off-screen posters is a top jank source.
-              cacheExtent: 120,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(120),
               padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
               itemCount: items.length,
               itemExtent: itemWidth == null ? null : itemWidth! + 12,

@@ -1,5 +1,13 @@
 # Third-Party Notices & Artwork Attribution
 
+## Android player backends
+
+- **AndroidX Media3 ExoPlayer 1.11.1**: AndroidX libraries used by the optional Media3 player through Flutter `video_player`; Apache License 2.0. [Source and license](https://github.com/androidx/media).
+- **LibVLC Android 3.7.6**: Optional VLC playback through `flutter_vlc_player`; GNU LGPL 2.1. Binary redistribution must include the applicable license and source offer or equivalent access to the corresponding source and modifications. [Source and license](https://code.videolan.org/videolan/libvlcjni).
+- **flutter_vlc_player 7.4.4**: Flutter integration for LibVLC; consult the package's bundled license when distributing. [Package](https://pub.dev/packages/flutter_vlc_player).
+
+---
+
 This application includes reference channel artwork for beIN SPORTS channels sourced from the open-source community repository [tv-logo/tv-logos](https://github.com/tv-logo/tv-logos).
 
 ---

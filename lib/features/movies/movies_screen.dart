@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
@@ -296,7 +297,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                       ))
               : GridView.builder(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  cacheExtent: 350,
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(350),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 170,
                     childAspectRatio: 2 / 3,

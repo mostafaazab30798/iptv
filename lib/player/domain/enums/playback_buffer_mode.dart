@@ -7,7 +7,7 @@ enum PlaybackBufferMode {
   compact,
 
   /// Low Latency mode: ~3s behind live.
-  /// Default sports profile on typical devices.
+  /// Fast-start profile for viewers who explicitly prefer lower latency.
   lowLatency,
 
   /// Balanced mode: ~8–12s behind live.
@@ -43,6 +43,23 @@ enum PlaybackBufferMode {
         return 10;
       case PlaybackBufferMode.stability:
         return 25;
+    }
+  }
+
+  /// Seconds of media required before playback starts or resumes.
+  ///
+  /// This stays below [cacheSecs], allowing the cache to keep filling in the
+  /// background without delaying every channel change by the full target.
+  double get cachePauseWaitSecs {
+    switch (this) {
+      case PlaybackBufferMode.compact:
+        return 0.75;
+      case PlaybackBufferMode.lowLatency:
+        return 1;
+      case PlaybackBufferMode.balanced:
+        return 2;
+      case PlaybackBufferMode.stability:
+        return 4;
     }
   }
 
@@ -101,9 +118,8 @@ enum PlaybackBufferMode {
     }
   }
 
-  /// Compact on ≤3 GiB RAM devices; otherwise low-latency for live zap speed.
-  static PlaybackBufferMode get deviceDefault =>
-      DeviceMemory.isLowRamDevice
-          ? PlaybackBufferMode.compact
-          : PlaybackBufferMode.lowLatency;
+  /// Keep low-RAM devices compact; use a steadier buffer everywhere else.
+  static PlaybackBufferMode get deviceDefault => DeviceMemory.isLowRamDevice
+      ? PlaybackBufferMode.compact
+      : PlaybackBufferMode.balanced;
 }

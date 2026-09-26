@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -104,16 +105,15 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     final channels = liveState.filteredChannels.isNotEmpty
         ? liveState.filteredChannels
         : (ref.read(liveControllerProvider.notifier).catalog.isNotEmpty
-            ? ref.read(liveControllerProvider.notifier).catalog
-            : [channel]);
+              ? ref.read(liveControllerProvider.notifier).catalog
+              : [channel]);
     final initialIndex = channels.indexWhere(
       (c) => c.streamId == channel.streamId,
     );
 
-    String urlFor(Channel c) => ref.read(streamUrlBuilderProvider).liveForSession(
-      session,
-      streamId: c.streamId,
-    );
+    String urlFor(Channel c) => ref
+        .read(streamUrlBuilderProvider)
+        .liveForSession(session, streamId: c.streamId);
 
     final playerNotifier = ref.read(playerControllerProvider.notifier);
     playerNotifier.setLivePreviewHostActive(true);
@@ -142,6 +142,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     context.push(Routes.player);
   }
 
+  void _openCatchUp(Channel channel) {
+    context.push(Routes.catchUp, extra: channel);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(
@@ -150,9 +154,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     final categories = ref.watch(
       liveControllerProvider.select((s) => s.categories),
     );
-    final error = ref.watch(
-      liveControllerProvider.select((s) => s.error),
-    );
+    final error = ref.watch(liveControllerProvider.select((s) => s.error));
     final inChannelsView = _selectedCategory != null || _isAllChannelsSelected;
 
     return InnerBackScope(
@@ -222,37 +224,37 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
               memoryKey: 'live/categories',
               debugLabel: 'live-categories',
               child: ListView.separated(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              cacheExtent: 350,
-              itemCount: categories.length + 1,
-              separatorBuilder: (_, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                if (index == 0) {
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.md,
+                ),
+                scrollCacheExtent: const ScrollCacheExtent.pixels(350),
+                itemCount: categories.length + 1,
+                separatorBuilder: (_, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return CategoryCard(
+                      title: context.l10n.labelAllChannels,
+                      itemCount: totalCount,
+                      itemCountLabel: context.l10n.labelChannels,
+                      isAllCard: true,
+                      onTap: () => _selectCategory(null, isAll: true),
+                    );
+                  }
+
+                  final category = categories[index - 1];
+                  final count = categoryCounts[category.id] ?? 0;
+                  final leadingChannel = leading[category.id];
+
                   return CategoryCard(
-                    title: context.l10n.labelAllChannels,
-                    itemCount: totalCount,
+                    title: category.name,
+                    itemCount: count,
                     itemCountLabel: context.l10n.labelChannels,
-                    isAllCard: true,
-                    onTap: () => _selectCategory(null, isAll: true),
+                    leadingChannel: leadingChannel,
+                    onTap: () => _selectCategory(category),
                   );
-                }
-
-                final category = categories[index - 1];
-                final count = categoryCounts[category.id] ?? 0;
-                final leadingChannel = leading[category.id];
-
-                return CategoryCard(
-                  title: category.name,
-                  itemCount: count,
-                  itemCountLabel: context.l10n.labelChannels,
-                  leadingChannel: leadingChannel,
-                  onTap: () => _selectCategory(category),
-                );
-              },
-            ),
+                },
+              ),
             ),
     );
   }
@@ -424,6 +426,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                         child: LiveMiniPreview(
                           selectedChannel: _selectedChannel,
                           onExpandFullscreen: _openFullscreenPlayer,
+                          onOpenCatchUp: _selectedChannel?.hasTvArchive == true
+                              ? () => _openCatchUp(_selectedChannel!)
+                              : null,
                         ),
                       ),
 
@@ -460,12 +465,18 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
               }
 
               final previewWidth = switch (formFactor) {
-                FormFactor.tv =>
-                  (constraints.maxWidth * 0.32).clamp(260.0, 320.0),
-                FormFactor.desktop =>
-                  (constraints.maxWidth * 0.30).clamp(320.0, 420.0),
-                FormFactor.tablet =>
-                  (constraints.maxWidth * 0.34).clamp(300.0, 380.0),
+                FormFactor.tv => (constraints.maxWidth * 0.32).clamp(
+                  260.0,
+                  320.0,
+                ),
+                FormFactor.desktop => (constraints.maxWidth * 0.30).clamp(
+                  320.0,
+                  420.0,
+                ),
+                FormFactor.tablet => (constraints.maxWidth * 0.34).clamp(
+                  300.0,
+                  380.0,
+                ),
                 FormFactor.phone => 360.0,
               };
 
@@ -519,6 +530,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                       child: LiveMiniPreview(
                         selectedChannel: _selectedChannel,
                         onExpandFullscreen: _openFullscreenPlayer,
+                        onOpenCatchUp: _selectedChannel?.hasTvArchive == true
+                            ? () => _openCatchUp(_selectedChannel!)
+                            : null,
                       ),
                     ),
                   ),
@@ -541,9 +555,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
       return const ChannelListSkeleton();
     }
 
-    final error = ref.watch(
-      liveControllerProvider.select((s) => s.error),
-    );
+    final error = ref.watch(liveControllerProvider.select((s) => s.error));
 
     if (filteredChannels.isEmpty) {
       return error != null
@@ -564,7 +576,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     if (_isGridView) {
       return GridView.builder(
         padding: const EdgeInsets.all(AppSpacing.md),
-        cacheExtent: 350,
+        scrollCacheExtent: const ScrollCacheExtent.pixels(350),
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 155,
           childAspectRatio: 1.15,
@@ -589,7 +601,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     // prototypeItem would need separated; use itemExtent on plain ListView.
     return ListView.builder(
       padding: const EdgeInsets.all(AppSpacing.md),
-      cacheExtent: 350,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(350),
       itemExtent: 80,
       itemCount: filteredChannels.length,
       itemBuilder: (context, i) {
@@ -604,6 +616,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
             isPlaying: isPlaying,
             categoryName: catName,
             onTap: () => _playChannel(channel),
+            onCatchUp: channel.hasTvArchive
+                ? () => _openCatchUp(channel)
+                : null,
           ),
         );
       },

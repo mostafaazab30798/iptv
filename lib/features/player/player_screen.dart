@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv/core/platform/platform_service.dart';
+import 'package:iptv/features/player/player_fullscreen_policy.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/player/presentation/buffering_indicator.dart';
 import 'package:iptv/player/presentation/player_error_view.dart';
@@ -30,6 +31,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 
   /// Guards against PopScope + overlay both invoking leave on the same pop.
   bool _isLeaving = false;
+
+  /// Prevents rapid pointer/remote repeats from applying two opposite window
+  /// transitions before the first platform response arrives.
+  bool _fullscreenChangeInProgress = false;
 
   @override
   void initState() {
@@ -89,7 +94,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 
   Future<void> _exitFullscreenMode() async {
     _controller ??= ref.read(playerControllerProvider.notifier);
-    if (PlatformService.instance.isAndroid) {
+    if (PlatformService.instance.isAndroid &&
+        !PlatformService.instance.isAndroidTv) {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
@@ -100,7 +106,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   }
 
   void _restoreDefaultOrientations() {
-    if (PlatformService.instance.isAndroid) {
+    if (PlatformService.instance.isAndroidTv) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    } else if (PlatformService.instance.isAndroid) {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
@@ -111,25 +122,39 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   }
 
   Future<void> _toggleFullscreen() async {
-    final isMobile = PlatformService.instance.isAndroid;
-    if (isMobile) {
+    if (_fullscreenChangeInProgress || !mounted) return;
+
+    _fullscreenChangeInProgress = true;
+    try {
+      final platform = PlatformService.instance;
       final isLandscape =
           MediaQuery.maybeOrientationOf(context) == Orientation.landscape;
-      if (isLandscape) {
-        await _exitFullscreenMode();
-      } else {
-        await _enterFullscreenMode();
+      final isPlatformFull = platform.isAndroid
+          ? platform.isFullScreenNotifier.value
+          : await platform.isFullScreen();
+      final action = resolvePlayerFullscreenAction(
+        isAndroidTv: platform.isAndroidTv,
+        isAndroid: platform.isAndroid,
+        isLandscape: isLandscape,
+        isPlatformFullscreen: isPlatformFull,
+      );
+
+      switch (action) {
+        // A TV player route already occupies the whole display and Android TV
+        // has no useful portrait/windowed mode. Exit returns to its caller.
+        case PlayerFullscreenAction.leaveTvPlayer:
+          _handleBack();
+        case PlayerFullscreenAction.exitLandscape:
+          await _exitFullscreenMode();
+        case PlayerFullscreenAction.enterLandscape:
+          await _enterFullscreenMode();
+        case PlayerFullscreenAction.exitDesktopFullscreen:
+          await _exitFullscreenMode();
+        case PlayerFullscreenAction.enterDesktopFullscreen:
+          await _enterFullscreenMode();
       }
-    } else {
-      final isPlatformFull =
-          PlatformService.instance.isFullScreenNotifier.value;
-      final isCurrentlyFull = ref.read(playerControllerProvider).isFullscreen;
-      final shouldExit = isPlatformFull || isCurrentlyFull;
-      if (shouldExit) {
-        await _exitFullscreenMode();
-      } else {
-        await _enterFullscreenMode();
-      }
+    } finally {
+      _fullscreenChangeInProgress = false;
     }
   }
 
@@ -244,6 +269,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
           playbackRate: s.playbackRate,
           isLocked: s.isLocked,
           bufferMode: s.bufferMode,
+          backend: s.backend,
           error: s.error,
           errorMessage: s.errorMessage,
           currentAudioTrack: s.currentAudioTrack,
@@ -350,6 +376,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                 onSelectAudioTrack: controller.setAudioTrack,
                 onSelectSubtitleTrack: controller.setSubtitleTrack,
                 onSelectBufferMode: controller.setBufferMode,
+                onSelectBackend: controller.selectBackend,
                 onToggleLock: controller.toggleLock,
                 onToggleFullscreen: _toggleFullscreen,
                 onClose: _handleBack,
@@ -376,6 +403,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                 customMessage: fullPlayerState.errorMessage,
                 onRetry: controller.retry,
                 onClose: _handleBack,
+                currentBackend: fullPlayerState.backend,
+                onSelectBackend: PlatformService.instance.isAndroid
+                    ? controller.selectBackend
+                    : null,
               ),
           ],
         ),

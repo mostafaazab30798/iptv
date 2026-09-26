@@ -4,12 +4,14 @@ import 'package:iptv/player/domain/entities/player_metrics.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
+import 'package:iptv/player/domain/enums/player_backend.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
 
 /// Immutable consolidated state for the IPTV player subsystem.
 class PlayerState extends Equatable {
   const PlayerState({
+    this.backend = PlayerBackend.mediaKit,
     this.status = PlayerStatus.idle,
     this.source,
     this.position = Duration.zero,
@@ -18,6 +20,7 @@ class PlayerState extends Equatable {
     this.volume = 1.0,
     this.isMuted = false,
     this.isFullscreen = false,
+
     /// True while [PlayerScreen] is mounted and owns the shared video texture.
     this.isPlayerRouteActive = false,
     this.aspectRatioIndex = 0, // 0: Best Fit, 1: Fit, 2: Fill, 3: 16:9, 4: 4:3
@@ -38,6 +41,7 @@ class PlayerState extends Equatable {
   });
 
   final PlayerStatus status;
+  final PlayerBackend backend;
   final PlayerSource? source;
   final Duration position;
   final Duration duration;
@@ -65,15 +69,21 @@ class PlayerState extends Equatable {
   static const initial = PlayerState();
 
   bool get isLive => source?.profile.isLive ?? (duration == Duration.zero);
+  bool get canSeek => capabilities.seek && (!isLive || capabilities.liveSeek);
   bool get isPlaying => status == PlayerStatus.playing;
   bool get isBuffering => status == PlayerStatus.buffering;
-  bool get isLoading => status == PlayerStatus.loading || status == PlayerStatus.initializing;
-  bool get hasError => status == PlayerStatus.error && error != null && !isRetrying;
+  bool get isLoading =>
+      status == PlayerStatus.loading || status == PlayerStatus.initializing;
+  bool get hasError =>
+      status == PlayerStatus.error && error != null && !isRetrying;
   bool get isAutoReconnecting => isRetrying || (isLoading && retryAttempt > 0);
 
   double get bufferedFraction {
     if (duration == Duration.zero) return 0.0;
-    return (bufferedPosition.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+    return (bufferedPosition.inMilliseconds / duration.inMilliseconds).clamp(
+      0.0,
+      1.0,
+    );
   }
 
   double get progressFraction {
@@ -82,6 +92,7 @@ class PlayerState extends Equatable {
   }
 
   PlayerState copyWith({
+    PlayerBackend? backend,
     PlayerStatus? status,
     PlayerSource? source,
     bool clearSource = false,
@@ -110,6 +121,7 @@ class PlayerState extends Equatable {
     int? maxRetries,
   }) {
     return PlayerState(
+      backend: backend ?? this.backend,
       status: status ?? this.status,
       source: clearSource ? null : (source ?? this.source),
       position: position ?? this.position,
@@ -140,29 +152,30 @@ class PlayerState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        source,
-        position,
-        duration,
-        bufferedPosition,
-        volume,
-        isMuted,
-        isFullscreen,
-        isPlayerRouteActive,
-        aspectRatioIndex,
-        playbackRate,
-        isLocked,
-        bufferMode,
-        error,
-        errorMessage,
-        currentAudioTrack,
-        currentSubtitleTrack,
-        availableAudioTracks,
-        availableSubtitleTracks,
-        capabilities,
-        metrics,
-        isRetrying,
-        retryAttempt,
-        maxRetries,
-      ];
+    backend,
+    status,
+    source,
+    position,
+    duration,
+    bufferedPosition,
+    volume,
+    isMuted,
+    isFullscreen,
+    isPlayerRouteActive,
+    aspectRatioIndex,
+    playbackRate,
+    isLocked,
+    bufferMode,
+    error,
+    errorMessage,
+    currentAudioTrack,
+    currentSubtitleTrack,
+    availableAudioTracks,
+    availableSubtitleTracks,
+    capabilities,
+    metrics,
+    isRetrying,
+    retryAttempt,
+    maxRetries,
+  ];
 }

@@ -56,8 +56,16 @@ Future<void> _initializeAfterFirstFrame() async {
 /// Initializes the minimum synchronous services needed to render Flutter UI.
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Initialize logging before installing the global error handler so startup
+  // platform-channel failures retain their originating stack trace.
+  AppLogger.initialize(verbose: kDebugMode);
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
-    AppLogger.warning('Unhandled platform error: $error', feature: 'app');
+    AppLogger.error(
+      'Unhandled asynchronous error',
+      feature: 'app',
+      error: error,
+      stackTrace: stack,
+    );
     return true; // Handled to prevent crash
   };
   MediaKit.ensureInitialized();
@@ -68,7 +76,9 @@ Future<void> bootstrap() async {
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
   if (isAndroidHost) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    await SystemChrome.setSystemUIChangeCallback((systemOverlaysAreVisible) async {
+    await SystemChrome.setSystemUIChangeCallback((
+      systemOverlaysAreVisible,
+    ) async {
       if (!systemOverlaysAreVisible) return;
       // Android blocks UI-visibility changes briefly after the keyboard closes.
       await Future<void>.delayed(const Duration(seconds: 1));
@@ -85,7 +95,8 @@ Future<void> bootstrap() async {
 
   // Cap decoded image RAM — desktop monitors display large 1080p artwork and have
   // ample RAM, while low-spec mobile/TV devices need tight constraints.
-  final isDesktop = !kIsWeb &&
+  final isDesktop =
+      !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.linux ||
           defaultTargetPlatform == TargetPlatform.macOS);
@@ -101,8 +112,6 @@ Future<void> bootstrap() async {
     imageCache.maximumSize = lowRam ? 80 : 120;
   }
 
-  // Logging first — so everything below can log.
-  AppLogger.initialize(verbose: kDebugMode);
   AppLogger.info('Bootstrap starting', feature: 'bootstrap');
 
   // Platform + prefs before runApp so isAndroidTv / formFactor are correct

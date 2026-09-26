@@ -1542,4 +1542,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get iptvAccountExpired =>
       'This IPTV account has expired. Sign in with another user or disconnect this saved login.';
+
+  @override
+  String get catchUpTitle => 'Catch-up TV';
+
+  @override
+  String get catchUpLoadError => 'Could not load archived programmes.';
+
+  @override
+  String get catchUpEmpty => 'No catch-up programmes';
+
+  @override
+  String get catchUpEmptySubtitle =>
+      'This provider has no archived programmes available for this channel.';
 }

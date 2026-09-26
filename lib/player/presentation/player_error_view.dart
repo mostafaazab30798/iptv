@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
+import 'package:iptv/player/domain/enums/player_backend.dart';
 
 import 'package:iptv/shared/extensions/context_extensions.dart';
 
@@ -14,12 +15,16 @@ class PlayerErrorView extends StatelessWidget {
     this.customMessage,
     required this.onRetry,
     required this.onClose,
+    this.currentBackend,
+    this.onSelectBackend,
   });
 
   final PlayerErrorType errorType;
   final String? customMessage;
   final VoidCallback onRetry;
   final VoidCallback onClose;
+  final PlayerBackend? currentBackend;
+  final ValueChanged<PlayerBackend>? onSelectBackend;
 
   @override
   Widget build(BuildContext context) {
@@ -84,38 +89,86 @@ class PlayerErrorView extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 26),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 10,
                 children: [
                   OutlinedButton.icon(
                     onPressed: onClose,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white24),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
                     icon: Directionality.maybeOf(context) == TextDirection.rtl
                         ? Transform.flip(
                             flipX: true,
-                            child: const HugeIcon(icon: AppIcons.arrowBack, size: 18, color: Colors.white),
+                            child: const HugeIcon(
+                              icon: AppIcons.arrowBack,
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           )
-                        : const HugeIcon(icon: AppIcons.arrowBack, size: 18, color: Colors.white),
+                        : const HugeIcon(
+                            icon: AppIcons.arrowBack,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                     label: Text(context.l10n.actionBack),
                   ),
                   if (canRetry) ...[
-                    const SizedBox(width: 16),
                     ElevatedButton.icon(
                       onPressed: onRetry,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accent,
                         foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                         elevation: 2,
                       ),
-                      icon: const HugeIcon(icon: AppIcons.refresh, size: 18, color: Colors.black),
-                      label: Text(context.l10n.actionRetry, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      icon: const HugeIcon(
+                        icon: AppIcons.refresh,
+                        size: 18,
+                        color: Colors.black,
+                      ),
+                      label: Text(
+                        context.l10n.actionRetry,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
+                  if (onSelectBackend != null)
+                    PopupMenuButton<PlayerBackend>(
+                      tooltip: 'Choose player engine',
+                      onSelected: onSelectBackend,
+                      itemBuilder: (_) => [
+                        for (final backend in PlayerBackend.values)
+                          PopupMenuItem(
+                            value: backend,
+                            child: Text(
+                              backend == currentBackend
+                                  ? '${backend.label} ✓'
+                                  : backend.label,
+                            ),
+                          ),
+                      ],
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        child: Text(
+                          'Change Player',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ],
@@ -125,19 +178,22 @@ class PlayerErrorView extends StatelessWidget {
     );
   }
 
-  String _getErrorTitle(BuildContext context, PlayerErrorType type) => switch (type) {
+  String _getErrorTitle(BuildContext context, PlayerErrorType type) =>
+      switch (type) {
         PlayerErrorType.networkUnavailable => context.l10n.errorNetwork,
         PlayerErrorType.timeout => context.l10n.errorNetwork,
         PlayerErrorType.serverUnavailable => context.l10n.errorServer,
         PlayerErrorType.unauthorized => context.l10n.errorAuth,
         PlayerErrorType.invalidSource => context.l10n.playerStreamUnavailable,
-        PlayerErrorType.unsupportedFormat => context.l10n.playerStreamUnavailable,
+        PlayerErrorType.unsupportedFormat =>
+          context.l10n.playerStreamUnavailable,
         PlayerErrorType.codecError => context.l10n.playerStreamUnavailable,
         PlayerErrorType.playbackFailure => context.l10n.playerStreamUnavailable,
         PlayerErrorType.unknown => context.l10n.errorUnknown,
       };
 
-  String _getDefaultMessage(BuildContext context, PlayerErrorType type) => switch (type) {
+  String _getDefaultMessage(BuildContext context, PlayerErrorType type) =>
+      switch (type) {
         PlayerErrorType.networkUnavailable => context.l10n.errorNetwork,
         PlayerErrorType.timeout => context.l10n.errorNetwork,
         PlayerErrorType.serverUnavailable => context.l10n.errorServer,

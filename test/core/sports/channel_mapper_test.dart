@@ -3,13 +3,7 @@ import 'package:iptv/core/sports/channel_mapper.dart';
 import 'package:iptv/domain/entities/channel.dart';
 
 Channel _ch(int id, String name) {
-  return Channel(
-    id: id,
-    serverId: 1,
-    streamId: id,
-    name: name,
-    categoryId: 1,
-  );
+  return Channel(id: id, serverId: 1, streamId: id, name: name, categoryId: 1);
 }
 
 void main() {
@@ -28,21 +22,24 @@ void main() {
       expect(ssc5.number, '5');
     });
 
-    test('findBestChannel selects highest quality match for scraped channel', () {
-      final channels = [
-        _ch(1, 'beIN Sports 1 SD'),
-        _ch(2, 'beIN Sports 1 HD'),
-        _ch(3, 'beIN Sports 1 FHD'),
-        _ch(4, 'beIN Sports 1 4K'),
-        _ch(5, 'beIN Sports 2 HD'),
-        _ch(6, 'ON Time Sports 1 HD'),
-      ];
+    test(
+      'findBestChannel selects highest quality match for scraped channel',
+      () {
+        final channels = [
+          _ch(1, 'beIN Sports 1 SD'),
+          _ch(2, 'beIN Sports 1 HD'),
+          _ch(3, 'beIN Sports 1 FHD'),
+          _ch(4, 'beIN Sports 1 4K'),
+          _ch(5, 'beIN Sports 2 HD'),
+          _ch(6, 'ON Time Sports 1 HD'),
+        ];
 
-      final best = ChannelMapper.findBestChannel('بى ان سبورت 1HD', channels);
-      expect(best, isNotNull);
-      expect(best!.streamId, 4); // 4K has highest quality
-      expect(best.name, contains('beIN Sports 1 4K'));
-    });
+        final best = ChannelMapper.findBestChannel('بى ان سبورت 1HD', channels);
+        expect(best, isNotNull);
+        expect(best!.streamId, 4); // 4K has highest quality
+        expect(best.name, contains('beIN Sports 1 4K'));
+      },
+    );
 
     test('findBestChannel matches ON Sport to ON Time Sports 1', () {
       final channels = [
@@ -54,6 +51,22 @@ void main() {
       final best = ChannelMapper.findBestChannel('ON Sport', channels);
       expect(best, isNotNull);
       expect(best!.streamId, 11); // FHD over HD
+    });
+
+    test('regular beIN does not resolve to a French regional channel', () {
+      final channels = [
+        _ch(20, 'beIN Sports FR 1 4K'),
+        _ch(21, 'beIN Sports 1 HD'),
+      ];
+
+      final regular = ChannelMapper.findBestChannel('beIN Sports 1', channels);
+      final french = ChannelMapper.findBestChannel(
+        'beIN Sports France 1',
+        channels,
+      );
+
+      expect(regular?.streamId, 21);
+      expect(french?.streamId, 20);
     });
 
     test('findBestChannel returns null for Not Available', () {

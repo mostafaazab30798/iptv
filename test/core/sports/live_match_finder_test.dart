@@ -5,13 +5,7 @@ import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/live_fixture.dart';
 
 Channel _ch(int id, String name) {
-  return Channel(
-    id: id,
-    serverId: 1,
-    streamId: id,
-    name: name,
-    categoryId: 1,
-  );
+  return Channel(id: id, serverId: 1, streamId: id, name: name, categoryId: 1);
 }
 
 void main() {
@@ -53,10 +47,7 @@ void main() {
   test('does not treat club TV as a match even when the team name matches', () {
     final matches = LiveMatchFinder.bindFixtures(
       fixtures: [fixture],
-      channels: [
-        _ch(1, 'Liverpool TV 4K'),
-        _ch(2, 'FC Barcelona TV'),
-      ],
+      channels: [_ch(1, 'Liverpool TV 4K'), _ch(2, 'FC Barcelona TV')],
       epgTitles: {1: 'Ipswich Town vs Liverpool'},
     );
     expect(matches, isEmpty);
@@ -95,5 +86,14 @@ void main() {
     expect(matches, hasLength(1));
     expect(matches.single.channel.streamId, 4);
     expect(matches.single.fixture?.awayName, 'Liverpool');
+  });
+
+  test('fallback prefers regular beIN over a higher-resolution beIN FR', () {
+    final matches = LiveMatchFinder.bindFixtures(
+      fixtures: [fixture],
+      channels: [_ch(20, 'beIN Sports FR 1 4K'), _ch(21, 'beIN Sports 1 HD')],
+    );
+
+    expect(matches.single.channel.streamId, 21);
   });
 }

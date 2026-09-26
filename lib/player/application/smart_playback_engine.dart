@@ -7,17 +7,14 @@ import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
+import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/domain/enums/software_decode_fallback_tier.dart';
 import 'package:iptv/player/domain/interfaces/player_engine.dart';
 import 'package:iptv/player/infrastructure/playback_retry_manager.dart';
 import 'package:iptv/player/utils/player_logger.dart';
 
-/// Soft catch-up / hard-resync / decode-heal state for live edge control.
-enum LiveEdgePhase {
-  atTarget,
-  catchingUp,
-  cooldown,
-}
+/// Hard-resync / decode-heal state for live playback recovery.
+enum LiveEdgePhase { atTarget, cooldown }
 
 /// Smart coordinator managing engine lifecycle, capability enforcement, retry logic,
 /// software-decode escalation, adaptive buffers, and live-edge drift recovery.
@@ -28,9 +25,8 @@ enum LiveEdgePhase {
 ///   Tier 2 (frameSkip): After sustained high drops under Tier 1.
 ///   De-escalation: Reverts when drops recover or hardware decode returns.
 ///
-/// Live-edge controller (live sources only):
-///   AtTarget -> CatchingUp (1.01x–1.03x) -> HardResync (reopen) -> Cooldown
-/// Decode-heal shares the same cool-downed reopen path.
+/// Long, observed buffering transitions can reopen a live source to recover
+/// its current edge. Decode-heal shares the same cool-downed reopen path.
 class SmartPlaybackEngine {
   SmartPlaybackEngine({
     required PlayerEngine engine,
@@ -45,19 +41,15 @@ class SmartPlaybackEngine {
     this.networkEscalateWindow = 4,
     this.networkDeEscalateWindow = 20,
     this.liveLowLatencyRecoverWindow = 45,
-    this.softCatchUpOverTargetSecs = 1.5,
-    this.softCatchUpMaxOverTargetSecs = 6.0,
-    this.hardResyncOverTargetSecs = 8.0,
-    this.hardResyncImmediateSecs = 20.0,
-    this.catchUpRate = 1.02,
     this.resyncCooldown = const Duration(seconds: 45),
+    this.stalledPlaybackResyncThreshold = const Duration(seconds: 8),
     this.decodeHealDropDeltaThreshold = 40,
     this.decodeHealSpikeWindow = 2,
-  })  : _engine = engine,
-        _retryManager = retryManager ?? PlaybackRetryManager(),
-        _decodeProber = decodeProber ?? DeviceDecodeProber(),
-        _currentBufferMode = initialBufferMode,
-        _clock = clock ?? DateTime.now;
+  }) : _engine = engine,
+       _retryManager = retryManager ?? PlaybackRetryManager(),
+       _decodeProber = decodeProber ?? DeviceDecodeProber(),
+       _currentBufferMode = initialBufferMode,
+       _clock = clock ?? DateTime.now;
 
   final PlayerEngine _engine;
   final PlaybackRetryManager _retryManager;
@@ -67,7 +59,6 @@ class SmartPlaybackEngine {
   DateTime? _switchStartTime;
   PlayerMetrics _latestMetrics = PlayerMetrics.empty;
   PlayerSource? _activeSource;
-  bool _wasBuffering = false;
 
   // ── SW decode escalation state ──────────────────────────────────────────────
 
@@ -84,6 +75,7 @@ class SmartPlaybackEngine {
 
   Timer? _escalationTimer;
   StreamSubscription<PlayerMetrics>? _metricsSubscription;
+  StreamSubscription<PlayerStatus>? _statusSubscription;
   StreamSubscription<Duration>? _firstFrameSubscription;
 
   // ── Adaptive network buffer escalation ──────────────────────────────────────
@@ -102,23 +94,17 @@ class SmartPlaybackEngine {
 
   LiveEdgePhase _liveEdgePhase = LiveEdgePhase.atTarget;
   DateTime? _resyncCooldownUntil;
+  DateTime? _bufferingStartedAt;
   int _decodeDropSpikeSeconds = 0;
   int _lastDecoderDrops = 0;
-  bool _catchUpActive = false;
-
-  final double softCatchUpOverTargetSecs;
-  final double softCatchUpMaxOverTargetSecs;
-  final double hardResyncOverTargetSecs;
-  final double hardResyncImmediateSecs;
-  final double catchUpRate;
   final Duration resyncCooldown;
+  final Duration stalledPlaybackResyncThreshold;
   final int decodeHealDropDeltaThreshold;
   final int decodeHealSpikeWindow;
 
   PlaybackBufferMode get currentBufferMode => _currentBufferMode;
   LiveEdgePhase get liveEdgePhase => _liveEdgePhase;
   SoftwareDecodeFallbackTier get currentSwDecodeTier => _currentTier;
-  bool get isCatchUpActive => _catchUpActive;
 
   PlayerEngine get engine => _engine;
   PlaybackRetryManager get retryManager => _retryManager;
@@ -139,10 +125,10 @@ class SmartPlaybackEngine {
     await firstFrameSub?.cancel();
 
     _activeSource = source;
-    _wasBuffering = false;
+    _bufferingStartedAt = null;
     _userPinnedBufferMode = false;
 
-    await _resetLiveEdgeState(restoreRate: true);
+    _resetLiveEdgeState();
     await _applyEscalationTier(SoftwareDecodeFallbackTier.none);
     _lastTotalDrops = 0;
     _lastDecoderDrops = 0;
@@ -188,13 +174,15 @@ class SmartPlaybackEngine {
       if (m.hwdecCurrent != null) {
         _decodeProber.reconcile(m.hwdecCurrent);
       }
-      if (m.isHardwareDecodingActive && _currentTier != SoftwareDecodeFallbackTier.none) {
+      if (m.isHardwareDecodingActive &&
+          _currentTier != SoftwareDecodeFallbackTier.none) {
         _applyEscalationTier(SoftwareDecodeFallbackTier.none);
         _tier2ConsecutiveSeconds = 0;
         _deEscalateConsecutiveSeconds = 0;
         _decodeBottleneckConsecutiveSeconds = 0;
       }
     });
+    _statusSubscription = _engine.statusStream.listen(_handlePlaybackStatus);
   }
 
   void _stopEscalationMonitor() {
@@ -202,6 +190,29 @@ class SmartPlaybackEngine {
     _escalationTimer = null;
     _metricsSubscription?.cancel();
     _metricsSubscription = null;
+    _statusSubscription?.cancel();
+    _statusSubscription = null;
+  }
+
+  void _handlePlaybackStatus(PlayerStatus status) {
+    if (status == PlayerStatus.buffering) {
+      _bufferingStartedAt ??= _clock();
+      return;
+    }
+
+    final bufferingStartedAt = _bufferingStartedAt;
+    if (bufferingStartedAt == null) return;
+    _bufferingStartedAt = null;
+
+    if (status != PlayerStatus.playing ||
+        !(_activeSource?.profile.isLive ?? false)) {
+      return;
+    }
+
+    final stalledFor = _clock().difference(bufferingStartedAt);
+    if (stalledFor >= stalledPlaybackResyncThreshold) {
+      unawaited(_hardResyncLive(reason: 'post-stall-resync'));
+    }
   }
 
   /// Called every second. Drives the two-tier escalation / de-escalation state machine.
@@ -290,7 +301,10 @@ class SmartPlaybackEngine {
   void _tickNetworkAdaptation(PlayerMetrics m) {
     if (_userPinnedBufferMode) return;
 
-    final bufferingDelta = (m.bufferingCount - _lastBufferingCount).clamp(0, 1 << 30);
+    final bufferingDelta = (m.bufferingCount - _lastBufferingCount).clamp(
+      0,
+      1 << 30,
+    );
     _lastBufferingCount = m.bufferingCount;
 
     final stressedNow = m.isNetworkBottleneck || bufferingDelta > 0;
@@ -374,25 +388,18 @@ class SmartPlaybackEngine {
       return;
     }
     if (_liveEdgePhase == LiveEdgePhase.cooldown &&
-        (_resyncCooldownUntil == null || !now.isBefore(_resyncCooldownUntil!))) {
+        (_resyncCooldownUntil == null ||
+            !now.isBefore(_resyncCooldownUntil!))) {
       _liveEdgePhase = LiveEdgePhase.atTarget;
       _resyncCooldownUntil = null;
     }
-
-    final cacheSecs = (m.cacheDuration?.inMilliseconds ?? 0) / 1000.0;
-    final targetSecs = _currentBufferMode.cacheSecs.toDouble();
-    final overTarget = cacheSecs - targetSecs;
-
-    // Track buffering edges for post-stall fat-cache resync.
-    final bufferingNow = m.isNetworkBottleneck;
-    final leftBuffering = _wasBuffering && !bufferingNow;
-    _wasBuffering = bufferingNow;
 
     // Decode-heal: healthy cache + decoder drop storm => broken refs / macroblocks.
     final decoderDrops = m.decoderFrameDropCount ?? 0;
     final decoderDelta = (decoderDrops - _lastDecoderDrops).clamp(0, 1 << 30);
     _lastDecoderDrops = decoderDrops;
-    final cacheHealthy = !m.isNetworkBottleneck &&
+    final cacheHealthy =
+        !m.isNetworkBottleneck &&
         (m.cacheBufferingState == null || m.cacheBufferingState! >= 70);
     if (cacheHealthy && decoderDelta >= decodeHealDropDeltaThreshold) {
       _decodeDropSpikeSeconds++;
@@ -406,52 +413,10 @@ class SmartPlaybackEngine {
       return;
     }
 
-    // Immediate hard resync on extreme cache lag or fat cache right after stall.
-    if (cacheSecs >= hardResyncImmediateSecs ||
-        (leftBuffering && overTarget >= hardResyncOverTargetSecs)) {
-      unawaited(_hardResyncLive(reason: 'hard-resync'));
-      return;
-    }
-
-    if (overTarget >= hardResyncOverTargetSecs) {
-      unawaited(_hardResyncLive(reason: 'hard-resync'));
-      return;
-    }
-
-    if (overTarget >= softCatchUpOverTargetSecs &&
-        overTarget < softCatchUpMaxOverTargetSecs) {
-      unawaited(_enterSoftCatchUp());
-      return;
-    }
-
-    // Back at / under soft band — restore 1.0x.
-    if (_catchUpActive && overTarget < softCatchUpOverTargetSecs) {
-      unawaited(_exitSoftCatchUp());
-    }
-  }
-
-  Future<void> _enterSoftCatchUp() async {
-    if (_catchUpActive) {
-      _liveEdgePhase = LiveEdgePhase.catchingUp;
-      return;
-    }
-    _catchUpActive = true;
-    _liveEdgePhase = LiveEdgePhase.catchingUp;
-    PlayerLogger.note(
-      '[live-edge] Soft catch-up at ${catchUpRate}x '
-      '(cache ahead of target)',
-    );
-    await _engine.setPlaybackRate(catchUpRate);
-  }
-
-  Future<void> _exitSoftCatchUp() async {
-    if (!_catchUpActive) return;
-    _catchUpActive = false;
-    if (_liveEdgePhase == LiveEdgePhase.catchingUp) {
-      _liveEdgePhase = LiveEdgePhase.atTarget;
-    }
-    PlayerLogger.note('[live-edge] Restoring playback rate 1.0x');
-    await _engine.setPlaybackRate(1.0);
+    // mpv's cache-duration is buffered media *ahead* of the playhead, not the
+    // distance behind the broadcaster's live edge. It must never trigger
+    // speed changes or reopens. Long real buffering transitions are handled
+    // by [_handlePlaybackStatus].
   }
 
   Future<void> _hardResyncLive({required String reason}) async {
@@ -466,8 +431,6 @@ class SmartPlaybackEngine {
     _resyncCooldownUntil = now.add(resyncCooldown);
     _liveEdgePhase = LiveEdgePhase.cooldown;
     _decodeDropSpikeSeconds = 0;
-    await _exitSoftCatchUp();
-
     PlayerLogger.note(
       '[$reason] Hard live-edge resync — reopening source '
       '(cooldown ${resyncCooldown.inSeconds}s)',
@@ -475,16 +438,11 @@ class SmartPlaybackEngine {
     await _engine.open(source);
   }
 
-  Future<void> _resetLiveEdgeState({required bool restoreRate}) async {
+  void _resetLiveEdgeState() {
     _liveEdgePhase = LiveEdgePhase.atTarget;
     _resyncCooldownUntil = null;
+    _bufferingStartedAt = null;
     _decodeDropSpikeSeconds = 0;
-    if (restoreRate && _catchUpActive) {
-      _catchUpActive = false;
-      await _engine.setPlaybackRate(1.0);
-    } else {
-      _catchUpActive = false;
-    }
   }
 
   // ── DeviceDecodeProber integration ──────────────────────────────────────────
@@ -503,7 +461,6 @@ class SmartPlaybackEngine {
     required Future<void> Function() onExecuteRetry,
     required void Function(Duration delay, int attempt) onRetryScheduled,
   }) {
-    unawaited(_exitSoftCatchUp());
     return _retryManager.scheduleRetry(
       errorType: errorType,
       onExecuteRetry: onExecuteRetry,
@@ -515,10 +472,7 @@ class SmartPlaybackEngine {
 
   Future<void> play() => _engine.play();
 
-  Future<void> pause() async {
-    await _exitSoftCatchUp();
-    await _engine.pause();
-  }
+  Future<void> pause() => _engine.pause();
 
   Future<void> stop() async {
     _switchStartTime = null;
@@ -527,7 +481,7 @@ class SmartPlaybackEngine {
     _firstFrameSubscription = null;
     _retryManager.cancel();
     _stopEscalationMonitor();
-    await _resetLiveEdgeState(restoreRate: true);
+    _resetLiveEdgeState();
     return _engine.stop();
   }
 
@@ -539,7 +493,8 @@ class SmartPlaybackEngine {
   Future<void> setPlaybackRate(double rate) => _engine.setPlaybackRate(rate);
   Future<void> setVolume(double volume) => _engine.setVolume(volume);
   Future<void> setMuted(bool muted) => _engine.setMuted(muted);
-  Future<void> setAudioTrack(PlayerAudioTrack track) => _engine.setAudioTrack(track);
+  Future<void> setAudioTrack(PlayerAudioTrack track) =>
+      _engine.setAudioTrack(track);
   Future<void> setSubtitleTrack(PlayerSubtitleTrack track) =>
       _engine.setSubtitleTrack(track);
 
@@ -565,7 +520,7 @@ class SmartPlaybackEngine {
     final firstFrameSub = _firstFrameSubscription;
     _firstFrameSubscription = null;
     await firstFrameSub?.cancel();
-    await _resetLiveEdgeState(restoreRate: true);
+    _resetLiveEdgeState();
     await _engine.dispose();
   }
 }

@@ -1,5 +1,6 @@
 import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -77,25 +78,26 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
       );
       return;
     } else {
-      final streamUrl = ref.read(streamUrlBuilderProvider).liveForSession(
-      session,
-      streamId: fav.itemId,
-    );
+      final streamUrl = ref
+          .read(streamUrlBuilderProvider)
+          .liveForSession(session, streamId: fav.itemId);
 
       final favorites = ref.read(favoritesListProvider).valueOrNull ?? const [];
-      final channelFavorites =
-          favorites.where((f) => f.type == FavoriteType.channel).toList();
-      final channels = channelFavorites
-          .map((f) => Channel(
-                id: f.itemId,
-                serverId: 0,
-                streamId: f.itemId,
-                name: f.name,
-                streamIcon: f.imageUrl,
-              ))
+      final channelFavorites = favorites
+          .where((f) => f.type == FavoriteType.channel)
           .toList();
-      final initialIndex =
-          channels.indexWhere((c) => c.streamId == fav.itemId);
+      final channels = channelFavorites
+          .map(
+            (f) => Channel(
+              id: f.itemId,
+              serverId: 0,
+              streamId: f.itemId,
+              name: f.name,
+              streamIcon: f.imageUrl,
+            ),
+          )
+          .toList();
+      final initialIndex = channels.indexWhere((c) => c.streamId == fav.itemId);
 
       final playerNotifier = ref.read(playerControllerProvider.notifier);
       playerNotifier.setLazyLivePlaylist(
@@ -111,10 +113,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                 ),
               ],
         initialIndex: initialIndex >= 0 ? initialIndex : 0,
-        urlFor: (c) => ref.read(streamUrlBuilderProvider).liveForSession(
-      session,
-      streamId: c.streamId,
-    ),
+        urlFor: (c) => ref
+            .read(streamUrlBuilderProvider)
+            .liveForSession(session, streamId: c.streamId),
       );
 
       playerNotifier.load(
@@ -261,25 +262,26 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                               size: 18,
                               color: AppColors.textSecondary,
                             ),
-                            suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                              valueListenable: _searchController,
-                              builder: (context, value, _) {
-                                if (value.text.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-                                return IconButton(
-                                  icon: const HugeIcon(
-                                    icon: AppIcons.close,
-                                    size: 16,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _searchQuery.value = '';
+                            suffixIcon:
+                                ValueListenableBuilder<TextEditingValue>(
+                                  valueListenable: _searchController,
+                                  builder: (context, value, _) {
+                                    if (value.text.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return IconButton(
+                                      icon: const HugeIcon(
+                                        icon: AppIcons.close,
+                                        size: 16,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _searchQuery.value = '';
+                                      },
+                                    );
                                   },
-                                );
-                              },
-                            ),
+                                ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 0,
@@ -306,8 +308,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                               _buildFilterChip(
                                 label: context.l10n.labelChannels,
                                 count: channelCount,
-                                isSelected: _selectedTypeFilter ==
-                                    FavoriteType.channel,
+                                isSelected:
+                                    _selectedTypeFilter == FavoriteType.channel,
                                 onTap: () => setState(
                                   () => _selectedTypeFilter =
                                       FavoriteType.channel,
@@ -322,8 +324,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                 isSelected:
                                     _selectedTypeFilter == FavoriteType.movie,
                                 onTap: () => setState(
-                                  () => _selectedTypeFilter =
-                                      FavoriteType.movie,
+                                  () =>
+                                      _selectedTypeFilter = FavoriteType.movie,
                                 ),
                               ),
                             ],
@@ -335,8 +337,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                 isSelected:
                                     _selectedTypeFilter == FavoriteType.series,
                                 onTap: () => setState(
-                                  () => _selectedTypeFilter =
-                                      FavoriteType.series,
+                                  () =>
+                                      _selectedTypeFilter = FavoriteType.series,
                                 ),
                               ),
                             ],
@@ -360,9 +362,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                           return false;
                         }
                         if (query.isNotEmpty &&
-                            !item.name
-                                .toLowerCase()
-                                .contains(query.toLowerCase())) {
+                            !item.name.toLowerCase().contains(
+                              query.toLowerCase(),
+                            )) {
                           return false;
                         }
                         return true;
@@ -378,7 +380,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
 
                       if (_isGridView) {
                         return GridView.builder(
-                          cacheExtent: _listCacheExtent,
+                          scrollCacheExtent: const ScrollCacheExtent.pixels(
+                            _listCacheExtent,
+                          ),
                           padding: const EdgeInsets.all(AppSpacing.md),
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -397,7 +401,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       }
 
                       return ListView.separated(
-                        cacheExtent: _listCacheExtent,
+                        scrollCacheExtent: const ScrollCacheExtent.pixels(
+                          _listCacheExtent,
+                        ),
                         padding: const EdgeInsets.all(AppSpacing.md),
                         itemCount: filteredItems.length,
                         separatorBuilder: (_, index) =>
@@ -517,7 +523,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
             final w = constraints.maxWidth.isFinite && constraints.maxWidth > 0
                 ? constraints.maxWidth
                 : 148.0;
-            final h = constraints.maxHeight.isFinite && constraints.maxHeight > 0
+            final h =
+                constraints.maxHeight.isFinite && constraints.maxHeight > 0
                 ? constraints.maxHeight
                 : 124.0;
             return ChannelCard(

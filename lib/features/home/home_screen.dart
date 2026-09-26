@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -228,7 +229,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                 controller: _scrollController,
                 // Platform-default physics; AlwaysScrollable enables pull-to-refresh.
                 physics: const AlwaysScrollableScrollPhysics(),
-                cacheExtent: 240,
+                scrollCacheExtent: const ScrollCacheExtent.pixels(240),
                 slivers: [
                   _HomeHeroSliver(autoPlayNotifier: _heroAutoPlayNotifier),
                   const _HomeContinueWatchingSliver(),

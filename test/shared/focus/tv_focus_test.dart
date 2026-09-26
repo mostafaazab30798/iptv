@@ -9,10 +9,7 @@ import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
 
 Widget _tvApp({required Widget home}) {
   return RemoteFocusScope(
-    child: MaterialApp(
-      builder: Dpad.wrap(),
-      home: home,
-    ),
+    child: MaterialApp(builder: Dpad.wrap(), home: home),
   );
 }
 
@@ -29,11 +26,7 @@ void main() {
           body: FocusableCard(
             autofocus: true,
             onTap: () => tapped = true,
-            child: const SizedBox(
-              width: 120,
-              height: 80,
-              child: Text('Card'),
-            ),
+            child: const SizedBox(width: 120, height: 80, child: Text('Card')),
           ),
         ),
       ),
@@ -46,7 +39,9 @@ void main() {
     expect(tapped, isTrue);
   });
 
-  testWidgets('arrow keys move focus between TvFocusable items', (tester) async {
+  testWidgets('arrow keys move focus between TvFocusable items', (
+    tester,
+  ) async {
     var selected = '';
 
     await tester.pumpWidget(
@@ -86,6 +81,27 @@ void main() {
     expect(selected, 'right');
   });
 
+  testWidgets('pointer tap activates TvFocusable exactly once', (tester) async {
+    var selections = 0;
+
+    await tester.pumpWidget(
+      _tvApp(
+        home: Scaffold(
+          body: TvFocusable(
+            onSelect: () => selections++,
+            child: const SizedBox(width: 80, height: 48, child: Text('Action')),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Action'));
+    await tester.pump();
+
+    expect(selections, 1);
+  });
+
   testWidgets('focus ring stays off until a remote key is pressed', (
     tester,
   ) async {
@@ -95,11 +111,7 @@ void main() {
           body: FocusableCard(
             autofocus: true,
             onTap: () {},
-            child: const SizedBox(
-              width: 120,
-              height: 80,
-              child: Text('Card'),
-            ),
+            child: const SizedBox(width: 120, height: 80, child: Text('Card')),
           ),
         ),
       ),
@@ -155,8 +167,9 @@ void main() {
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'poster');
   });
 
-  testWidgets('rtl poster keeps heart at start opposite the rating end',
-      (tester) async {
+  testWidgets('rtl poster keeps heart at start opposite the rating end', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Directionality(

@@ -261,13 +261,16 @@ class HomeController extends StateNotifier<HomeState> {
       }
 
       // 2. Launch catalog fetches in parallel, updating state progressively as each finishes.
-      // Featured live uses take(20); sports/news use category-indexed slices
-      // (no full-catalog name keyword scan on Home).
+      // Fetch live categories beside the catalog. Sports/news rows are then
+      // sliced from the catalog already in memory instead of making another
+      // request for every matching category.
       final liveTask = () async {
         try {
-          final channelsRes = await liveRepo.getChannels(
-            forceRefresh: forceRefresh,
-          );
+          final liveResults = await Future.wait([
+            liveRepo.getChannels(forceRefresh: forceRefresh),
+            liveRepo.getCategories(forceRefresh: forceRefresh),
+          ]);
+          final channelsRes = liveResults[0] as Result<List<Channel>>;
           final channels = channelsRes.when(
             ok: (c) => c,
             err: (_) => <Channel>[],
@@ -279,8 +282,14 @@ class HomeController extends StateNotifier<HomeState> {
             state = state.copyWith(liveChannels: channels.take(20).toList());
           }
 
-          final rowSlices = await _loadSportsAndNewsRows(
-            forceRefresh: forceRefresh,
+          final categoriesRes = liveResults[1] as Result<List<Category>>;
+          final categories = categoriesRes.when(
+            ok: (c) => c,
+            err: (_) => <Category>[],
+          );
+          final rowSlices = _buildSportsAndNewsRows(
+            channels: channels,
+            categories: categories,
           );
           if (!mounted) return;
 
@@ -371,8 +380,12 @@ class HomeController extends StateNotifier<HomeState> {
     // Fallback if the catalog has fewer than 20 rated movies: fill with unrated items with posters & recent year
     if (result.length < 20 && unrated.isNotEmpty) {
       unrated.sort((a, b) {
-        final hasPosterA = (a.streamIcon != null && a.streamIcon!.isNotEmpty) ? 1 : 0;
-        final hasPosterB = (b.streamIcon != null && b.streamIcon!.isNotEmpty) ? 1 : 0;
+        final hasPosterA = (a.streamIcon != null && a.streamIcon!.isNotEmpty)
+            ? 1
+            : 0;
+        final hasPosterB = (b.streamIcon != null && b.streamIcon!.isNotEmpty)
+            ? 1
+            : 0;
         if (hasPosterA != hasPosterB) return hasPosterB.compareTo(hasPosterA);
         final yearA = a.releaseYear ?? 0;
         final yearB = b.releaseYear ?? 0;
@@ -436,8 +449,7 @@ class HomeController extends StateNotifier<HomeState> {
     // Hero slides only render artwork from backdrop/poster URLs — skip
     // movies with no usable picture so the carousel never shows a blank card.
     final validMovies = movies
-        .where((m) =>
-            m.name.trim().isNotEmpty && _heroImageUrlFor(m) != null)
+        .where((m) => m.name.trim().isNotEmpty && _heroImageUrlFor(m) != null)
         .toList();
 
     if (validMovies.isEmpty) return const [];
@@ -467,14 +479,18 @@ class HomeController extends StateNotifier<HomeState> {
 
     final pickedMovies = rated.map((e) => e.$1).take(3).toList();
     if (pickedMovies.length < 3 && unrated.isNotEmpty) {
-      unrated.sort((a, b) => (b.releaseYear ?? 0).compareTo(a.releaseYear ?? 0));
+      unrated.sort(
+        (a, b) => (b.releaseYear ?? 0).compareTo(a.releaseYear ?? 0),
+      );
       pickedMovies.addAll(unrated.take(3 - pickedMovies.length));
     }
 
     return pickedMovies.map((m) {
       final r = double.tryParse(m.rating?.replaceAll(',', '.') ?? '');
       final ratingStr = (r != null && r > 0.0) ? m.rating : null;
-      final yearStr = m.releaseYear != null && m.releaseYear! > 0 ? '${m.releaseYear}' : null;
+      final yearStr = m.releaseYear != null && m.releaseYear! > 0
+          ? '${m.releaseYear}'
+          : null;
       final genreStr = m.genre ?? 'Action';
       final imageUrl = _heroImageUrlFor(m)!;
 
@@ -693,20 +709,13 @@ class HomeController extends StateNotifier<HomeState> {
     }
   }
 
-  /// Builds Home sports/news rows from category-scoped live cache slices.
-  Future<({List<Channel> sports, List<Channel> news})> _loadSportsAndNewsRows({
-    required bool forceRefresh,
-  }) async {
-    final liveRepo = _liveRepo;
-    if (liveRepo == null) {
-      return (sports: const <Channel>[], news: const <Channel>[]);
-    }
-
-    final catsRes = await liveRepo.getCategories(forceRefresh: forceRefresh);
-    final categories = catsRes.when(ok: (c) => c, err: (_) => <Category>[]);
-
-    final sportsCatIds = <int>[];
-    final newsCatIds = <int>[];
+  /// Builds Home rows in one pass over the already-fetched live catalog.
+  ({List<Channel> sports, List<Channel> news}) _buildSportsAndNewsRows({
+    required List<Channel> channels,
+    required List<Category> categories,
+  }) {
+    final sportsCatIds = <int>{};
+    final newsCatIds = <int>{};
     for (final cat in categories) {
       if (_isSportsCategoryName(cat.name)) {
         sportsCatIds.add(cat.id);
@@ -715,42 +724,19 @@ class HomeController extends StateNotifier<HomeState> {
       }
     }
 
-    final sports = await _channelsFromCategoryIds(
-      sportsCatIds,
-      limit: 15,
-      forceRefresh: forceRefresh,
-    );
-    final news = await _channelsFromCategoryIds(
-      newsCatIds,
-      limit: 15,
-      forceRefresh: forceRefresh,
-    );
-    return (sports: sports, news: news);
-  }
-
-  Future<List<Channel>> _channelsFromCategoryIds(
-    List<int> categoryIds, {
-    required int limit,
-    required bool forceRefresh,
-  }) async {
-    if (categoryIds.isEmpty || _liveRepo == null) return const [];
-
-    final out = <Channel>[];
-    final seen = <int>{};
-    for (final categoryId in categoryIds) {
-      if (out.length >= limit) break;
-      final res = await _liveRepo.getChannels(
-        categoryId: categoryId,
-        forceRefresh: forceRefresh,
-      );
-      final slice = res.when(ok: (c) => c, err: (_) => <Channel>[]);
-      for (final c in slice) {
-        if (!seen.add(c.streamId)) continue;
-        out.add(c);
-        if (out.length >= limit) break;
+    final sports = <Channel>[];
+    final news = <Channel>[];
+    for (final channel in channels) {
+      final categoryId = channel.categoryId;
+      if (categoryId == null) continue;
+      if (sports.length < 15 && sportsCatIds.contains(categoryId)) {
+        sports.add(channel);
+      } else if (news.length < 15 && newsCatIds.contains(categoryId)) {
+        news.add(channel);
       }
+      if (sports.length == 15 && news.length == 15) break;
     }
-    return out;
+    return (sports: sports, news: news);
   }
 
   static bool _isSportsCategoryName(String name) {
@@ -968,9 +954,20 @@ final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>(
     final seriesRepo = ref.watch(seriesRepositoryProvider);
     final favoritesRepo = ref.watch(favoritesRepositoryProvider);
     final historyRepo = ref.watch(historyRepositoryProvider);
-    final allowedContent =
-        ref.watch(kidsAllowedContentProvider).valueOrNull ??
-        const KidsAllowedContent.denyAll();
+    final kidsMode = ref.watch(
+      kidsModeProvider.select(
+        (state) =>
+            (isInitialized: state.isInitialized, isEnabled: state.isEnabled),
+      ),
+    );
+    // Avoid an unnecessary async provider transition (and a second complete
+    // HomeController load) when Kids Mode is disabled.
+    final allowedContent = !kidsMode.isInitialized
+        ? const KidsAllowedContent.denyAll()
+        : !kidsMode.isEnabled
+        ? const KidsAllowedContent.unrestricted()
+        : ref.watch(kidsAllowedContentProvider).valueOrNull ??
+              const KidsAllowedContent.denyAll();
 
     return HomeController(
       liveRepo: liveRepo,

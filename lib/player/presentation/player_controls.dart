@@ -106,6 +106,9 @@ class PlayerControls extends StatelessWidget {
         final isWide = constraints.maxWidth >= 720 && !isTv;
         // Phones: shortest side stays under 600 in both orientations.
         final isPhone = MediaQuery.sizeOf(context).shortestSide < 600;
+        final horizontalSafeInset = isTv
+            ? ChromeHeights.overscanLogicalPx
+            : 14.0;
 
         return Stack(
           fit: StackFit.expand,
@@ -116,8 +119,8 @@ class PlayerControls extends StatelessWidget {
               left: 0,
               right: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalSafeInset,
                   vertical: 8,
                 ),
                 decoration: const BoxDecoration(
@@ -164,9 +167,9 @@ class PlayerControls extends StatelessWidget {
                             children: [
                               Text(
                                 source.title,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 14,
+                                  fontSize: isTv ? 16 : 14,
                                   fontWeight: FontWeight.w700,
                                 ),
                                 maxLines: 1,
@@ -181,7 +184,7 @@ class PlayerControls extends StatelessWidget {
                                             : 'Video on Demand')),
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 10.5,
+                                  fontSize: isTv ? 12 : 10.5,
                                   fontWeight: FontWeight.w500,
                                 ),
                                 maxLines: 1,
@@ -258,59 +261,65 @@ class PlayerControls extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Replay 10s
-                    _CompactGlassButton(
-                      icon: AppIcons.replay10,
-                      tooltip: context.l10n.playerReplay10,
-                      size: 46,
-                      iconSize: 24,
-                      onPressed: () =>
-                          onSeekRelative(const Duration(seconds: -10)),
-                    ),
-                    const SizedBox(width: 16),
+                    if (playerState.canSeek)
+                      _CompactGlassButton(
+                        icon: AppIcons.replay10,
+                        tooltip: context.l10n.playerReplay10,
+                        size: 46,
+                        iconSize: 24,
+                        onPressed: () =>
+                            onSeekRelative(const Duration(seconds: -10)),
+                      ),
+                    if (playerState.canSeek) const SizedBox(width: 16),
 
                     // Main Play / Pause Button
-                    TvFocusable(
-                      autofocus: true,
-                      focusNode: primaryFocusNode,
-                      debugLabel: 'player-play-pause',
-                      onSelect: onPlayPause,
-                      scale: 1.12,
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.accent,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.accent.withValues(alpha: 0.4),
-                              blurRadius: 18,
-                              spreadRadius: 2,
+                    Semantics(
+                      button: true,
+                      label: playerState.isPlaying ? 'Pause' : 'Play',
+                      child: TvFocusable(
+                        autofocus: true,
+                        focusNode: primaryFocusNode,
+                        debugLabel: 'player-play-pause',
+                        onSelect: onPlayPause,
+                        scale: 1.12,
+                        child: Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.accent,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accent.withValues(alpha: 0.4),
+                                blurRadius: 18,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: HugeIcon(
+                              icon: playerState.isPlaying
+                                  ? AppIcons.pause
+                                  : AppIcons.play,
+                              color: Colors.black,
+                              size: 32,
                             ),
-                          ],
-                        ),
-                        child: Center(
-                          child: HugeIcon(
-                            icon: playerState.isPlaying
-                                ? AppIcons.pause
-                                : AppIcons.play,
-                            color: Colors.black,
-                            size: 32,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    if (playerState.canSeek) const SizedBox(width: 16),
 
                     // Forward 10s
-                    _CompactGlassButton(
-                      icon: AppIcons.forward10,
-                      tooltip: context.l10n.playerForward10,
-                      size: 46,
-                      iconSize: 24,
-                      onPressed: () =>
-                          onSeekRelative(const Duration(seconds: 10)),
-                    ),
+                    if (playerState.canSeek)
+                      _CompactGlassButton(
+                        icon: AppIcons.forward10,
+                        tooltip: context.l10n.playerForward10,
+                        size: 46,
+                        iconSize: 24,
+                        onPressed: () =>
+                            onSeekRelative(const Duration(seconds: 10)),
+                      ),
                   ],
                 ),
               ),
@@ -322,7 +331,12 @@ class PlayerControls extends StatelessWidget {
               left: 0,
               right: 0,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(14, 4, 14, 10),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalSafeInset,
+                  4,
+                  horizontalSafeInset,
+                  isTv ? 16 : 10,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
@@ -542,18 +556,24 @@ class PlayerControls extends StatelessWidget {
                                     if (caps.fullscreen) ...[
                                       Builder(
                                         builder: (context) {
-                                          final isMobile = PlatformService
-                                              .instance
-                                              .isAndroid;
+                                          final platform =
+                                              PlatformService.instance;
+                                          final isTv = platform.isAndroidTv;
+                                          final isMobile =
+                                              platform.isAndroid && !isTv;
                                           final isLandscape =
                                               MediaQuery.maybeOrientationOf(
                                                 context,
                                               ) ==
                                               Orientation.landscape;
-                                          final isFullscreenActive = isMobile
+                                          final isFullscreenActive = isTv
+                                              ? true
+                                              : isMobile
                                               ? isLandscape
                                               : playerState.isFullscreen;
-                                          final tooltip = isMobile
+                                          final tooltip = isTv
+                                              ? 'Exit Fullscreen'
+                                              : isMobile
                                               ? (isLandscape
                                                     ? 'Portrait'
                                                     : 'Fullscreen (Landscape)')
@@ -647,21 +667,29 @@ class _CompactGlassButton extends StatelessWidget {
     final tooltipLabel = tooltip;
     final buttonContent = tooltipLabel == null
         ? visual
-        : Tooltip(message: tooltipLabel, child: visual);
+        : Tooltip(
+            message: tooltipLabel,
+            excludeFromSemantics: true,
+            child: visual,
+          );
 
     final interactiveVisual = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onPressed,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
         child: Center(child: buttonContent),
       ),
     );
 
-    return TvFocusable(
-      onSelect: onPressed,
-      debugLabel: tooltip,
-      child: interactiveVisual,
+    return Semantics(
+      button: true,
+      label: tooltipLabel,
+      child: TvFocusable(
+        onSelect: onPressed,
+        debugLabel: tooltip,
+        child: interactiveVisual,
+      ),
     );
   }
 }
@@ -681,42 +709,47 @@ class _CompactGlassActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TvFocusable(
-      onSelect: onPressed,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: AdaptiveGlass(
-          sigma: 8,
-          enableBlur: false,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.16),
-                width: 0.8,
+    return Semantics(
+      button: true,
+      label: tooltip ?? label,
+      child: TvFocusable(
+        onSelect: onPressed,
+        debugLabel: tooltip ?? label,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: AdaptiveGlass(
+            sigma: 8,
+            enableBlur: false,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  width: 0.8,
+                ),
               ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  HugeIcon(
-                    icon: icon as List<List<dynamic>>,
-                    color: Colors.white,
-                    size: 13,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    label,
-                    style: const TextStyle(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    HugeIcon(
+                      icon: icon as List<List<dynamic>>,
                       color: Colors.white,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
+                      size: 13,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
