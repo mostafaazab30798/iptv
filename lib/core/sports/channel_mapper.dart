@@ -40,8 +40,14 @@ abstract final class ChannelMapper {
   }
 
   /// Extracts the canonical network identifier and channel number/qualifier.
-  static ({String network, String? number, bool isXtra, bool isPremium})
-      extractNetworkInfo(String channelName) {
+  static ({
+    String network,
+    String? number,
+    bool isXtra,
+    bool isPremium,
+    bool isFrench,
+  })
+  extractNetworkInfo(String channelName) {
     final n = normalize(channelName);
 
     var network = '';
@@ -69,21 +75,32 @@ abstract final class ChannelMapper {
       network = 'alkass';
     }
 
-    final isXtra = n.contains('xtra') || n.contains('extra') || n.contains('اكسترا');
-    final isPremium = n.contains('premium') || n.contains('بريميوم') || n.contains('بريميم');
+    final isXtra =
+        n.contains('xtra') || n.contains('extra') || n.contains('اكسترا');
+    final isPremium =
+        n.contains('premium') || n.contains('بريميوم') || n.contains('بريميم');
+    final isFrench = isFrenchVariant(n);
 
     // Clean resolution tags so attached suffixes/prefixes like "1hd", "hd1", or "4k" are accurately parsed
     var textForNumber = ' $n ';
-    textForNumber = textForNumber.replaceAll(RegExp(r'[48]k', caseSensitive: false), ' ');
     textForNumber = textForNumber.replaceAll(
-        RegExp(r'(?:hd|fhd|uhd|sd)', caseSensitive: false), ' ');
+      RegExp(r'[48]k', caseSensitive: false),
+      ' ',
+    );
+    textForNumber = textForNumber.replaceAll(
+      RegExp(r'(?:hd|fhd|uhd|sd)', caseSensitive: false),
+      ' ',
+    );
 
     // Extract channel number (1 to 16)
     String? number;
-    final match = RegExp(r'(?:^|\s)(1[0-6]|[1-9])(?:\s|$)').firstMatch(textForNumber);
+    final match = RegExp(
+      r'(?:^|\s)(1[0-6]|[1-9])(?:\s|$)',
+    ).firstMatch(textForNumber);
     if (match != null) {
       number = match.group(1);
-    } else if (network == 'ontime' && (n.contains('on sport') || n.contains('اون سبورت'))) {
+    } else if (network == 'ontime' &&
+        (n.contains('on sport') || n.contains('اون سبورت'))) {
       // Default ON Sport without number is typically ON Time Sports 1
       number = '1';
     }
@@ -93,7 +110,16 @@ abstract final class ChannelMapper {
       number: number,
       isXtra: isXtra,
       isPremium: isPremium,
+      isFrench: isFrench,
     );
+  }
+
+  /// Whether the station name explicitly identifies the French beIN package.
+  static bool isFrenchVariant(String channelName) {
+    final normalized = normalize(channelName);
+    return RegExp(
+      r'(^| )(fr|fra|france|french|francais|français|فرنسا|فرنسي|فرنسيه)( |$)',
+    ).hasMatch(normalized);
   }
 
   /// Finds the highest-quality matching IPTV channel for a scraped broadcast channel name.
@@ -147,6 +173,12 @@ abstract final class ChannelMapper {
 
       // Check premium distinction if target specified it
       if (targetInfo.isPremium && !info.isPremium) {
+        continue;
+      }
+
+      // A generic beIN listing means the regular package. Regional variants
+      // are eligible only when the broadcaster explicitly names them.
+      if (targetInfo.isFrench != info.isFrench) {
         continue;
       }
 

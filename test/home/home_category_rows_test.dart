@@ -156,7 +156,10 @@ class _EmptyVod implements VodRepository {
       const Err(AppResultError('none'));
 
   @override
-  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback}) async =>
+  Future<Result<Movie>> getMovieDetails(
+    int streamId, {
+    Movie? fallback,
+  }) async =>
       fallback != null ? Ok(fallback) : const Err(AppResultError('none'));
 }
 
@@ -186,7 +189,10 @@ class _MovieVod implements VodRepository {
       const Err(AppResultError('none'));
 
   @override
-  Future<Result<Movie>> getMovieDetails(int streamId, {Movie? fallback}) async =>
+  Future<Result<Movie>> getMovieDetails(
+    int streamId, {
+    Movie? fallback,
+  }) async =>
       fallback != null ? Ok(fallback) : const Err(AppResultError('none'));
 }
 
@@ -236,7 +242,7 @@ Channel _ch({required int id, required String name, required int categoryId}) {
 
 void main() {
   test(
-    'Home sports/news rows use category-scoped lookups (no full-list name scan)',
+    'Home sports/news rows reuse the fetched catalog by category id',
     () async {
       final sports = List.generate(
         20,
@@ -294,10 +300,10 @@ void main() {
         isTrue,
       );
 
-      // One unfiltered fetch for featured Live row + category fetches for sports/news.
+      // One unfiltered fetch supplies featured Live, sports, and news rows.
       expect(liveRepo.getChannelsAllCalls, 1);
-      expect(liveRepo.getChannelsCategoryCalls, greaterThanOrEqualTo(2));
-      expect(liveRepo.requestedCategoryIds, containsAll(<int?>[1, 2]));
+      expect(liveRepo.getChannelsCategoryCalls, 0);
+      expect(liveRepo.requestedCategoryIds, <int?>[null]);
 
       // Sanity: Home did not need to iterate 5k names — category calls return slices.
       expect(liveRepo.channelsByCategory[1]!.length, 20);

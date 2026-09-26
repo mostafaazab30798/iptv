@@ -1,5 +1,6 @@
 import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -107,10 +108,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 // ---------------------------------------------------------------------------
 
 class _SearchFilterSection extends ConsumerWidget {
-  const _SearchFilterSection({
-    required this.selected,
-    required this.onSelect,
-  });
+  const _SearchFilterSection({required this.selected, required this.onSelect});
 
   final _SearchCategoryFilter selected;
   final ValueChanged<_SearchCategoryFilter> onSelect;
@@ -149,10 +147,7 @@ class _SearchFilterSection extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _SearchBody extends ConsumerWidget {
-  const _SearchBody({
-    required this.filter,
-    required this.onSuggestionTap,
-  });
+  const _SearchBody({required this.filter, required this.onSuggestionTap});
 
   final _SearchCategoryFilter filter;
   final ValueChanged<String> onSuggestionTap;
@@ -164,9 +159,7 @@ class _SearchBody extends ConsumerWidget {
     );
     if (isLoading) return const SearchSkeleton();
 
-    final query = ref.watch(
-      searchControllerProvider.select((s) => s.query),
-    );
+    final query = ref.watch(searchControllerProvider.select((s) => s.query));
     if (query.isEmpty) {
       return _SearchDiscoveryView(onSuggestionTap: onSuggestionTap);
     }
@@ -185,12 +178,8 @@ class _SearchBody extends ConsumerWidget {
     final channels = ref.watch(
       searchControllerProvider.select((s) => s.channels),
     );
-    final movies = ref.watch(
-      searchControllerProvider.select((s) => s.movies),
-    );
-    final series = ref.watch(
-      searchControllerProvider.select((s) => s.series),
-    );
+    final movies = ref.watch(searchControllerProvider.select((s) => s.movies));
+    final series = ref.watch(searchControllerProvider.select((s) => s.series));
 
     return _SearchResultsView(
       filter: filter,
@@ -437,9 +426,7 @@ class _TabPill extends StatelessWidget {
           color: isActive ? AppColors.accent : const Color(0xFF161A24),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isActive
-                ? AppColors.accent
-                : Colors.white.withAlpha(20),
+            color: isActive ? AppColors.accent : Colors.white.withAlpha(20),
             width: 0.8,
           ),
         ),
@@ -580,22 +567,21 @@ class _SearchResultsView extends ConsumerWidget {
     final session = ref.read(sessionProvider).valueOrNull;
     if (session == null) return;
 
-    final url = ref.read(streamUrlBuilderProvider).liveForSession(
-      session,
-      streamId: channel.streamId,
-    );
+    final url = ref
+        .read(streamUrlBuilderProvider)
+        .liveForSession(session, streamId: channel.streamId);
 
-    final initialIndex =
-        channels.indexWhere((c) => c.streamId == channel.streamId);
+    final initialIndex = channels.indexWhere(
+      (c) => c.streamId == channel.streamId,
+    );
 
     final playerNotifier = ref.read(playerControllerProvider.notifier);
     playerNotifier.setLazyLivePlaylist(
       channels: channels.isNotEmpty ? channels : [channel],
       initialIndex: initialIndex >= 0 ? initialIndex : 0,
-      urlFor: (c) => ref.read(streamUrlBuilderProvider).liveForSession(
-      session,
-      streamId: c.streamId,
-    ),
+      urlFor: (c) => ref
+          .read(streamUrlBuilderProvider)
+          .liveForSession(session, streamId: c.streamId),
     );
 
     playerNotifier.load(
@@ -630,7 +616,7 @@ class _SearchResultsView extends ConsumerWidget {
     final metrics = PosterCardLayout.posterRowMetricsOf(context);
 
     return CustomScrollView(
-      cacheExtent: _gridCacheExtent,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(_gridCacheExtent),
       slivers: [
         if (movies.isNotEmpty)
           SliverPadding(
@@ -737,7 +723,7 @@ class _SearchResultsView extends ConsumerWidget {
     List<Movie> list,
   ) {
     return GridView.builder(
-      cacheExtent: _gridCacheExtent,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(_gridCacheExtent),
       padding: const EdgeInsets.all(AppSpacing.xl),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 140,
@@ -763,7 +749,7 @@ class _SearchResultsView extends ConsumerWidget {
     List<Series> list,
   ) {
     return GridView.builder(
-      cacheExtent: _gridCacheExtent,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(_gridCacheExtent),
       padding: const EdgeInsets.all(AppSpacing.xl),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 140,
@@ -793,7 +779,7 @@ class _SearchResultsView extends ConsumerWidget {
     );
 
     return ListView.separated(
-      cacheExtent: _gridCacheExtent,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(_gridCacheExtent),
       padding: const EdgeInsets.all(AppSpacing.xl),
       itemCount: list.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),

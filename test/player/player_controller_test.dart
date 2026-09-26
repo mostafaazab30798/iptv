@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv/player/application/player_controller.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
+import 'package:iptv/player/domain/enums/player_backend.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
+import 'package:iptv/player/domain/enums/stream_type.dart';
 import 'package:iptv/player/infrastructure/fake_player_engine.dart';
+import 'package:iptv/player/infrastructure/android_alternative_player_engine.dart';
 
 void main() {
   group('PlayerController', () {
@@ -26,6 +30,31 @@ void main() {
       expect(controller.state.isMuted, isFalse);
     });
 
+    test('switches between the selectable Android backends', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        await controller.selectBackend(PlayerBackend.media3);
+        expect(controller.state.backend, PlayerBackend.media3);
+        expect(controller.engine, isA<AndroidAlternativePlayerEngine>());
+        expect(
+          (controller.engine as AndroidAlternativePlayerEngine).backend,
+          PlayerBackend.media3,
+        );
+
+        await controller.selectBackend(PlayerBackend.vlc);
+        expect(controller.state.backend, PlayerBackend.vlc);
+        expect(
+          (controller.engine as AndroidAlternativePlayerEngine).backend,
+          PlayerBackend.vlc,
+        );
+
+        await controller.selectBackend(PlayerBackend.mediaKit);
+        expect(controller.state.backend, PlayerBackend.mediaKit);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
     test('loads source and updates active state', () async {
       final source = PlayerSource.live(
         url: 'http://test.live/channel.m3u8',
@@ -37,6 +66,19 @@ void main() {
 
       expect(controller.state.source?.title, equals('Discovery Channel'));
       expect(controller.state.status, equals(PlayerStatus.playing));
+      expect(controller.state.source?.streamType, equals(StreamType.hls));
+      expect(fakeEngine.currentSource?.streamType, equals(StreamType.hls));
+    });
+
+    test('detects MPEG-TS before opening an untyped live source', () async {
+      final source = PlayerSource.live(
+        url: 'http://test.live/channel.ts',
+        title: 'Sports',
+      );
+
+      await controller.load(source);
+
+      expect(fakeEngine.currentSource?.streamType, equals(StreamType.mpegTs));
     });
 
     test('switches channels correctly in playlist sequence', () async {
@@ -107,6 +149,15 @@ void main() {
       expect(controller.state.aspectRatioIndex, equals(0)); // Back to Best Fit
     });
 
+    test('invalid aspect ratio selection falls back to Best Fit', () {
+      controller.setAspectRatio(4);
+      expect(controller.state.aspectRatioIndex, equals(4));
+
+      controller.setAspectRatio(99);
+
+      expect(controller.state.aspectRatioIndex, equals(0));
+    });
+
     test('seekRelative adjusts position safely', () async {
       final source = PlayerSource.vod(
         url: 'http://test.vod/movie.mp4',
@@ -125,6 +176,26 @@ void main() {
       await controller.seekRelative(const Duration(seconds: -10));
       expect(controller.state.position, equals(const Duration(seconds: 30)));
     });
+
+    test(
+      'relative seek is ignored for a live channel without timeshift',
+      () async {
+        await controller.load(
+          PlayerSource.live(
+            url: 'http://test.live/channel.m3u8',
+            title: 'Live Channel',
+            channelId: 42,
+          ),
+        );
+        final positionBeforeSeek = controller.state.position;
+        final enginePositionBeforeSeek = fakeEngine.currentPosition;
+
+        await controller.seekRelative(const Duration(seconds: 10));
+
+        expect(controller.state.position, positionBeforeSeek);
+        expect(fakeEngine.currentPosition, enginePositionBeforeSeek);
+      },
+    );
 
     test('scrubbing stays paused until release and then resumes', () async {
       final source = PlayerSource.vod(

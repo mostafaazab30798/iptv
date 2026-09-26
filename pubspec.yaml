@@ -1,7 +1,7 @@
 name: iptv
 description: "Premium IPTV client for Android, Android TV, Windows, and Web."
 publish_to: 'none'
-version: 1.1.0+25
+version: 1.2.0+26
 
 environment:
   sdk: ^3.10.7
@@ -69,6 +69,14 @@ dependencies:
   url_launcher: ^6.3.2
   package_info_plus: ^10.2.1
   dpad: ^3.0.0
+  video_player: ^2.14.0
+  flutter_vlc_player: ^7.4.4
+
+dependency_overrides:
+  # flutter_vlc_player 7.4.4 ships native Pigeon handlers with the package
+  # namespace, while its published Dart interface omits that namespace.
+  flutter_vlc_player_platform_interface:
+    path: third_party/flutter_vlc_player_platform_interface
 
 dev_dependencies:
   flutter_test:

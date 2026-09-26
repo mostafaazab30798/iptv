@@ -7,6 +7,7 @@ import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/domain/entities/favorite.dart';
 import 'package:iptv/features/favorites/favorite_channel_ids.dart';
 import 'package:iptv/features/favorites/favorite_ids.dart';
+import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
 import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/favorite_snackbar.dart';
@@ -29,6 +30,7 @@ class ChannelListTile extends ConsumerWidget {
     this.categoryName,
     this.timeOrEpg,
     this.onMoreOptions,
+    this.onCatchUp,
   });
 
   final Channel channel;
@@ -37,6 +39,7 @@ class ChannelListTile extends ConsumerWidget {
   final String? categoryName;
   final String? timeOrEpg;
   final VoidCallback? onMoreOptions;
+  final VoidCallback? onCatchUp;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -71,8 +74,9 @@ class ChannelListTile extends ConsumerWidget {
                               ? AppColors.accent
                               : AppColors.textPrimary,
                           fontSize: 15.0,
-                          fontWeight:
-                              isPlaying ? FontWeight.w800 : FontWeight.w600,
+                          fontWeight: isPlaying
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                           letterSpacing: 0.2,
                           shadows: isPlaying
                               ? [
@@ -139,6 +143,7 @@ class ChannelListTile extends ConsumerWidget {
         _ChannelMoreButton(
           channel: channel,
           onPlay: onTap,
+          onCatchUp: onCatchUp,
         ),
       ],
     );
@@ -152,9 +157,7 @@ class ChannelListTile extends ConsumerWidget {
         color: isPlaying ? const Color(0xFF0F1B2B) : const Color(0xFF0D1017),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isPlaying
-              ? AppColors.accent
-              : Colors.white.withAlpha(20),
+          color: isPlaying ? AppColors.accent : Colors.white.withAlpha(20),
           width: isPlaying ? 1.5 : 0.9,
         ),
         boxShadow: isPlaying
@@ -232,10 +235,12 @@ class _ChannelMoreButton extends ConsumerWidget {
   const _ChannelMoreButton({
     required this.channel,
     required this.onPlay,
+    this.onCatchUp,
   });
 
   final Channel channel;
   final VoidCallback onPlay;
+  final VoidCallback? onCatchUp;
 
   Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
     final box = context.findRenderObject() as RenderBox?;
@@ -270,6 +275,27 @@ class _ChannelMoreButton extends ConsumerWidget {
             ],
           ),
         ),
+        if (onCatchUp != null)
+          PopupMenuItem<String>(
+            value: 'catch-up',
+            child: Row(
+              children: [
+                const HugeIcon(
+                  icon: AppIcons.replay,
+                  color: AppColors.accent,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  context.l10n.catchUpTitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         PopupMenuItem<String>(
           value: 'favorite',
           child: Builder(
@@ -307,20 +333,19 @@ class _ChannelMoreButton extends ConsumerWidget {
       case 'play':
         onPlay();
       case 'favorite':
-        final nowFav =
-            await ref.read(favoriteChannelIdsProvider.notifier).toggleChannel(
-                  itemId: channel.streamId,
-                  name: channel.name,
-                  imageUrl: channel.streamIcon,
-                );
+        final nowFav = await ref
+            .read(favoriteChannelIdsProvider.notifier)
+            .toggleChannel(
+              itemId: channel.streamId,
+              name: channel.name,
+              imageUrl: channel.streamIcon,
+            );
         ref.invalidate(favoritesListProvider);
         if (context.mounted) {
-          showFavoriteSnackBar(
-            context,
-            name: channel.name,
-            isFavorite: nowFav,
-          );
+          showFavoriteSnackBar(context, name: channel.name, isFavorite: nowFav);
         }
+      case 'catch-up':
+        onCatchUp?.call();
     }
   }
 

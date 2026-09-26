@@ -200,10 +200,12 @@ class WebIosPlayerEngine implements PlayerEngine {
         if (index == 2) {
           // Fill (100% cover)
           video.style.objectFit = 'cover';
+        } else if (index == 3 || index == 4) {
+          // Fixed-ratio modes deliberately reshape legacy video into the
+          // selected 16:9 or 4:3 Flutter frame.
+          video.style.objectFit = 'fill';
         } else {
-          // Preserve the source ratio for Best Fit, Fit, 16:9, and 4:3.
-          // The Flutter view constrains forced-ratio modes; CSS only decides
-          // how the native video is fitted inside that box.
+          // Preserve the source ratio for Best Fit and Fit.
           video.style.objectFit = 'contain';
         }
         video.style.transform = 'none';

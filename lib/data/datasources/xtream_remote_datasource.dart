@@ -21,7 +21,10 @@ class XtreamRemoteDataSource {
         'player_api.php',
         params: {'action': ApiConstants.actionGetLiveCategories},
       );
-      return res.whereType<Map<dynamic, dynamic>>().map(Map<String, dynamic>.from).toList();
+      return res
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
     } catch (_) {
       return [];
     }
@@ -32,13 +35,17 @@ class XtreamRemoteDataSource {
     try {
       final params = <String, dynamic>{
         'action': ApiConstants.actionGetLiveStreams,
-        if (categoryId != null && categoryId > 0) 'category_id': categoryId.toString(),
+        if (categoryId != null && categoryId > 0)
+          'category_id': categoryId.toString(),
       };
       final res = await _client.get<List<dynamic>>(
         'player_api.php',
         params: params,
       );
-      return res.whereType<Map<dynamic, dynamic>>().map(Map<String, dynamic>.from).toList();
+      return res
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
     } catch (_) {
       return [];
     }
@@ -51,7 +58,10 @@ class XtreamRemoteDataSource {
         'player_api.php',
         params: {'action': ApiConstants.actionGetVodCategories},
       );
-      return res.whereType<Map<dynamic, dynamic>>().map(Map<String, dynamic>.from).toList();
+      return res
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
     } catch (_) {
       return [];
     }
@@ -62,13 +72,17 @@ class XtreamRemoteDataSource {
     try {
       final params = <String, dynamic>{
         'action': ApiConstants.actionGetVodStreams,
-        if (categoryId != null && categoryId > 0) 'category_id': categoryId.toString(),
+        if (categoryId != null && categoryId > 0)
+          'category_id': categoryId.toString(),
       };
       final res = await _client.get<List<dynamic>>(
         'player_api.php',
         params: params,
       );
-      return res.whereType<Map<dynamic, dynamic>>().map(Map<String, dynamic>.from).toList();
+      return res
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
     } catch (_) {
       return [];
     }
@@ -81,7 +95,10 @@ class XtreamRemoteDataSource {
         'player_api.php',
         params: {'action': ApiConstants.actionGetSeriesCategories},
       );
-      return res.whereType<Map<dynamic, dynamic>>().map(Map<String, dynamic>.from).toList();
+      return res
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
     } catch (_) {
       return [];
     }
@@ -92,13 +109,17 @@ class XtreamRemoteDataSource {
     try {
       final params = <String, dynamic>{
         'action': ApiConstants.actionGetSeries,
-        if (categoryId != null && categoryId > 0) 'category_id': categoryId.toString(),
+        if (categoryId != null && categoryId > 0)
+          'category_id': categoryId.toString(),
       };
       final res = await _client.get<List<dynamic>>(
         'player_api.php',
         params: params,
       );
-      return res.whereType<Map<dynamic, dynamic>>().map(Map<String, dynamic>.from).toList();
+      return res
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
     } catch (_) {
       return [];
     }
@@ -118,6 +139,27 @@ class XtreamRemoteDataSource {
           'action': ApiConstants.actionGetShortEpg,
           'stream_id': streamId.toString(),
           'limit': limit.toString(),
+        },
+      );
+      final listings = res['epg_listings'];
+      if (listings is! List) return const [];
+      return listings
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Full guide rows used by TV archive / catch-up playback.
+  Future<List<Map<String, dynamic>>> getEpg(int streamId) async {
+    try {
+      final res = await _client.get<Map<String, dynamic>>(
+        'player_api.php',
+        params: {
+          'action': ApiConstants.actionGetSimpleDataTable,
+          'stream_id': streamId.toString(),
         },
       );
       final listings = res['epg_listings'];

@@ -12,9 +12,9 @@ import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
 import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_status.dart';
 import 'package:iptv/player/domain/enums/software_decode_fallback_tier.dart';
+import 'package:iptv/player/domain/enums/stream_type.dart';
 import 'package:iptv/player/domain/interfaces/player_engine.dart';
 import 'package:iptv/player/utils/player_logger.dart';
-
 
 /// Concrete [PlayerEngine] backed by `media_kit` and `media_kit_video`.
 ///
@@ -37,8 +37,10 @@ class MediaKitPlayerEngine implements PlayerEngine {
   final _durationController = StreamController<Duration>.broadcast();
   final _bufferController = StreamController<Duration>.broadcast();
   final _errorController = StreamController<PlayerErrorType>.broadcast();
-  final _audioTracksController = StreamController<List<PlayerAudioTrack>>.broadcast();
-  final _subtitleTracksController = StreamController<List<PlayerSubtitleTrack>>.broadcast();
+  final _audioTracksController =
+      StreamController<List<PlayerAudioTrack>>.broadcast();
+  final _subtitleTracksController =
+      StreamController<List<PlayerSubtitleTrack>>.broadcast();
   final _metricsController = StreamController<PlayerMetrics>.broadcast();
 
   final List<StreamSubscription<dynamic>> _subscriptions = [];
@@ -96,10 +98,12 @@ class MediaKitPlayerEngine implements PlayerEngine {
   Stream<PlayerErrorType> get errorStream => _errorController.stream;
 
   @override
-  Stream<List<PlayerAudioTrack>> get audioTracksStream => _audioTracksController.stream;
+  Stream<List<PlayerAudioTrack>> get audioTracksStream =>
+      _audioTracksController.stream;
 
   @override
-  Stream<List<PlayerSubtitleTrack>> get subtitleTracksStream => _subtitleTracksController.stream;
+  Stream<List<PlayerSubtitleTrack>> get subtitleTracksStream =>
+      _subtitleTracksController.stream;
 
   @override
   Stream<PlayerMetrics> get metricsStream => _metricsController.stream;
@@ -177,10 +181,7 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
     // ── Stream probing: reliable detection for IPTV MPEG-TS / HLS ─────────────
     // Omit +genpts as synthetic PTS generation corrupts live MPEG-TS timestamps and causes slow motion.
-    await _setProperty('demuxer-lavf-o', 'fflags=+discardcorrupt');
-    await _setProperty('demuxer-lavf-probesize', '8388608'); // 8MB probe buffer for live MPEG-TS
-    await _setProperty('demuxer-lavf-analyzeduration', '3.0'); // 3s analysis duration (not 0.5s)
-    await _setProperty('demuxer-lavf-buffersize', '2097152'); // 2MB chunk buffer
+    await _applyStreamProbePolicy(null);
 
     // ── Buffer sizing per active mode ─────────────────────────────────────────
     await _applyBufferModeProperties(_bufferMode);
@@ -188,8 +189,13 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
     // ── Network: persistent connections, best quality ABR & IPTV headers ─────
     await _setProperty('network-timeout', '15'); // 15s network timeout
-    await _setProperty('tls-verify', 'no'); // IPTV servers often use self-signed certs
-    await _setProperty('hls-bitrate', 'max');
+    await _setProperty(
+      'tls-verify',
+      'no',
+    ); // IPTV servers often use self-signed certs
+    // Do not force the highest HLS rendition: many IPTV masters advertise a
+    // stream that is too large for the viewer's current connection.
+    await _setProperty('hls-bitrate', 'no');
     await _setProperty('user-agent', ApiConstants.defaultUserAgent);
 
     // Borderless Flutter hosts the video texture. Exclusive D3D11 fullscreen
@@ -201,22 +207,68 @@ class MediaKitPlayerEngine implements PlayerEngine {
   }
 
   Future<void> _applyBufferModeProperties(PlaybackBufferMode mode) async {
-    await _setProperty('demuxer-readahead-secs', mode.demuxerReadaheadSecs.toString());
+    await _setProperty(
+      'demuxer-readahead-secs',
+      mode.demuxerReadaheadSecs.toString(),
+    );
     await _setProperty('cache-secs', mode.cacheSecs.toString());
     await _setProperty('demuxer-max-bytes', mode.demuxerMaxBytes);
     await _setProperty('demuxer-max-back-bytes', mode.demuxerMaxBackBytes);
   }
 
-  /// Live sports prefer a shorter initial cache pause so startup does not add a
-  /// full second of intentional delay; VOD keeps the safer 1s pause.
+  /// Prime the cache before playback. A short startup pause prevents the
+  /// immediate play/buffer/play loop common on variable IPTV connections.
   Future<void> _applyCachePausePolicy({required bool isLive}) async {
     await _setProperty('cache-pause', 'yes');
     if (isLive) {
-      await _setProperty('cache-pause-initial', 'no');
-      await _setProperty('cache-pause-wait', '0.3');
+      await _setProperty('cache-pause-initial', 'yes');
+      await _setProperty(
+        'cache-pause-wait',
+        _bufferMode.cachePauseWaitSecs.toString(),
+      );
     } else {
       await _setProperty('cache-pause-initial', 'yes');
       await _setProperty('cache-pause-wait', '1.0');
+    }
+  }
+
+  /// Uses small, transport-aware live probes for fast channel changes and a
+  /// larger probe for VOD, where container and track discovery matter more.
+  Future<void> _applyStreamProbePolicy(PlayerSource? source) async {
+    // Synthetic PTS generation can corrupt live MPEG-TS timing. Drop damaged
+    // packets but keep the source timestamps as the playback clock.
+    await _setProperty('demuxer-lavf-o', 'fflags=+discardcorrupt');
+
+    final isLive = source?.profile.isLive ?? false;
+    if (!isLive) {
+      await _setProperty('demuxer-lavf-probesize', '8388608');
+      await _setProperty('demuxer-lavf-analyzeduration', '3.0');
+      await _setProperty('demuxer-lavf-buffersize', '262144');
+      return;
+    }
+
+    switch (source!.streamType) {
+      case StreamType.hls:
+      case StreamType.dash:
+        await _setProperty('demuxer-lavf-probesize', '1048576');
+        await _setProperty('demuxer-lavf-analyzeduration', '1.0');
+        await _setProperty('demuxer-lavf-buffersize', '65536');
+      case StreamType.mpegTs:
+      case StreamType.rtp:
+      case StreamType.udp:
+        await _setProperty('demuxer-lavf-probesize', '2097152');
+        await _setProperty('demuxer-lavf-analyzeduration', '1.5');
+        await _setProperty('demuxer-lavf-buffersize', '131072');
+      case StreamType.rtsp:
+        await _setProperty('demuxer-lavf-probesize', '1048576');
+        await _setProperty('demuxer-lavf-analyzeduration', '1.0');
+        await _setProperty('demuxer-lavf-buffersize', '131072');
+      case StreamType.auto:
+      case StreamType.unknown:
+      case StreamType.file:
+        await _setProperty('demuxer-lavf-probesize', '2097152');
+        await _setProperty('demuxer-lavf-analyzeduration', '1.5');
+        await _setProperty('demuxer-lavf-buffersize', '131072');
     }
   }
 
@@ -238,6 +290,9 @@ class MediaKitPlayerEngine implements PlayerEngine {
   Future<void> setBufferMode(PlaybackBufferMode mode) async {
     _bufferMode = mode;
     await _applyBufferModeProperties(mode);
+    await _applyCachePausePolicy(
+      isLive: _currentSource?.profile.isLive ?? false,
+    );
     _metrics = _metrics.copyWith(bufferMode: mode);
     if (!_metricsController.isClosed) {
       _metricsController.add(_metrics);
@@ -245,7 +300,9 @@ class MediaKitPlayerEngine implements PlayerEngine {
   }
 
   @override
-  Future<void> applySoftwareDecodeEscalation(SoftwareDecodeFallbackTier tier) async {
+  Future<void> applySoftwareDecodeEscalation(
+    SoftwareDecodeFallbackTier tier,
+  ) async {
     switch (tier) {
       case SoftwareDecodeFallbackTier.none:
         // Restore libmpv defaults — hardware decode re-engaged or no longer needed.
@@ -296,14 +353,18 @@ class MediaKitPlayerEngine implements PlayerEngine {
         if (_status == PlayerStatus.disposed) return;
         if (buffering) {
           PlayerLogger.bufferingStart();
-          _metrics = _metrics.copyWith(bufferingCount: _metrics.bufferingCount + 1);
+          _metrics = _metrics.copyWith(
+            bufferingCount: _metrics.bufferingCount + 1,
+          );
           _metricsController.add(_metrics);
           _updateStatus(PlayerStatus.buffering);
         } else if (_status == PlayerStatus.buffering ||
             _status == PlayerStatus.loading ||
             _status == PlayerStatus.error) {
           PlayerLogger.bufferingEnd(Duration.zero);
-          _updateStatus(player.state.playing ? PlayerStatus.playing : PlayerStatus.paused);
+          _updateStatus(
+            player.state.playing ? PlayerStatus.playing : PlayerStatus.paused,
+          );
         }
       }),
     );
@@ -313,13 +374,16 @@ class MediaKitPlayerEngine implements PlayerEngine {
         _position = pos;
         _positionController.add(pos);
 
-        if (!_firstFrameReceived && pos > Duration.zero && _openStartTime != null) {
+        if (!_firstFrameReceived &&
+            pos > Duration.zero &&
+            _openStartTime != null) {
           _firstFrameReceived = true;
           final firstFrameLatency = DateTime.now().difference(_openStartTime!);
           PlayerLogger.firstFrame(firstFrameLatency);
           _metrics = _metrics.copyWith(firstFrameDuration: firstFrameLatency);
           _metricsController.add(_metrics);
-          if (_status == PlayerStatus.loading || _status == PlayerStatus.buffering) {
+          if (_status == PlayerStatus.loading ||
+              _status == PlayerStatus.buffering) {
             _updateStatus(PlayerStatus.playing);
           }
         }
@@ -333,9 +397,7 @@ class MediaKitPlayerEngine implements PlayerEngine {
       }),
     );
 
-    _subscriptions.add(
-      player.stream.buffer.listen(_bufferController.add),
-    );
+    _subscriptions.add(player.stream.buffer.listen(_bufferController.add));
 
     _subscriptions.add(
       player.stream.completed.listen((completed) {
@@ -361,7 +423,9 @@ class MediaKitPlayerEngine implements PlayerEngine {
             title: a.title ?? a.language ?? 'Audio Track ${a.id}',
             language: a.language,
             bitrate: a.bitrate,
-            channels: a.channels != null ? int.tryParse(a.channels.toString()) : null,
+            channels: a.channels != null
+                ? int.tryParse(a.channels.toString())
+                : null,
           );
         }).toList();
         _audioTracksController.add(audioList);
@@ -411,7 +475,11 @@ class MediaKitPlayerEngine implements PlayerEngine {
   }
 
   Future<void> _pollMpvTelemetry() async {
-    if (_player == null || _status == PlayerStatus.disposed || _status == PlayerStatus.idle) return;
+    if (_player == null ||
+        _status == PlayerStatus.disposed ||
+        _status == PlayerStatus.idle) {
+      return;
+    }
 
     try {
       if (kIsWeb) return;
@@ -462,11 +530,21 @@ class MediaKitPlayerEngine implements PlayerEngine {
       }
 
       final fps = fpsStr != null ? double.tryParse(fpsStr.toString()) : null;
-      final bitrate = bitrateStr != null ? int.tryParse(bitrateStr.toString()) : null;
-      final cacheDurSec = cacheDurStr != null ? double.tryParse(cacheDurStr.toString()) : null;
-      final cacheBufferingState = cacheStateStr != null ? int.tryParse(cacheStateStr.toString()) : null;
-      final frameDropCount = frameDropStr != null ? int.tryParse(frameDropStr.toString()) : null;
-      final decoderFrameDropCount = decoderDropStr != null ? int.tryParse(decoderDropStr.toString()) : null;
+      final bitrate = bitrateStr != null
+          ? int.tryParse(bitrateStr.toString())
+          : null;
+      final cacheDurSec = cacheDurStr != null
+          ? double.tryParse(cacheDurStr.toString())
+          : null;
+      final cacheBufferingState = cacheStateStr != null
+          ? int.tryParse(cacheStateStr.toString())
+          : null;
+      final frameDropCount = frameDropStr != null
+          ? int.tryParse(frameDropStr.toString())
+          : null;
+      final decoderFrameDropCount = decoderDropStr != null
+          ? int.tryParse(decoderDropStr.toString())
+          : null;
       final hwdecCurrent = hwdecCurrentStr?.toString().trim();
       final videoCodec = videoCodecStr?.toString().trim();
       final pixelFormat = pixelFormatStr?.toString().trim();
@@ -485,13 +563,17 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
       _metrics = _metrics.copyWith(
         fps: fps ?? _metrics.fps,
-        videoBitrate: bitrate != null && bitrate > 0 ? bitrate : _metrics.videoBitrate,
+        videoBitrate: bitrate != null && bitrate > 0
+            ? bitrate
+            : _metrics.videoBitrate,
         cacheDuration: cacheDurSec != null
             ? Duration(milliseconds: (cacheDurSec * 1000).toInt())
             : _metrics.cacheDuration,
-        cacheBufferingState: cacheBufferingState ?? _metrics.cacheBufferingState,
+        cacheBufferingState:
+            cacheBufferingState ?? _metrics.cacheBufferingState,
         frameDropCount: frameDropCount ?? _metrics.frameDropCount,
-        decoderFrameDropCount: decoderFrameDropCount ?? _metrics.decoderFrameDropCount,
+        decoderFrameDropCount:
+            decoderFrameDropCount ?? _metrics.decoderFrameDropCount,
         hwdecCurrent: hwdecCurrent ?? _metrics.hwdecCurrent,
         videoCodec: videoCodec ?? _metrics.videoCodec,
         videoParams: videoParams ?? _metrics.videoParams,
@@ -546,17 +628,22 @@ class MediaKitPlayerEngine implements PlayerEngine {
       _openStartTime = DateTime.now();
       _updateStatus(PlayerStatus.loading);
 
-      PlayerLogger.open(effectiveSource.title, streamType: effectiveSource.streamType.name);
+      PlayerLogger.open(
+        effectiveSource.title,
+        streamType: effectiveSource.streamType.name,
+      );
 
       try {
         // Re-apply buffer + cache-pause policy every open so live sports stay
         // near the edge even after prior VOD / mode changes on the same engine.
         await _applyBufferModeProperties(_bufferMode);
         await _applyCachePausePolicy(isLive: effectiveSource.profile.isLive);
+        await _applyStreamProbePolicy(effectiveSource);
         if (epoch != _operationEpoch) return;
 
         // Set user-agent on mpv context for sub-segment / playlist fetches
-        final ua = effectiveHeaders[ApiConstants.userAgentHeader] ??
+        final ua =
+            effectiveHeaders[ApiConstants.userAgentHeader] ??
             effectiveHeaders['user-agent'] ??
             ApiConstants.defaultUserAgent;
         await _setProperty('user-agent', ua);
@@ -573,14 +660,19 @@ class MediaKitPlayerEngine implements PlayerEngine {
         final media = mk.Media(
           effectiveSource.url,
           httpHeaders: effectiveHeaders,
-          start: effectiveSource.profile.isLive ? null : effectiveSource.startAt,
+          start: effectiveSource.profile.isLive
+              ? null
+              : effectiveSource.startAt,
         );
 
         await _player?.open(media, play: true);
         if (epoch != _operationEpoch) return;
 
         final openDuration = DateTime.now().difference(_openStartTime!);
-        _metrics = _metrics.copyWith(playerOpenDuration: openDuration, bufferMode: _bufferMode);
+        _metrics = _metrics.copyWith(
+          playerOpenDuration: openDuration,
+          bufferMode: _bufferMode,
+        );
         _metricsController.add(_metrics);
       } catch (e) {
         if (epoch != _operationEpoch) return;
@@ -630,7 +722,9 @@ class MediaKitPlayerEngine implements PlayerEngine {
   Future<void> seekRelative(Duration offset) async {
     if (_currentSource?.profile.isLive ?? false) return;
     final current = _position;
-    final maxDur = _duration > Duration.zero ? _duration : const Duration(hours: 24);
+    final maxDur = _duration > Duration.zero
+        ? _duration
+        : const Duration(hours: 24);
     var target = current + offset;
     if (target < Duration.zero) target = Duration.zero;
     if (target > maxDur) target = maxDur;
@@ -823,7 +917,9 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
     PlayerLogger.error('MediaKit error', message: safeError);
     final errorType = _classifyError(rawError);
-    _metrics = _metrics.copyWith(playbackErrorCount: _metrics.playbackErrorCount + 1);
+    _metrics = _metrics.copyWith(
+      playbackErrorCount: _metrics.playbackErrorCount + 1,
+    );
     _metricsController.add(_metrics);
     _updateStatus(PlayerStatus.error);
     if (!_errorController.isClosed) {
@@ -833,16 +929,22 @@ class MediaKitPlayerEngine implements PlayerEngine {
 
   PlayerErrorType _classifyError(String err) {
     final lower = err.toLowerCase();
-    if (lower.contains('401') || lower.contains('403') || lower.contains('unauthorized')) {
+    if (lower.contains('401') ||
+        lower.contains('403') ||
+        lower.contains('unauthorized')) {
       return PlayerErrorType.unauthorized;
     }
-    if (lower.contains('404') || lower.contains('invalid') || lower.contains('not found')) {
+    if (lower.contains('404') ||
+        lower.contains('invalid') ||
+        lower.contains('not found')) {
       return PlayerErrorType.invalidSource;
     }
     if (lower.contains('timeout') || lower.contains('timed out')) {
       return PlayerErrorType.timeout;
     }
-    if (lower.contains('network') || lower.contains('connection refused') || lower.contains('host')) {
+    if (lower.contains('network') ||
+        lower.contains('connection refused') ||
+        lower.contains('host')) {
       return PlayerErrorType.networkUnavailable;
     }
     if (lower.contains('could not find codec') ||

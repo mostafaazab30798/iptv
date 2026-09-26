@@ -11,6 +11,7 @@ void main() {
       const mode = PlaybackBufferMode.compact;
       expect(mode.demuxerReadaheadSecs, equals(2));
       expect(mode.cacheSecs, equals(3));
+      expect(mode.cachePauseWaitSecs, equals(0.75));
       expect(mode.bufferSizeBytes, equals(6 * 1024 * 1024));
       expect(mode.demuxerMaxBytes, equals('12MiB'));
       expect(mode.demuxerMaxBackBytes, equals('4MiB'));
@@ -20,6 +21,7 @@ void main() {
       const mode = PlaybackBufferMode.lowLatency;
       expect(mode.demuxerReadaheadSecs, equals(3));
       expect(mode.cacheSecs, equals(3));
+      expect(mode.cachePauseWaitSecs, equals(1));
       expect(mode.bufferSizeBytes, equals(16 * 1024 * 1024));
       expect(mode.demuxerMaxBytes, equals('24MiB'));
       expect(mode.demuxerMaxBackBytes, equals('6MiB'));
@@ -29,6 +31,7 @@ void main() {
       const mode = PlaybackBufferMode.balanced;
       expect(mode.demuxerReadaheadSecs, equals(5));
       expect(mode.cacheSecs, equals(10));
+      expect(mode.cachePauseWaitSecs, equals(2));
       expect(mode.bufferSizeBytes, equals(32 * 1024 * 1024));
       expect(mode.demuxerMaxBytes, equals('64MiB'));
       expect(mode.demuxerMaxBackBytes, equals('16MiB'));
@@ -38,6 +41,7 @@ void main() {
       const mode = PlaybackBufferMode.stability;
       expect(mode.demuxerReadaheadSecs, equals(15));
       expect(mode.cacheSecs, equals(25));
+      expect(mode.cachePauseWaitSecs, equals(4));
       expect(mode.bufferSizeBytes, equals(64 * 1024 * 1024));
       expect(mode.demuxerMaxBytes, equals('128MiB'));
       expect(mode.demuxerMaxBackBytes, equals('32MiB'));
@@ -50,7 +54,10 @@ void main() {
       expect(controller.state.bufferMode, equals(PlaybackBufferMode.balanced));
 
       await controller.setBufferMode(PlaybackBufferMode.lowLatency);
-      expect(controller.state.bufferMode, equals(PlaybackBufferMode.lowLatency));
+      expect(
+        controller.state.bufferMode,
+        equals(PlaybackBufferMode.lowLatency),
+      );
 
       await controller.setBufferMode(PlaybackBufferMode.stability);
       expect(controller.state.bufferMode, equals(PlaybackBufferMode.stability));

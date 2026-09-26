@@ -11,6 +11,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/application/player_state.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
 import 'package:iptv/player/domain/enums/playback_buffer_mode.dart';
+import 'package:iptv/player/domain/enums/player_backend.dart';
 import 'package:iptv/player/handoff/presentation/audio_handoff_tv_dialog.dart';
 import 'package:iptv/player/presentation/audio_track_selector.dart';
 import 'package:iptv/player/presentation/diagnostics_overlay.dart';
@@ -47,6 +48,7 @@ class PlayerOverlay extends StatefulWidget {
     required this.onSelectAudioTrack,
     required this.onSelectSubtitleTrack,
     required this.onSelectBufferMode,
+    required this.onSelectBackend,
     required this.onToggleLock,
     required this.onToggleFullscreen,
     required this.onClose,
@@ -71,6 +73,7 @@ class PlayerOverlay extends StatefulWidget {
   final ValueChanged<PlayerAudioTrack> onSelectAudioTrack;
   final ValueChanged<PlayerSubtitleTrack> onSelectSubtitleTrack;
   final ValueChanged<PlaybackBufferMode> onSelectBufferMode;
+  final ValueChanged<PlayerBackend> onSelectBackend;
   final VoidCallback onToggleLock;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onClose;
@@ -222,7 +225,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   }
 
   void _showSeekRippleOnly(DoubleTapSeekSide side) {
-    if (widget.playerState.isLive) return;
+    if (!widget.playerState.canSeek) return;
 
     _seekResetTimer?.cancel();
     final step = side == DoubleTapSeekSide.left ? -10 : 10;
@@ -243,7 +246,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
   }
 
   void _triggerSeekRipple(DoubleTapSeekSide side) {
-    if (widget.playerState.isLive) return;
+    if (!widget.playerState.canSeek) return;
 
     _seekResetTimer?.cancel();
     final step = side == DoubleTapSeekSide.left ? -10 : 10;
@@ -528,16 +531,24 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       return KeyEventResult.handled;
     }
 
+    if (key == LogicalKeyboardKey.mediaPlayPause ||
+        (key == LogicalKeyboardKey.mediaPlay &&
+            !widget.playerState.isPlaying) ||
+        (key == LogicalKeyboardKey.mediaPause &&
+            widget.playerState.isPlaying)) {
+      widget.onPlayPause();
+      _showOverlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPlay ||
+        key == LogicalKeyboardKey.mediaPause) {
+      _showOverlay();
+      return KeyEventResult.handled;
+    }
+
     // While player chrome is visible, D-pad arrows/select move between
     // focusable controls instead of seeking or changing channels.
     if (chromeOpen) {
-      if (key == LogicalKeyboardKey.mediaPlayPause ||
-          key == LogicalKeyboardKey.mediaPlay ||
-          key == LogicalKeyboardKey.mediaPause) {
-        widget.onPlayPause();
-        _showOverlay();
-        return KeyEventResult.handled;
-      }
       _scheduleHide();
       return KeyEventResult.ignored;
     }
@@ -554,6 +565,10 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     }
 
     if (key == LogicalKeyboardKey.arrowLeft) {
+      if (!widget.playerState.canSeek) {
+        _showOverlay();
+        return KeyEventResult.handled;
+      }
       widget.onSeekRelative(const Duration(seconds: -10));
       _showSeekRippleOnly(DoubleTapSeekSide.left);
       _showOverlay();
@@ -561,6 +576,10 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     }
 
     if (key == LogicalKeyboardKey.arrowRight) {
+      if (!widget.playerState.canSeek) {
+        _showOverlay();
+        return KeyEventResult.handled;
+      }
       widget.onSeekRelative(const Duration(seconds: 10));
       _showSeekRippleOnly(DoubleTapSeekSide.right);
       _showOverlay();
@@ -695,6 +714,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                             _scheduleHide();
                           },
                           onSeekRelative: (offset) {
+                            if (!widget.playerState.canSeek) return;
                             widget.onSeekRelative(offset);
                             _showSeekRippleOnly(
                               offset.isNegative
@@ -759,6 +779,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                                 );
                               },
                               onSelectBufferMode: widget.onSelectBufferMode,
+                              onSelectBackend: widget.onSelectBackend,
                               onSetSleepTimer: _setSleepTimer,
                               onAudioHandoff: isPhone
                                   ? null

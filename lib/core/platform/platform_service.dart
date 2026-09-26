@@ -4,13 +4,7 @@ import 'package:iptv/core/platform/platform_io.dart'
     as plat;
 
 /// Platform type enumeration.
-enum PlatformType {
-  android,
-  androidTv,
-  windows,
-  web,
-  unknown,
-}
+enum PlatformType { android, androidTv, windows, web, unknown }
 
 /// Centralized platform detection and capability surface.
 ///
@@ -49,6 +43,13 @@ class PlatformService {
   /// Sets true borderless fullscreen mode on Windows/macOS/Linux, Web, and Android/iOS.
   Future<bool> setFullScreen(bool isFullScreen) async {
     await plat.setPlatformFullScreen(isFullScreen);
+    // Android's immersive state is not queryable through the desktop window
+    // API. Keep the requested player state authoritative there so TV/player
+    // chrome never reports the opposite action.
+    if (isAndroid) {
+      isFullScreenNotifier.value = isFullScreen;
+      return isFullScreen;
+    }
     final actual = await plat.isPlatformFullScreen();
     isFullScreenNotifier.value = actual;
     return actual;
@@ -56,6 +57,7 @@ class PlatformService {
 
   /// Checks if true fullscreen mode is currently active.
   Future<bool> isFullScreen() async {
+    if (isAndroid) return isFullScreenNotifier.value;
     final full = await plat.isPlatformFullScreen();
     isFullScreenNotifier.value = full;
     return full;

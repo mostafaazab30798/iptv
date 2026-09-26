@@ -119,6 +119,8 @@ void main() {
       expect(find.text('HBO HD'), findsAtLeast(1));
       expect(find.text('Game of Thrones'), findsOneWidget);
       expect(find.text('LIVE'), findsOneWidget);
+      expect(find.byTooltip('Replay 10s'), findsNothing);
+      expect(find.byTooltip('Forward 10s'), findsNothing);
 
       await finishPlayerTest(tester);
     });
@@ -299,6 +301,16 @@ void main() {
           'player-surface',
         );
 
+        // Hardware media keys work even after the on-screen chrome hides.
+        await tester.sendKeyEvent(LogicalKeyboardKey.mediaPause);
+        await tester.pump();
+        expect(controller.state.isPlaying, isFalse);
+        await tester.pump(const Duration(seconds: 5));
+        await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlay);
+        await tester.pump();
+        expect(controller.state.isPlaying, isTrue);
+        await tester.pump(const Duration(seconds: 5));
+
         // First OK only restores visible chrome and its predictable landing
         // target; a second OK activates Play/Pause.
         await tester.sendKeyEvent(LogicalKeyboardKey.select);
@@ -316,6 +328,31 @@ void main() {
         await finishPlayerTest(tester);
       },
     );
+
+    testWidgets('remote arrows reveal controls without seeking live TV', (
+      tester,
+    ) async {
+      await controller.load(
+        PlayerSource.live(
+          url: 'http://test.live/remote.m3u8',
+          title: 'Remote Live Test',
+          channelId: 819,
+        ),
+      );
+      await tester.pumpWidget(createRemoteTestApp());
+      await tester.pump(const Duration(seconds: 5));
+      final positionBeforeKey = controller.state.position;
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+
+      expect(controller.state.position, positionBeforeKey);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'player-play-pause',
+      );
+      await finishPlayerTest(tester);
+    });
 
     testWidgets('renders Next and Previous channel buttons and handles taps', (
       tester,
@@ -570,6 +607,62 @@ void main() {
       );
     },
   );
+
+  testWidgets('fullscreen control is operable and has button semantics', (
+    tester,
+  ) async {
+    var toggles = 0;
+    final state = PlayerState(
+      status: PlayerStatus.playing,
+      source: PlayerSource.live(
+        url: 'http://test.live/channel.ts',
+        title: 'Fullscreen Test',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: PlayerControls(
+            playerState: state,
+            onPlayPause: () {},
+            onRequestSeekPreview: (_) async => null,
+            onScrubStart: () {},
+            onScrubEnd: (_) {},
+            onSeekRelative: (_) {},
+            onVolumeChanged: (_) {},
+            onToggleMute: () {},
+            onNextChannel: () {},
+            onPreviousChannel: () {},
+            onCycleAspectRatio: () {},
+            onSelectPlaybackRate: (_) {},
+            onOpenAudioTracks: () {},
+            onOpenSubtitles: () {},
+            onToggleLock: () {},
+            onOpenQuickSettings: () {},
+            onToggleFullscreen: () => toggles++,
+            onClose: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final fullscreen = find.byTooltip('Fullscreen');
+    expect(fullscreen, findsOneWidget);
+    final semanticButton = find.bySemanticsLabel('Fullscreen');
+    expect(semanticButton, findsOneWidget);
+    final target = tester.getSize(semanticButton);
+    expect(target.width, greaterThanOrEqualTo(48));
+    expect(target.height, greaterThanOrEqualTo(48));
+
+    await tester.tap(fullscreen);
+    await tester.pump();
+
+    expect(toggles, 1);
+  });
 
   testWidgets('D-pad focuses the VOD timeline and seeks with left/right', (
     tester,

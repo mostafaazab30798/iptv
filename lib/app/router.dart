@@ -9,6 +9,8 @@ import 'package:iptv/features/account/account_screen.dart';
 import 'package:iptv/features/account/devices_screen.dart';
 import 'package:iptv/features/account/sign_in_screen.dart';
 import 'package:iptv/features/account/verify_code_screen.dart';
+import 'package:iptv/features/catch_up/catch_up_screen.dart';
+import 'package:iptv/domain/entities/channel.dart';
 import 'package:iptv/features/favorites/favorites_screen.dart';
 import 'package:iptv/features/history/history_screen.dart';
 import 'package:iptv/features/home/home_screen.dart';
@@ -45,6 +47,7 @@ abstract final class Routes {
   static const settings = '/settings';
   static const search = '/search';
   static const player = '/player';
+  static const catchUp = '/catch-up';
 }
 
 /// Resolves navigation from the two independent authentication layers.
@@ -187,6 +190,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.player,
         pageBuilder: (context, state) => _noTransition(const PlayerScreen()),
+      ),
+      GoRoute(
+        path: Routes.catchUp,
+        pageBuilder: (context, state) {
+          final channel = state.extra;
+          if (channel is! Channel) {
+            return _fade(const LiveScreen(), interceptBack: true);
+          }
+          return _fade(
+            CatchUpScreen(channel: channel),
+            interceptBack: true,
+          );
+        },
       ),
       GoRoute(
         path: Routes.search,

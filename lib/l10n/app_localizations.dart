@@ -2851,6 +2851,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This IPTV account has expired. Sign in with another user or disconnect this saved login.'**
   String get iptvAccountExpired;
+
+  /// No description provided for @catchUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Catch-up TV'**
+  String get catchUpTitle;
+
+  /// No description provided for @catchUpLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load archived programmes.'**
+  String get catchUpLoadError;
+
+  /// No description provided for @catchUpEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No catch-up programmes'**
+  String get catchUpEmpty;
+
+  /// No description provided for @catchUpEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This provider has no archived programmes available for this channel.'**
+  String get catchUpEmptySubtitle;
 }
 
 class _AppLocalizationsDelegate

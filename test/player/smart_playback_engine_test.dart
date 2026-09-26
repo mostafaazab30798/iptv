@@ -49,10 +49,7 @@ void main() {
         networkDeEscalateWindow: 3,
         liveLowLatencyRecoverWindow: 5,
         resyncCooldown: const Duration(seconds: 30),
-        softCatchUpOverTargetSecs: 1.5,
-        softCatchUpMaxOverTargetSecs: 6.0,
-        hardResyncOverTargetSecs: 8.0,
-        hardResyncImmediateSecs: 20.0,
+        stalledPlaybackResyncThreshold: const Duration(seconds: 8),
         decodeHealDropDeltaThreshold: 40,
         decodeHealSpikeWindow: 2,
       );
@@ -114,7 +111,10 @@ void main() {
         fakeEngine.lastAppliedSwDecodeTier,
         equals(SoftwareDecodeFallbackTier.none),
       );
-      expect(smartEngine.currentSwDecodeTier, equals(SoftwareDecodeFallbackTier.none));
+      expect(
+        smartEngine.currentSwDecodeTier,
+        equals(SoftwareDecodeFallbackTier.none),
+      );
     });
 
     test('sustained decode bottleneck applies Tier 1', () async {
@@ -142,7 +142,7 @@ void main() {
       );
     });
 
-    test('soft catch-up engages then restores 1.0x when cache recovers', () async {
+    test('forward cache fullness never changes live playback speed', () async {
       final source = PlayerSource.live(
         url: 'http://stream.example/live.ts',
         title: 'Sports',
@@ -150,7 +150,6 @@ void main() {
       );
       await smartEngine.open(source);
 
-      // lowLatency target=3s; cache=6s => +3s over target => soft catch-up band.
       smartEngine.debugTick(
         _metrics(
           hwdecCurrent: 'mediacodec',
@@ -160,24 +159,11 @@ void main() {
       );
       await pumpEventQueue();
 
-      expect(smartEngine.isCatchUpActive, isTrue);
-      expect(smartEngine.liveEdgePhase, equals(LiveEdgePhase.catchingUp));
-      expect(fakeEngine.playbackRate, equals(1.02));
-
-      smartEngine.debugTick(
-        _metrics(
-          hwdecCurrent: 'mediacodec',
-          cacheDuration: const Duration(seconds: 3),
-          cacheBufferingState: 90,
-        ),
-      );
-      await pumpEventQueue();
-
-      expect(smartEngine.isCatchUpActive, isFalse);
+      expect(smartEngine.liveEdgePhase, equals(LiveEdgePhase.atTarget));
       expect(fakeEngine.playbackRate, equals(1.0));
     });
 
-    test('hard resync fires once under large lag then respects cooldown', () async {
+    test('long real buffering resyncs once then respects cooldown', () async {
       final source = PlayerSource.live(
         url: 'http://stream.example/live.ts',
         title: 'Sports',
@@ -186,83 +172,86 @@ void main() {
       await smartEngine.open(source);
       final opensAfterFirst = fakeEngine.openCount;
 
-      smartEngine.debugTick(
-        _metrics(
-          hwdecCurrent: 'mediacodec',
-          cacheDuration: const Duration(seconds: 22),
-          cacheBufferingState: 90,
-        ),
-      );
+      fakeEngine.simulateBuffering();
+      await pumpEventQueue();
+      now = now.add(const Duration(seconds: 9));
+      fakeEngine.simulatePlaying();
       await pumpEventQueue();
 
       expect(fakeEngine.openCount, equals(opensAfterFirst + 1));
       expect(smartEngine.liveEdgePhase, equals(LiveEdgePhase.cooldown));
 
-      // Still in cooldown — another fat cache must not reopen again.
-      smartEngine.debugTick(
-        _metrics(
-          hwdecCurrent: 'mediacodec',
-          cacheDuration: const Duration(seconds: 25),
-          cacheBufferingState: 90,
-        ),
-      );
+      // Still in cooldown — another long stall must not reopen again.
+      fakeEngine.simulateBuffering();
+      await pumpEventQueue();
+      now = now.add(const Duration(seconds: 9));
+      fakeEngine.simulatePlaying();
       await pumpEventQueue();
 
       expect(fakeEngine.openCount, equals(opensAfterFirst + 1));
 
-      // After cooldown expires, another lag can resync again.
+      // After cooldown expires, another long stall can resync again.
       now = now.add(const Duration(seconds: 31));
-      smartEngine.debugTick(
-        _metrics(
-          hwdecCurrent: 'mediacodec',
-          cacheDuration: const Duration(seconds: 22),
-          cacheBufferingState: 90,
-        ),
-      );
+      fakeEngine.simulateBuffering();
+      await pumpEventQueue();
+      now = now.add(const Duration(seconds: 9));
+      fakeEngine.simulatePlaying();
       await pumpEventQueue();
 
       expect(fakeEngine.openCount, equals(opensAfterFirst + 2));
     });
 
-    test('live buffer adaptation recovers balanced to lowLatency after healthy window', () async {
-      final source = PlayerSource.live(
-        url: 'http://stream.example/live.ts',
-        title: 'Sports',
-        channelId: 1,
-      );
-      await smartEngine.open(source);
-
-      // Force escalate lowLatency -> balanced via network stress.
-      for (var i = 0; i < 2; i++) {
-        smartEngine.debugTick(
-          _metrics(
-            hwdecCurrent: 'mediacodec',
-            cacheBufferingState: 10,
-            cacheDuration: const Duration(milliseconds: 200),
-            bufferingCount: i + 1,
-          ),
+    test(
+      'live buffer adaptation recovers balanced to lowLatency after healthy window',
+      () async {
+        final source = PlayerSource.live(
+          url: 'http://stream.example/live.ts',
+          title: 'Sports',
+          channelId: 1,
         );
-      }
-      await pumpEventQueue();
-      expect(smartEngine.currentBufferMode, equals(PlaybackBufferMode.balanced));
-      expect(fakeEngine.lastBufferMode, equals(PlaybackBufferMode.balanced));
+        await smartEngine.open(source);
 
-      // Healthy window long enough to recover to lowLatency.
-      for (var i = 0; i < 5; i++) {
-        smartEngine.debugTick(
-          _metrics(
-            hwdecCurrent: 'mediacodec',
-            cacheBufferingState: 90,
-            cacheDuration: const Duration(seconds: 3),
-            bufferingCount: 2,
-          ),
+        // Force escalate lowLatency -> balanced via network stress.
+        for (var i = 0; i < 2; i++) {
+          smartEngine.debugTick(
+            _metrics(
+              hwdecCurrent: 'mediacodec',
+              cacheBufferingState: 10,
+              cacheDuration: const Duration(milliseconds: 200),
+              bufferingCount: i + 1,
+            ),
+          );
+        }
+        await pumpEventQueue();
+        expect(
+          smartEngine.currentBufferMode,
+          equals(PlaybackBufferMode.balanced),
         );
-      }
-      await pumpEventQueue();
+        expect(fakeEngine.lastBufferMode, equals(PlaybackBufferMode.balanced));
 
-      expect(smartEngine.currentBufferMode, equals(PlaybackBufferMode.lowLatency));
-      expect(fakeEngine.lastBufferMode, equals(PlaybackBufferMode.lowLatency));
-    });
+        // Healthy window long enough to recover to lowLatency.
+        for (var i = 0; i < 5; i++) {
+          smartEngine.debugTick(
+            _metrics(
+              hwdecCurrent: 'mediacodec',
+              cacheBufferingState: 90,
+              cacheDuration: const Duration(seconds: 3),
+              bufferingCount: 2,
+            ),
+          );
+        }
+        await pumpEventQueue();
+
+        expect(
+          smartEngine.currentBufferMode,
+          equals(PlaybackBufferMode.lowLatency),
+        );
+        expect(
+          fakeEngine.lastBufferMode,
+          equals(PlaybackBufferMode.lowLatency),
+        );
+      },
+    );
 
     test('decode-heal shares cooldown with hard resync', () async {
       final source = PlayerSource.live(
@@ -341,7 +330,10 @@ void main() {
         }
       }
       await pumpEventQueue();
-      expect(smartEngine.currentBufferMode, equals(PlaybackBufferMode.stability));
+      expect(
+        smartEngine.currentBufferMode,
+        equals(PlaybackBufferMode.stability),
+      );
 
       // First healthy window only steps to balanced.
       for (var i = 0; i < 3; i++) {
@@ -355,7 +347,10 @@ void main() {
         );
       }
       await pumpEventQueue();
-      expect(smartEngine.currentBufferMode, equals(PlaybackBufferMode.balanced));
+      expect(
+        smartEngine.currentBufferMode,
+        equals(PlaybackBufferMode.balanced),
+      );
 
       // Counter reset — still short of the lowLatency recover window.
       for (var i = 0; i < 4; i++) {
@@ -369,7 +364,10 @@ void main() {
         );
       }
       await pumpEventQueue();
-      expect(smartEngine.currentBufferMode, equals(PlaybackBufferMode.balanced));
+      expect(
+        smartEngine.currentBufferMode,
+        equals(PlaybackBufferMode.balanced),
+      );
     });
   });
 }

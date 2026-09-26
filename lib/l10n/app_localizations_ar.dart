@@ -1546,4 +1546,17 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get iptvAccountExpired =>
       'انتهت صلاحية حساب IPTV هذا. سجّل الدخول بمستخدم آخر أو افصل بيانات الدخول المحفوظة.';
+
+  @override
+  String get catchUpTitle => 'البث المؤجل';
+
+  @override
+  String get catchUpLoadError => 'تعذر تحميل البرامج المؤرشفة.';
+
+  @override
+  String get catchUpEmpty => 'لا توجد برامج مؤرشفة';
+
+  @override
+  String get catchUpEmptySubtitle =>
+      'لا يوفر مزود الخدمة برامج مؤرشفة لهذه القناة.';
 }

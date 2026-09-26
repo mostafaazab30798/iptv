@@ -42,6 +42,8 @@ class PreferencesStorage {
   static const String _keyLocale = 'locale';
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyPlayerVolume = 'player_volume';
+  static const String _keyPlayerBackend = 'player_backend';
+  static const String _keyPlayerAspectRatio = 'player_aspect_ratio';
   static const String _keyLastRoute = 'last_route';
   static const String _keyAuthServerUrl = 'auth_server_url';
   static const String _keyAuthUsername = 'auth_username';
@@ -129,7 +131,8 @@ class PreferencesStorage {
   // ---------------------------------------------------------------------------
 
   String get themeMode => _prefs.getString(_keyThemeMode) ?? 'dark';
-  Future<void> setThemeMode(String mode) => _prefs.setString(_keyThemeMode, mode);
+  Future<void> setThemeMode(String mode) =>
+      _prefs.setString(_keyThemeMode, mode);
 
   // ---------------------------------------------------------------------------
   // Player
@@ -138,6 +141,13 @@ class PreferencesStorage {
   double get playerVolume => _prefs.getDouble(_keyPlayerVolume) ?? 1.0;
   Future<void> setPlayerVolume(double volume) =>
       _prefs.setDouble(_keyPlayerVolume, volume);
+  String? get playerBackend => _prefs.getString(_keyPlayerBackend);
+  Future<void> setPlayerBackend(String backend) =>
+      _prefs.setString(_keyPlayerBackend, backend);
+  int get playerAspectRatio =>
+      (_prefs.getInt(_keyPlayerAspectRatio) ?? 0).clamp(0, 4);
+  Future<void> setPlayerAspectRatio(int index) =>
+      _prefs.setInt(_keyPlayerAspectRatio, index.clamp(0, 4));
 
   // ---------------------------------------------------------------------------
   // Navigation

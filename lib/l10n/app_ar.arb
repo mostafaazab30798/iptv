@@ -614,6 +614,10 @@
   "companionPairingDialogBody": "أدخل عنوان IP للتلفاز ورمز PIN المكوّن من 4 أرقام الظاهر على الشاشة.",
   "companionIpHintExample": "مثال: 192.168.1.50",
   "companionPinCodeLabel": "رمز PIN المكوّن من 4 أرقام",
-  "iptvAccountExpired": "انتهت صلاحية حساب IPTV هذا. سجّل الدخول بمستخدم آخر أو افصل بيانات الدخول المحفوظة."
+  "iptvAccountExpired": "انتهت صلاحية حساب IPTV هذا. سجّل الدخول بمستخدم آخر أو افصل بيانات الدخول المحفوظة.",
+  "catchUpTitle": "البث المؤجل",
+  "catchUpLoadError": "تعذر تحميل البرامج المؤرشفة.",
+  "catchUpEmpty": "لا توجد برامج مؤرشفة",
+  "catchUpEmptySubtitle": "لا يوفر مزود الخدمة برامج مؤرشفة لهذه القناة."
 }
 

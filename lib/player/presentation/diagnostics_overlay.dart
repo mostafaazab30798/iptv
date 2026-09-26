@@ -43,7 +43,11 @@ class DiagnosticsOverlay extends StatelessWidget {
               children: [
                 const Row(
                   children: [
-                    HugeIcon(icon: AppIcons.speed, color: Colors.yellowAccent, size: 16),
+                    HugeIcon(
+                      icon: AppIcons.speed,
+                      color: Colors.yellowAccent,
+                      size: 16,
+                    ),
                     SizedBox(width: 6),
                     Text(
                       'Diagnostics HUD',
@@ -56,7 +60,11 @@ class DiagnosticsOverlay extends StatelessWidget {
                   ],
                 ),
                 IconButton(
-                  icon: const HugeIcon(icon: AppIcons.close, color: Colors.white70, size: 18),
+                  icon: const HugeIcon(
+                    icon: AppIcons.close,
+                    color: Colors.white70,
+                    size: 18,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: onClose,
@@ -65,33 +73,46 @@ class DiagnosticsOverlay extends StatelessWidget {
             ),
             const Divider(color: Colors.white24, height: 16),
             _diagRow('Status', playerState.status.name),
+            _diagRow('Engine', playerState.backend.label),
             _diagRow('Stream Format', source?.streamType.name ?? 'unknown'),
-            _diagRow('Buffer Mode', playerState.bufferMode.displayName, valueColor: Colors.lightGreenAccent),
+            _diagRow(
+              'Buffer Mode',
+              playerState.bufferMode.displayName,
+              valueColor: Colors.lightGreenAccent,
+            ),
             _diagRow(
               'Hardware Decode (hwdec)',
               m.hwdecCurrent != null
                   ? (m.isHardwareDecodingActive
-                      ? '${m.hwdecCurrent} (Active GPU)'
-                      : '${m.hwdecCurrent} (CPU Fallback / Software)')
+                        ? '${m.hwdecCurrent} (Active GPU)'
+                        : '${m.hwdecCurrent} (CPU Fallback / Software)')
                   : 'auto-safe (probing...)',
               valueColor: m.isHardwareDecodingActive
                   ? Colors.greenAccent
                   : (m.hwdecCurrent == 'no' || m.hwdecCurrent == 'disabled'
-                      ? Colors.orangeAccent
-                      : Colors.white70),
+                        ? Colors.orangeAccent
+                        : Colors.white70),
             ),
             if (m.videoParams != null)
-              _diagRow('Video Params', m.videoParams!, valueColor: Colors.cyanAccent),
+              _diagRow(
+                'Video Params',
+                m.videoParams!,
+                valueColor: Colors.cyanAccent,
+              ),
             _diagRow(
               'Resolution',
               m.videoWidth != null ? '${m.videoWidth}x${m.videoHeight}' : 'N/A',
             ),
             _diagRow(
               'Framerate',
-              m.fps != null ? '${m.fps!.toStringAsFixed(1)} fps' : 'measuring...',
+              m.fps != null
+                  ? '${m.fps!.toStringAsFixed(1)} fps'
+                  : 'measuring...',
               valueColor: m.fps != null && m.fps! >= 50
                   ? Colors.greenAccent
-                  : (m.fps != null && m.fps! < 25 ? Colors.orangeAccent : Colors.white),
+                  : (m.fps != null && m.fps! < 25
+                        ? Colors.orangeAccent
+                        : Colors.white),
             ),
             _diagRow(
               'Video Bitrate',
@@ -102,7 +123,8 @@ class DiagnosticsOverlay extends StatelessWidget {
             _diagRow(
               'Demuxer Cache',
               '${m.cacheDuration != null ? (m.cacheDuration!.inMilliseconds / 1000).toStringAsFixed(1) : playerState.bufferedPosition.inSeconds}s${m.cacheBufferingState != null ? ' (${m.cacheBufferingState}%)' : ''}',
-              valueColor: (m.cacheBufferingState != null && m.cacheBufferingState! < 30)
+              valueColor:
+                  (m.cacheBufferingState != null && m.cacheBufferingState! < 30)
                   ? Colors.redAccent
                   : Colors.white,
             ),
@@ -111,25 +133,30 @@ class DiagnosticsOverlay extends StatelessWidget {
               m.frameDropCount != null || m.decoderFrameDropCount != null
                   ? '${m.frameDropCount ?? 0} (VO) / ${m.decoderFrameDropCount ?? 0} (Dec)'
                   : '0',
-              valueColor: (m.frameDropCount ?? 0) > 10 ? Colors.orangeAccent : Colors.white70,
+              valueColor: (m.frameDropCount ?? 0) > 10
+                  ? Colors.orangeAccent
+                  : Colors.white70,
             ),
             _diagRow(
               'Bottleneck Analysis',
               m.isDecodeBottleneck
                   ? 'DECODE/CPU (Cache OK, Drops High)'
                   : (m.isNetworkBottleneck
-                      ? 'NETWORK (Buffer Underrun)'
-                      : 'HEALTHY PIPELINE'),
+                        ? 'NETWORK (Buffer Underrun)'
+                        : 'HEALTHY PIPELINE'),
               valueColor: m.isDecodeBottleneck
                   ? Colors.orangeAccent
-                  : (m.isNetworkBottleneck ? Colors.redAccent : Colors.greenAccent),
+                  : (m.isNetworkBottleneck
+                        ? Colors.redAccent
+                        : Colors.greenAccent),
             ),
             _diagRow(
               'SW Decode Escalation',
               m.swDecodeTier.displayName,
               valueColor: switch (m.swDecodeTier) {
                 SoftwareDecodeFallbackTier.none => Colors.greenAccent,
-                SoftwareDecodeFallbackTier.loopFilterSkip => Colors.orangeAccent,
+                SoftwareDecodeFallbackTier.loopFilterSkip =>
+                  Colors.orangeAccent,
                 SoftwareDecodeFallbackTier.frameSkip => Colors.redAccent,
               },
             ),
@@ -152,7 +179,11 @@ class DiagnosticsOverlay extends StatelessWidget {
             if (playerState.currentSubtitleTrack != null)
               _diagRow('Subtitle', playerState.currentSubtitleTrack!.title),
             if (playerState.error != null)
-              _diagRow('Last Error', playerState.error!.name, valueColor: Colors.redAccent),
+              _diagRow(
+                'Last Error',
+                playerState.error!.name,
+                valueColor: Colors.redAccent,
+              ),
           ],
         ),
       ),
@@ -165,12 +196,19 @@ class DiagnosticsOverlay extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(key, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+          Text(
+            key,
+            style: const TextStyle(color: Colors.white60, fontSize: 11),
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               value,
-              style: TextStyle(color: valueColor, fontSize: 11, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: valueColor,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),

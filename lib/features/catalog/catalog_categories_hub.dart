@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/features/catalog/catalog_controller.dart';
@@ -62,7 +63,7 @@ class CatalogCategoriesHub<TItem, TLeading> extends StatelessWidget {
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.md,
               ),
-              cacheExtent: 350,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(350),
               itemCount: categories.length + 1,
               separatorBuilder: (_, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
@@ -82,7 +83,7 @@ class CatalogCategoriesHub<TItem, TLeading> extends StatelessWidget {
                 final logoUrl = leading == null
                     ? null
                     : (leadingUrlOf?.call(leading) ??
-                        (leading is String ? leading : null));
+                          (leading is String ? leading : null));
 
                 return CategoryCard(
                   title: category.name,

@@ -3,8 +3,7 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // The Flutter Gradle Plugin must be applied after the Android Gradle plugin.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -23,10 +22,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     val isTvBuild = project.hasProperty("tvBuild") || project.findProperty("appSuffix") == "tv"
@@ -66,6 +61,24 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 flutter {
     source = "../.."
+}
+
+// Keep the selectable Android backends on reviewed upstream releases.
+// Gradle resolves these over the older transitive plugin versions.
+dependencies {
+    val media3Version = "1.11.1"
+    implementation("androidx.media3:media3-exoplayer:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-dash:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-rtsp:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-smoothstreaming:$media3Version")
+    implementation("org.videolan.android:libvlc-all:3.7.6")
 }

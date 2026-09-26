@@ -118,10 +118,7 @@ class UpdateController extends StateNotifier<UpdateState> {
 
   static const checkCacheTtl = Duration(hours: 6);
 
-  Future<void> checkForUpdates({
-    bool silent = false,
-    bool force = false,
-  }) {
+  Future<void> checkForUpdates({bool silent = false, bool force = false}) {
     final activeCheck = _checkInFlight;
     if (activeCheck != null) return activeCheck;
 
@@ -361,7 +358,9 @@ class UpdateController extends StateNotifier<UpdateState> {
       return;
     }
 
-    final isAndroid = PlatformService.instance.isAndroid || PlatformService.instance.isAndroidTv;
+    final isAndroid =
+        PlatformService.instance.isAndroid ||
+        PlatformService.instance.isAndroidTv;
     final isWindows = PlatformService.instance.isWindows;
 
     if (isAndroid || isWindows) {
@@ -398,7 +397,12 @@ class UpdateController extends StateNotifier<UpdateState> {
               : 'Opening installer...',
         );
       } catch (e, st) {
-        AppLogger.error('In-app update download failed: $e', error: e, stackTrace: st, feature: 'updates');
+        AppLogger.error(
+          'In-app update download failed: $e',
+          error: e,
+          stackTrace: st,
+          feature: 'updates',
+        );
         state = state.copyWith(
           status: UpdateFlowStatus.error,
           errorMessage: e.toString(),
@@ -434,7 +438,7 @@ class UpdateController extends StateNotifier<UpdateState> {
     try {
       final json = Map<String, dynamic>.from(jsonDecode(raw) as Map);
       final manifest = ReleaseManifest.fromJson(json);
-      return _verifier.verify(manifest);
+      return await _verifier.verify(manifest);
     } catch (_) {
       await _preferences.setCachedMandatoryManifestJson(null);
       return null;

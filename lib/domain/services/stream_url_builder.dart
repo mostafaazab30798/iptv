@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:intl/intl.dart';
 import 'package:iptv/core/network/url_helpers.dart';
 import 'package:iptv/domain/entities/server_config.dart';
 import 'package:iptv/player/infrastructure/web/web_player_engine.dart';
@@ -49,6 +50,25 @@ class StreamUrlBuilder {
     return UrlHelpers.wrapWebProxy(raw, proxyAllHttpTargets: true);
   }
 
+  /// Builds the Xtream-compatible TV archive URL for a finished programme.
+  String catchUp({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required int streamId,
+    required DateTime start,
+    required Duration duration,
+    String extension = 'ts',
+  }) {
+    final base = UrlHelpers.normalizeServerUrl(serverUrl);
+    final durationMinutes = (duration.inSeconds / 60).ceil().clamp(1, 1440);
+    final archiveStart = DateFormat('yyyy-MM-dd:HH-mm').format(start.toUtc());
+    final raw =
+        '$base/timeshift/$username/$password/$durationMinutes/$archiveStart/'
+        '$streamId.$extension';
+    return UrlHelpers.wrapWebProxy(raw, proxyAllHttpTargets: true);
+  }
+
   String liveForSession(
     ServerConfig session, {
     required int streamId,
@@ -82,6 +102,22 @@ class StreamUrlBuilder {
     username: session.username,
     password: session.password,
     streamId: streamId,
+    extension: extension,
+  );
+
+  String catchUpForSession(
+    ServerConfig session, {
+    required int streamId,
+    required DateTime start,
+    required Duration duration,
+    String extension = 'ts',
+  }) => catchUp(
+    serverUrl: session.serverUrl,
+    username: session.username,
+    password: session.password,
+    streamId: streamId,
+    start: start,
+    duration: duration,
     extension: extension,
   );
 }

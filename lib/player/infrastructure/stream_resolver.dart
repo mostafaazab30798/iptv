@@ -9,9 +9,7 @@ import 'package:iptv/player/utils/stream_type_detector.dart';
 ///
 /// Ensures structured URL construction with safe encoding, ports, and headers without logging secrets.
 class StreamResolver {
-  const StreamResolver({
-    this.defaultUserAgent = ApiConstants.defaultUserAgent,
-  });
+  const StreamResolver({this.defaultUserAgent = ApiConstants.defaultUserAgent});
 
   final String defaultUserAgent;
 
@@ -44,7 +42,7 @@ class StreamResolver {
     final headers = <String, String>{
       if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
       'Connection': 'keep-alive',
-      if (customHeaders != null) ...customHeaders,
+      ...?customHeaders,
     };
 
     return PlayerSource.live(
@@ -89,7 +87,7 @@ class StreamResolver {
     final headers = <String, String>{
       if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
       'Connection': 'keep-alive',
-      if (customHeaders != null) ...customHeaders,
+      ...?customHeaders,
     };
 
     return PlayerSource.vod(
@@ -120,7 +118,7 @@ class StreamResolver {
     final headers = <String, String>{
       if (!kIsWeb) ApiConstants.userAgentHeader: defaultUserAgent,
       'Connection': 'keep-alive',
-      if (customHeaders != null) ...customHeaders,
+      ...?customHeaders,
     };
 
     return PlayerSource(
