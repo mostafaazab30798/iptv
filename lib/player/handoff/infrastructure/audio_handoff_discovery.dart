@@ -7,7 +7,6 @@ import 'package:iptv/core/logging/app_logger.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/handoff/domain/audio_handoff_models.dart';
 
-
 const int kHandoffDiscoveryPort = 8999;
 const String kDiscoveryBeaconType = 'hope_tv_beacon';
 const String kDiscoveryProbeType = 'hope_phone_probe';
@@ -66,15 +65,15 @@ class AudioHandoffDiscoveryBroadcaster {
         cancelOnError: false,
       );
 
-      // Broadcast beacon every 1.5 seconds
+      // A three-second idle cadence keeps discovery responsive without
+      // waking every native host roughly forty times per minute.
       _beaconTimer = Timer.periodic(
-        const Duration(milliseconds: 1500),
+        const Duration(seconds: 3),
         (_) => unawaited(_sendBeacon()),
       );
 
       // Send initial beacon immediately
       unawaited(_sendBeacon());
-
 
       AppLogger.info(
         'Audio Handoff UDP Discovery Broadcaster active on port ${_socket?.port}',
@@ -191,7 +190,6 @@ class AudioHandoffDiscoveryBroadcaster {
       }
     } catch (_) {}
   }
-
 
   Future<void> stop() async {
     _beaconTimer?.cancel();
@@ -340,7 +338,9 @@ class AudioHandoffDiscoveryScanner {
           }
           for (final addr in iface.addresses) {
             final ip = addr.address;
-            if (ip.startsWith('169.254.') || ip == '127.0.0.1' || ip == '0.0.0.0') {
+            if (ip.startsWith('169.254.') ||
+                ip == '127.0.0.1' ||
+                ip == '0.0.0.0') {
               continue;
             }
             final parts = ip.split('.');
@@ -355,11 +355,16 @@ class AudioHandoffDiscoveryScanner {
       // Fallback: routing socket trick
       if (subnetsToScan.isEmpty) {
         try {
-          final s = await Socket.connect('8.8.8.8', 53,
-              timeout: const Duration(milliseconds: 300));
+          final s = await Socket.connect(
+            '8.8.8.8',
+            53,
+            timeout: const Duration(milliseconds: 300),
+          );
           final ip = s.address.address;
           s.destroy();
-          if (ip != '127.0.0.1' && !ip.startsWith('169.254.') && ip != '0.0.0.0') {
+          if (ip != '127.0.0.1' &&
+              !ip.startsWith('169.254.') &&
+              ip != '0.0.0.0') {
             final parts = ip.split('.');
             if (parts.length == 4) {
               subnetsToScan['${parts[0]}.${parts[1]}.${parts[2]}.'] =
@@ -387,7 +392,8 @@ class AudioHandoffDiscoveryScanner {
           await Future<void>.delayed(const Duration(milliseconds: 24));
         }
       }
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       _isSubnetScanning = false;
     }
   }
@@ -402,8 +408,11 @@ class AudioHandoffDiscoveryScanner {
     for (final port in [8998, 8997, 8996]) {
       // Phase 1: fast TCP connect
       try {
-        final socket =
-            await Socket.connect(ip, port, timeout: const Duration(milliseconds: 80));
+        final socket = await Socket.connect(
+          ip,
+          port,
+          timeout: const Duration(milliseconds: 80),
+        );
         socket.destroy();
       } catch (_) {
         continue; // Port closed or timeout — skip HTTP probe
@@ -413,10 +422,12 @@ class AudioHandoffDiscoveryScanner {
       try {
         final client = HttpClient()
           ..connectionTimeout = const Duration(milliseconds: 500);
-        final request =
-            await client.getUrl(Uri.parse('http://$ip:$port/companion-info'));
-        final response =
-            await request.close().timeout(const Duration(milliseconds: 500));
+        final request = await client.getUrl(
+          Uri.parse('http://$ip:$port/companion-info'),
+        );
+        final response = await request.close().timeout(
+          const Duration(milliseconds: 500),
+        );
 
         if (response.statusCode == 200) {
           final body = await response.transform(utf8.decoder).join();
@@ -440,11 +451,7 @@ class AudioHandoffDiscoveryScanner {
             port: actualPort,
             sessionToken: token,
             pinCode: pin,
-            source: PlayerSource.live(
-              url: url,
-              title: title,
-              logoUrl: logo,
-            ),
+            source: PlayerSource.live(url: url, title: title, logoUrl: logo),
             serverDeviceName: dev,
           );
 
@@ -462,7 +469,6 @@ class AudioHandoffDiscoveryScanner {
     }
   }
 
-
   void triggerProbe() {
     _sendProbe();
   }
@@ -471,7 +477,6 @@ class AudioHandoffDiscoveryScanner {
     _sendProbe();
     unawaited(_scanSubnet());
   }
-
 
   void _sendProbe() {
     if (_socket == null) return;
@@ -491,27 +496,29 @@ class AudioHandoffDiscoveryScanner {
       // 2. Send to all interface directed broadcast addresses
       try {
         NetworkInterface.list(
-          type: InternetAddressType.IPv4,
-          includeLoopback: false,
-        ).then((interfaces) {
-          for (final iface in interfaces) {
-            for (final addr in iface.addresses) {
-              final ip = addr.address;
-              if (ip.startsWith('169.254.') || ip == '127.0.0.1') continue;
-              final parts = ip.split('.');
-              if (parts.length == 4) {
-                final bcastIp = '${parts[0]}.${parts[1]}.${parts[2]}.255';
-                try {
-                  _socket?.send(
-                    bytes,
-                    InternetAddress(bcastIp),
-                    kHandoffDiscoveryPort,
-                  );
-                } catch (_) {}
+              type: InternetAddressType.IPv4,
+              includeLoopback: false,
+            )
+            .then((interfaces) {
+              for (final iface in interfaces) {
+                for (final addr in iface.addresses) {
+                  final ip = addr.address;
+                  if (ip.startsWith('169.254.') || ip == '127.0.0.1') continue;
+                  final parts = ip.split('.');
+                  if (parts.length == 4) {
+                    final bcastIp = '${parts[0]}.${parts[1]}.${parts[2]}.255';
+                    try {
+                      _socket?.send(
+                        bytes,
+                        InternetAddress(bcastIp),
+                        kHandoffDiscoveryPort,
+                      );
+                    } catch (_) {}
+                  }
+                }
               }
-            }
-          }
-        }).catchError((_) {});
+            })
+            .catchError((_) {});
       } catch (_) {}
 
       // Clean up stale sessions (older than 8 seconds)
@@ -585,11 +592,7 @@ class AudioHandoffDiscoveryScanner {
           port: port,
           sessionToken: token,
           pinCode: pin,
-          source: PlayerSource.live(
-            url: url,
-            title: title,
-            logoUrl: logo,
-          ),
+          source: PlayerSource.live(url: url, title: title, logoUrl: logo),
           serverDeviceName: dev,
         );
 
@@ -603,7 +606,9 @@ class AudioHandoffDiscoveryScanner {
 
         // Background-probe all candidate IPs — pick the one that actually responds
         // This handles cases where the advertised IP is wrong (mobile data IP vs Wi-Fi IP)
-        unawaited(_resolveReachableIp(rawIps, port, token, pin, dev, url, title, logo));
+        unawaited(
+          _resolveReachableIp(rawIps, port, token, pin, dev, url, title, logo),
+        );
       }
     } catch (_) {}
   }
@@ -625,17 +630,18 @@ class AudioHandoffDiscoveryScanner {
       try {
         final client = HttpClient()
           ..connectionTimeout = const Duration(milliseconds: 400);
-        final request =
-            await client.getUrl(Uri.parse('http://$ip:$port/companion-info'));
-        final response =
-            await request.close().timeout(const Duration(milliseconds: 500));
+        final request = await client.getUrl(
+          Uri.parse('http://$ip:$port/companion-info'),
+        );
+        final response = await request.close().timeout(
+          const Duration(milliseconds: 500),
+        );
         client.close(force: true);
 
         if (response.statusCode == 200) {
           final body = await response.transform(utf8.decoder).join();
           final infoMap = jsonDecode(body) as Map<String, dynamic>;
-          final confirmedPort =
-              (infoMap['p'] as num?)?.toInt() ?? port;
+          final confirmedPort = (infoMap['p'] as num?)?.toInt() ?? port;
 
           final session = HandoffSessionInfo(
             hostIp: ip,
@@ -690,10 +696,9 @@ final discoveryScannerProvider = Provider<AudioHandoffDiscoveryScanner>((ref) {
 });
 
 /// Global stream provider for TV & PC sessions discovered on the local network.
-final discoveredTvSessionsProvider =
-    StreamProvider<List<DiscoveredTvSession>>((ref) {
+final discoveredTvSessionsProvider = StreamProvider<List<DiscoveredTvSession>>((
+  ref,
+) {
   final scanner = ref.watch(discoveryScannerProvider);
   return scanner.sessionsStream;
 });
-
-

@@ -326,6 +326,7 @@ Future<void> pumpUntil(
 }
 
 Future<void> initFakePreferences({String? pendingOtpEmail}) async {
+  PreferencesStorage.resetForTesting();
   SharedPreferences.setMockInitialValues({
     'pending_otp_email': ?pendingOtpEmail,
   });

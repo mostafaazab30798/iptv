@@ -7,12 +7,14 @@ part 'app_database.g.dart';
 // ---------------------------------------------------------------------------
 // Drift honesty (Phase 3)
 // ---------------------------------------------------------------------------
-// Only [Favorites] and [WatchHistory] are read/written by the live app today.
+// [Favorites], [WatchHistory], and [AppSettings] are read/written by the live
+// app today. AppSettings also backs the persistent web catalog cache.
 // The other tables (Accounts, Categories, Channels, EpgPrograms, Movies,
 // SeriesTable) remain in the schema for potential future local catalog use and
 // to avoid a high-risk destructive migration. Catalog browsing uses
-// [LocalCatalogCache] (JSON on disk) + Riverpod session memory, not these
-// Drift tables. Prefer documenting over dropping until a dedicated migration PR.
+// [LocalCatalogCache] (JSON on native platforms, AppSettings/IndexedDB on web)
+// plus Riverpod session memory, not these Drift catalog tables. Prefer
+// documenting over dropping until a dedicated migration PR.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -167,20 +169,22 @@ class SyncMetadata extends Table {
 // Database
 // ---------------------------------------------------------------------------
 
-@DriftDatabase(tables: [
-  Accounts,
-  Categories,
-  Channels,
-  EpgPrograms,
-  Movies,
-  SeriesTable,
-  Seasons,
-  Episodes,
-  Favorites,
-  WatchHistory,
-  AppSettings,
-  SyncMetadata,
-])
+@DriftDatabase(
+  tables: [
+    Accounts,
+    Categories,
+    Channels,
+    EpgPrograms,
+    Movies,
+    SeriesTable,
+    Seasons,
+    Episodes,
+    Favorites,
+    WatchHistory,
+    AppSettings,
+    SyncMetadata,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.executor);
@@ -188,20 +192,19 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => AppConstants.dbVersion;
 
-
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-          await _createIndexes();
-        },
-        onUpgrade: (m, from, to) async {
-          await _createIndexes();
-        },
-        beforeOpen: (details) async {
-          await _createIndexes();
-        },
-      );
+    onCreate: (m) async {
+      await m.createAll();
+      await _createIndexes();
+    },
+    onUpgrade: (m, from, to) async {
+      await _createIndexes();
+    },
+    beforeOpen: (details) async {
+      await _createIndexes();
+    },
+  );
 
   Future<void> _createIndexes() async {
     await customStatement(

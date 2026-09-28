@@ -704,6 +704,47 @@ class AppLocalizationsAr extends AppLocalizations {
   String get playerForward10 => 'تقديم 10 ثوانٍ';
 
   @override
+  String get secureConnectionTryAction => 'جرّب الاتصال الآمن';
+
+  @override
+  String get secureConnectionWarpRequired => 'تطبيق Cloudflare WARP مطلوب';
+
+  @override
+  String get secureConnectionInstallBody =>
+      'يستخدم الاتصال الآمن تطبيق Cloudflare WARP المجاني، وهو خدمة شبكة مستقلة من جهة خارجية. ثبّته مرة واحدة ثم ارجع إلى HOPE. تنطبق شروط وسياسة خصوصية Cloudflare.';
+
+  @override
+  String get secureConnectionInstallAction => 'تثبيت WARP';
+
+  @override
+  String get secureConnectionAlmostReady => 'أوشكنا على الانتهاء';
+
+  @override
+  String get secureConnectionEnableBody =>
+      'فعّل WARP ثم ارجع إلى HOPE. سنختبر الاتصال ونستأنف البث تلقائياً.';
+
+  @override
+  String get secureConnectionOpenWarp => 'فتح WARP';
+
+  @override
+  String get secureConnectionCheckingTitle => 'جارٍ فحص الاتصال';
+
+  @override
+  String get secureConnectionCheckingBody =>
+      'يتحقق HOPE مما إذا كان المسار الآمن يستطيع الوصول إلى البث.';
+
+  @override
+  String get secureConnectionFailedTitle =>
+      'تعذر على الاتصال الآمن استعادة هذا البث';
+
+  @override
+  String get secureConnectionFailedBody =>
+      'يمكنك اختبار المسار مرة أخرى أو المتابعة بدون الاتصال الآمن.';
+
+  @override
+  String get secureConnectionReady => 'الاتصال الآمن جاهز';
+
+  @override
   String historyResumeAt(String time) {
     return 'استئناف عند $time';
   }

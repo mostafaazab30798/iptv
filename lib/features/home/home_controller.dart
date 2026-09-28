@@ -180,11 +180,25 @@ class HomeController extends StateNotifier<HomeState> {
   final LiveScoreSource? _liveScores;
   final KidsAllowedContent _allowedContent;
 
-  bool _isFetching = false;
+  Future<void>? _loadOperation;
   bool _matchHeroResolved = false;
   List<Movie>? _pendingHeroMovies;
 
-  Future<void> loadData({bool forceRefresh = false}) async {
+  Future<void> loadData({bool forceRefresh = false}) {
+    final active = _loadOperation;
+    if (active != null) return active;
+
+    late final Future<void> operation;
+    operation = _loadData(forceRefresh: forceRefresh).whenComplete(() {
+      if (identical(_loadOperation, operation)) {
+        _loadOperation = null;
+      }
+    });
+    _loadOperation = operation;
+    return operation;
+  }
+
+  Future<void> _loadData({required bool forceRefresh}) async {
     final liveRepo = _liveRepo;
     if (liveRepo == null) {
       // Session / kids-mode gate is not ready yet. Stay in loading so Home
@@ -198,8 +212,6 @@ class HomeController extends StateNotifier<HomeState> {
       }
       return;
     }
-    if (_isFetching && !forceRefresh) return;
-    _isFetching = true;
     _matchHeroResolved = false;
     _pendingHeroMovies = null;
 
@@ -340,8 +352,6 @@ class HomeController extends StateNotifier<HomeState> {
       if (mounted) {
         state = state.copyWith(isLoading: false, error: e.toString());
       }
-    } finally {
-      _isFetching = false;
     }
   }
 
@@ -947,36 +957,35 @@ class HomeController extends StateNotifier<HomeState> {
   }
 }
 
-final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>(
-  (ref) {
-    final liveRepo = ref.watch(liveRepositoryProvider);
-    final vodRepo = ref.watch(vodRepositoryProvider);
-    final seriesRepo = ref.watch(seriesRepositoryProvider);
-    final favoritesRepo = ref.watch(favoritesRepositoryProvider);
-    final historyRepo = ref.watch(historyRepositoryProvider);
-    final kidsMode = ref.watch(
-      kidsModeProvider.select(
-        (state) =>
-            (isInitialized: state.isInitialized, isEnabled: state.isEnabled),
-      ),
-    );
-    // Avoid an unnecessary async provider transition (and a second complete
-    // HomeController load) when Kids Mode is disabled.
-    final allowedContent = !kidsMode.isInitialized
-        ? const KidsAllowedContent.denyAll()
-        : !kidsMode.isEnabled
-        ? const KidsAllowedContent.unrestricted()
-        : ref.watch(kidsAllowedContentProvider).valueOrNull ??
-              const KidsAllowedContent.denyAll();
+final homeControllerProvider =
+    StateNotifierProvider.autoDispose<HomeController, HomeState>((ref) {
+      final liveRepo = ref.watch(liveRepositoryProvider);
+      final vodRepo = ref.watch(vodRepositoryProvider);
+      final seriesRepo = ref.watch(seriesRepositoryProvider);
+      final favoritesRepo = ref.watch(favoritesRepositoryProvider);
+      final historyRepo = ref.watch(historyRepositoryProvider);
+      final kidsMode = ref.watch(
+        kidsModeProvider.select(
+          (state) =>
+              (isInitialized: state.isInitialized, isEnabled: state.isEnabled),
+        ),
+      );
+      // Avoid an unnecessary async provider transition (and a second complete
+      // HomeController load) when Kids Mode is disabled.
+      final allowedContent = !kidsMode.isInitialized
+          ? const KidsAllowedContent.denyAll()
+          : !kidsMode.isEnabled
+          ? const KidsAllowedContent.unrestricted()
+          : ref.watch(kidsAllowedContentProvider).valueOrNull ??
+                const KidsAllowedContent.denyAll();
 
-    return HomeController(
-      liveRepo: liveRepo,
-      vodRepo: vodRepo,
-      seriesRepo: seriesRepo,
-      favoritesRepo: favoritesRepo,
-      historyRepo: historyRepo,
-      liveScores: ref.watch(liveScoreSourceProvider),
-      allowedContent: allowedContent,
-    );
-  },
-);
+      return HomeController(
+        liveRepo: liveRepo,
+        vodRepo: vodRepo,
+        seriesRepo: seriesRepo,
+        favoritesRepo: favoritesRepo,
+        historyRepo: historyRepo,
+        liveScores: ref.watch(liveScoreSourceProvider),
+        allowedContent: allowedContent,
+      );
+    });

@@ -1328,6 +1328,78 @@ abstract class AppLocalizations {
   /// **'Forward 10s'**
   String get playerForward10;
 
+  /// No description provided for @secureConnectionTryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Try Secure Connection'**
+  String get secureConnectionTryAction;
+
+  /// No description provided for @secureConnectionWarpRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloudflare WARP required'**
+  String get secureConnectionWarpRequired;
+
+  /// No description provided for @secureConnectionInstallBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure Connection uses the free Cloudflare WARP app, a separate third-party network service. Install it once, then return to HOPE. Cloudflare\'s terms and privacy policy apply.'**
+  String get secureConnectionInstallBody;
+
+  /// No description provided for @secureConnectionInstallAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Install WARP'**
+  String get secureConnectionInstallAction;
+
+  /// No description provided for @secureConnectionAlmostReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost ready'**
+  String get secureConnectionAlmostReady;
+
+  /// No description provided for @secureConnectionEnableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on WARP, then return to HOPE. We\'ll test the connection and resume your stream automatically.'**
+  String get secureConnectionEnableBody;
+
+  /// No description provided for @secureConnectionOpenWarp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open WARP'**
+  String get secureConnectionOpenWarp;
+
+  /// No description provided for @secureConnectionCheckingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking connection'**
+  String get secureConnectionCheckingTitle;
+
+  /// No description provided for @secureConnectionCheckingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'HOPE is checking whether the secure route can reach your stream.'**
+  String get secureConnectionCheckingBody;
+
+  /// No description provided for @secureConnectionFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure Connection could not restore this stream'**
+  String get secureConnectionFailedTitle;
+
+  /// No description provided for @secureConnectionFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You can test the route again or continue without Secure Connection.'**
+  String get secureConnectionFailedBody;
+
+  /// No description provided for @secureConnectionReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure Connection ready'**
+  String get secureConnectionReady;
+
   /// No description provided for @historyResumeAt.
   ///
   /// In en, this message translates to:

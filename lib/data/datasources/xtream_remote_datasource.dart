@@ -26,7 +26,7 @@ class XtreamRemoteDataSource {
           .map(Map<String, dynamic>.from)
           .toList();
     } catch (_) {
-      return [];
+      rethrow;
     }
   }
 
@@ -47,7 +47,7 @@ class XtreamRemoteDataSource {
           .map(Map<String, dynamic>.from)
           .toList();
     } catch (_) {
-      return [];
+      rethrow;
     }
   }
 
@@ -63,7 +63,7 @@ class XtreamRemoteDataSource {
           .map(Map<String, dynamic>.from)
           .toList();
     } catch (_) {
-      return [];
+      rethrow;
     }
   }
 
@@ -84,7 +84,7 @@ class XtreamRemoteDataSource {
           .map(Map<String, dynamic>.from)
           .toList();
     } catch (_) {
-      return [];
+      rethrow;
     }
   }
 
@@ -100,7 +100,7 @@ class XtreamRemoteDataSource {
           .map(Map<String, dynamic>.from)
           .toList();
     } catch (_) {
-      return [];
+      rethrow;
     }
   }
 
@@ -121,7 +121,7 @@ class XtreamRemoteDataSource {
           .map(Map<String, dynamic>.from)
           .toList();
     } catch (_) {
-      return [];
+      rethrow;
     }
   }
 
@@ -185,7 +185,7 @@ class XtreamRemoteDataSource {
       );
       return res;
     } catch (_) {
-      return {};
+      rethrow;
     }
   }
 
@@ -201,7 +201,7 @@ class XtreamRemoteDataSource {
       );
       return res;
     } catch (_) {
-      return {};
+      rethrow;
     }
   }
 

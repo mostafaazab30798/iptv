@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show compute, kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:iptv/core/logging/app_logger.dart';
+import 'package:iptv/core/storage/database/app_database.dart' as db;
 import 'package:iptv/data/mappers/data_mapper.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/domain/entities/channel.dart';
@@ -16,6 +17,30 @@ class LocalCatalogCache {
   static final LocalCatalogCache instance = LocalCatalogCache._();
 
   String? _cacheDirPath;
+  db.AppDatabase? _database;
+
+  /// Provides the application database used as the persistent web cache.
+  /// Native platforms retain their background-isolate JSON file cache.
+  void attachDatabase(db.AppDatabase database) => _database = database;
+
+  Future<String?> _loadWebValue(String key) async {
+    final database = _database;
+    if (database == null) return null;
+    final row = await (database.select(
+      database.appSettings,
+    )..where((table) => table.key.equals(key))).getSingleOrNull();
+    return row?.value;
+  }
+
+  Future<void> _saveWebValue(String key, String value) async {
+    final database = _database;
+    if (database == null) return;
+    await database
+        .into(database.appSettings)
+        .insertOnConflictUpdate(
+          db.AppSettingsCompanion.insert(key: key, value: value),
+        );
+  }
 
   Future<String?> _getDirPath() async {
     if (kIsWeb) return null;
@@ -39,8 +64,12 @@ class LocalCatalogCache {
   // ---------------------------------------------------------------------------
 
   Future<List<Channel>?> loadChannels() async {
-    if (kIsWeb) return null;
     try {
+      if (kIsWeb) {
+        final content = await _loadWebValue('catalog:channels');
+        if (content == null || content.isEmpty) return null;
+        return await compute(_decodeAndMapChannels, content);
+      }
       final dir = await _getDirPath();
       if (dir == null) return null;
       final file = File('$dir/channels.json');
@@ -57,8 +86,12 @@ class LocalCatalogCache {
   }
 
   Future<void> saveChannels(List<Map<String, dynamic>> rawList) async {
-    if (kIsWeb || rawList.isEmpty) return;
+    if (rawList.isEmpty) return;
     try {
+      if (kIsWeb) {
+        await _saveWebValue('catalog:channels', jsonEncode(rawList));
+        return;
+      }
       final dir = await _getDirPath();
       if (dir == null) return;
       final file = File('$dir/channels.json');
@@ -74,8 +107,12 @@ class LocalCatalogCache {
   // ---------------------------------------------------------------------------
 
   Future<List<Movie>?> loadMovies() async {
-    if (kIsWeb) return null;
     try {
+      if (kIsWeb) {
+        final content = await _loadWebValue('catalog:movies');
+        if (content == null || content.isEmpty) return null;
+        return await compute(_decodeAndMapMovies, content);
+      }
       final dir = await _getDirPath();
       if (dir == null) return null;
       final file = File('$dir/movies.json');
@@ -92,8 +129,12 @@ class LocalCatalogCache {
   }
 
   Future<void> saveMovies(List<Map<String, dynamic>> rawList) async {
-    if (kIsWeb || rawList.isEmpty) return;
+    if (rawList.isEmpty) return;
     try {
+      if (kIsWeb) {
+        await _saveWebValue('catalog:movies', jsonEncode(rawList));
+        return;
+      }
       final dir = await _getDirPath();
       if (dir == null) return;
       final file = File('$dir/movies.json');
@@ -109,8 +150,12 @@ class LocalCatalogCache {
   // ---------------------------------------------------------------------------
 
   Future<List<Series>?> loadSeries() async {
-    if (kIsWeb) return null;
     try {
+      if (kIsWeb) {
+        final content = await _loadWebValue('catalog:series');
+        if (content == null || content.isEmpty) return null;
+        return await compute(_decodeAndMapSeries, content);
+      }
       final dir = await _getDirPath();
       if (dir == null) return null;
       final file = File('$dir/series.json');
@@ -127,8 +172,12 @@ class LocalCatalogCache {
   }
 
   Future<void> saveSeries(List<Map<String, dynamic>> rawList) async {
-    if (kIsWeb || rawList.isEmpty) return;
+    if (rawList.isEmpty) return;
     try {
+      if (kIsWeb) {
+        await _saveWebValue('catalog:series', jsonEncode(rawList));
+        return;
+      }
       final dir = await _getDirPath();
       if (dir == null) return;
       final file = File('$dir/series.json');
@@ -143,9 +192,16 @@ class LocalCatalogCache {
   // Categories
   // ---------------------------------------------------------------------------
 
-  Future<List<Category>?> loadCategories(String typeKey, CategoryType type) async {
-    if (kIsWeb) return null;
+  Future<List<Category>?> loadCategories(
+    String typeKey,
+    CategoryType type,
+  ) async {
     try {
+      if (kIsWeb) {
+        final content = await _loadWebValue('catalog:categories:$typeKey');
+        if (content == null || content.isEmpty) return null;
+        return await compute(_decodeAndMapCategories, (content, type.index));
+      }
       final dir = await _getDirPath();
       if (dir == null) return null;
       final file = File('$dir/categories_$typeKey.json');
@@ -156,27 +212,56 @@ class LocalCatalogCache {
 
       return await compute(_decodeAndMapCategories, (content, type.index));
     } catch (e) {
-      AppLogger.error('Failed to load cached categories ($typeKey): $e', feature: 'cache');
+      AppLogger.error(
+        'Failed to load cached categories ($typeKey): $e',
+        feature: 'cache',
+      );
       return null;
     }
   }
 
-  Future<void> saveCategories(String typeKey, List<Map<String, dynamic>> rawList) async {
-    if (kIsWeb || rawList.isEmpty) return;
+  Future<void> saveCategories(
+    String typeKey,
+    List<Map<String, dynamic>> rawList,
+  ) async {
+    if (rawList.isEmpty) return;
     try {
+      if (kIsWeb) {
+        await _saveWebValue('catalog:categories:$typeKey', jsonEncode(rawList));
+        return;
+      }
       final dir = await _getDirPath();
       if (dir == null) return;
       final file = File('$dir/categories_$typeKey.json');
       final jsonStr = await compute(_encodeJson, rawList);
       await file.writeAsString(jsonStr, flush: true);
     } catch (e) {
-      AppLogger.error('Failed to save categories cache ($typeKey): $e', feature: 'cache');
+      AppLogger.error(
+        'Failed to save categories cache ($typeKey): $e',
+        feature: 'cache',
+      );
     }
   }
 
   Future<void> clearAll() async {
-    if (kIsWeb) return;
     try {
+      if (kIsWeb) {
+        final database = _database;
+        if (database != null) {
+          await (database.delete(database.appSettings)..where(
+                (table) => table.key.isIn(const [
+                  'catalog:channels',
+                  'catalog:movies',
+                  'catalog:series',
+                  'catalog:categories:live',
+                  'catalog:categories:vod',
+                  'catalog:categories:series',
+                ]),
+              ))
+              .go();
+        }
+        return;
+      }
       final dir = await _getDirPath();
       if (dir == null) return;
       final cacheDir = Directory(dir);
@@ -232,7 +317,10 @@ List<Category> _decodeAndMapCategories((String jsonStr, int typeIndex) args) {
   if (decoded is List) {
     return decoded
         .whereType<Map<dynamic, dynamic>>()
-        .map((m) => DataMapper.categoryFromJson(Map<String, dynamic>.from(m), type))
+        .map(
+          (m) =>
+              DataMapper.categoryFromJson(Map<String, dynamic>.from(m), type),
+        )
         .toList();
   }
   return [];

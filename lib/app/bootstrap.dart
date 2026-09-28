@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:iptv/app/app.dart';
 import 'package:iptv/core/logging/app_logger.dart';
+import 'package:iptv/core/cache/local_catalog_cache.dart';
 import 'package:iptv/core/platform/device_memory.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/core/storage/database/app_database.dart';
@@ -129,6 +130,7 @@ Future<void> bootstrap() async {
 
   // Open database — isolated so crash is caught before UI renders.
   final db = AppDatabase();
+  LocalCatalogCache.instance.attachDatabase(db);
   AppLogger.info('Database opened', feature: 'bootstrap');
 
   AppLogger.info('Launching Flutter UI', feature: 'bootstrap');

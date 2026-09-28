@@ -840,7 +840,7 @@ class _CompanionScannerModalState extends ConsumerState<CompanionScannerModal>
               children: [
                 MobileScanner(
                   controller: _cameraController,
-                  errorBuilder: (context, error, child) {
+                  errorBuilder: (context, error) {
                     final isPermDenied =
                         error.errorCode == MobileScannerErrorCode.permissionDenied;
                     return Container(

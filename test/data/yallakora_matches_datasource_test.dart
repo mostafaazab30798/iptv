@@ -33,283 +33,319 @@ void main() {
       );
     });
 
-    test('successfully fetches and parses matches from matches.hope-tv.site', () async {
-      final requestedUrls = <String>[];
-      final dio = Dio();
-      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-        requestedUrls.add(options.uri.toString());
-        final sampleJson = jsonEncode([
-          {
-            'league': 'الدوري الإنجليزي',
-            'team_home': 'ليفربول',
-            'team_away': 'مانشستر سيتي',
-            'logo_home': 'https://example.com/liv.png',
-            'logo_away': 'https://example.com/city.png',
-            'score_home': '2',
-            'score_away': '1',
-            'time': '18:30',
-            'status': 'جارية',
-            'channel': 'beIN Sports 1 HD',
-          }
-        ]);
-
-        return ResponseBody.fromString(
-          sampleJson,
-          200,
-          headers: {
-            Headers.contentTypeHeader: [Headers.jsonContentType],
-          },
-        );
-      });
-
-      final dataSource = YallakoraMatchesDataSource(
-        dio: dio,
-        fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
-      );
-      final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
-
-      expect(matches, hasLength(1));
-      expect(matches.first.teamHome, 'ليفربول');
-      expect(matches.first.teamAway, 'مانشستر سيتي');
-      expect(requestedUrls.first, 'https://matches.hope-tv.site/matches.json');
-
-      final fixtures = await dataSource.fetchLiveBigMatches();
-      expect(fixtures, hasLength(1));
-      expect(fixtures.first.homeName, 'ليفربول');
-    });
-
-    test('falls back to raw GitHub when candidate returns placeholder Hello world', () async {
-      final requestedUrls = <String>[];
-      final dio = Dio();
-      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-        final url = options.uri.toString();
-        requestedUrls.add(url);
-
-        if (url.contains('matches.hope-tv.site')) {
-          // Emulate initial "Hello world" response
-          return ResponseBody.fromString(
-            'Hello world',
-            200,
-            headers: {
-              Headers.contentTypeHeader: ['text/plain;charset=UTF-8'],
-            },
-          );
-        }
-
-        // GitHub raw fallback succeeds
-        final sampleJson = jsonEncode([
-          {
-            'league': 'دوري أبطال أفريقيا',
-            'team_home': 'الأهلي',
-            'team_away': 'الترجي',
-            'logo_home': 'https://example.com/ahly.png',
-            'logo_away': 'https://example.com/taraji.png',
-            'score_home': '1',
-            'score_away': '0',
-            'time': '21:00',
-            'status': 'جارية',
-            'channel': 'beIN Sports 4 HD',
-          }
-        ]);
-
-        return ResponseBody.fromString(
-          sampleJson,
-          200,
-          headers: {
-            Headers.contentTypeHeader: [Headers.jsonContentType],
-          },
-        );
-      });
-
-      final dataSource = YallakoraMatchesDataSource(
-        dio: dio,
-        fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
-      );
-      final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
-
-      expect(matches, hasLength(1));
-      expect(matches.first.teamHome, 'الأهلي');
-      expect(matches.first.teamAway, 'الترجي');
-      expect(
-        requestedUrls,
-        contains('https://raw.githubusercontent.com/mostafaazab30798/iptv/main/matches.json'),
-      );
-    });
-
-    test('fetchLiveBigMatches filters to tracked big matches and sorts live first', () async {
-      final dio = Dio();
-      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-        final sampleJson = jsonEncode([
-          {
-            'league': 'الدوري المصري',
-            'team_home': 'إيه أس بورت',
-            'team_away': 'الزمالك',
-            'time': '20:00',
-            'status': 'لم تبدأ',
-            'channel': 'ON Sport',
-          },
-          {
-            'league': 'الدوري الإنجليزي',
-            'team_home': 'إيبسويتش تاون',
-            'team_away': 'ليفربول',
-            'time': '22:00',
-            'status': 'لم تبدأ',
-            'channel': 'beIN Sports 2 HD',
-          },
-          {
-            'league': 'الدوري الإسباني',
-            'team_home': 'ريال بيتيس',
-            'team_away': 'ريال مدريد',
-            'time': '22:00',
-            'status': 'لم تبدأ',
-            'channel': 'beIN Sports 3 HD',
-          },
-          {
-            'league': 'دوري أبطال أوروبا',
-            'team_home': 'باريس سان جيرمان',
-            'team_away': 'برشلونة',
-            'time': '21:00',
-            'status': 'جارية',
-            'channel': 'beIN Sports 1 HD',
-          },
-          {
-            'league': 'الدوري الإيطالي',
-            'team_home': 'جنوى',
-            'team_away': 'كومو',
-            'time': '19:30',
-            'status': 'لم تبدأ',
-            'channel': 'AD Sports',
-          },
-        ]);
-
-        return ResponseBody.fromString(
-          sampleJson,
-          200,
-          headers: {
-            Headers.contentTypeHeader: [Headers.jsonContentType],
-          },
-        );
-      });
-
-      final dataSource = YallakoraMatchesDataSource(
-        dio: dio,
-        fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
-      );
-      // Raw list returns all 5
-      final allMatches = await dataSource.fetchTodayMatches(forceRefresh: true);
-      expect(allMatches, hasLength(5));
-
-      // fetchLiveBigMatches filters down to tracked big clubs (Liverpool, Real Madrid, Barcelona, Zamalek - 4 matches)
-      final bigMatches = await dataSource.fetchLiveBigMatches(
-        now: DateTime(2026, 9, 6, 12, 0),
-      );
-      expect(bigMatches, hasLength(4));
-      final names = bigMatches.map((m) => '${m.homeName} vs ${m.awayName}').toList();
-      expect(names, contains('إيبسويتش تاون vs ليفربول'));
-      expect(names, contains('ريال بيتيس vs ريال مدريد'));
-      expect(names, contains('باريس سان جيرمان vs برشلونة'));
-      expect(names, contains('إيه أس بورت vs الزمالك'));
-
-      // Live match (PSG vs Barcelona) sorted first!
-      expect(bigMatches.first.homeName, 'باريس سان جيرمان');
-      expect(bigMatches.first.awayName, 'برشلونة');
-      expect(bigMatches.first.isLive, isTrue);
-    });
-
-    test('skips FotMob network requests entirely when all matches are > 10 minutes away', () async {
-      final requestedUrls = <String>[];
-      final dio = Dio();
-      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-        requestedUrls.add(options.uri.toString());
-        // Match scheduled 8 hours in the future (23:59)
-        final sampleJson = jsonEncode([
-          {
-            'league': 'الدوري الإسباني',
-            'team_home': 'ريال مدريد',
-            'team_away': 'خيتافي',
-            'time': '23:59',
-            'status': 'لم تبدأ',
-            'channel': 'beIN Sports 1',
-          }
-        ]);
-
-        return ResponseBody.fromString(
-          sampleJson,
-          200,
-          headers: {Headers.contentTypeHeader: [Headers.jsonContentType]},
-        );
-      });
-
-      final dataSource = YallakoraMatchesDataSource(
-        dio: dio,
-        fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
-      );
-
-      final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
-      expect(matches, hasLength(1));
-
-      // Notice: Only matches.json was requested! ZERO FotMob URLs requested!
-      expect(requestedUrls.any((url) => url.contains('fotmob')), isFalse);
-    });
-
-    test('invokes FotMob real-time enrichment when match is live or within 10 minutes', () async {
-      final requestedUrls = <String>[];
-      final dio = Dio();
-      dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-        requestedUrls.add(options.uri.toString());
-        if (options.uri.toString().contains('matches.json')) {
+    test(
+      'successfully fetches and parses matches from matches.hope-tv.site',
+      () async {
+        final requestedUrls = <String>[];
+        final dio = Dio();
+        dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+          requestedUrls.add(options.uri.toString());
           final sampleJson = jsonEncode([
             {
               'league': 'الدوري الإنجليزي',
               'team_home': 'ليفربول',
               'team_away': 'مانشستر سيتي',
-              'time': '18:00',
+              'logo_home': 'https://example.com/liv.png',
+              'logo_away': 'https://example.com/city.png',
+              'score_home': '2',
+              'score_away': '1',
+              'time': '18:30',
               'status': 'جارية',
-              'channel': 'beIN Sports 1',
-            }
+              'channel': 'beIN Sports 1 HD',
+            },
           ]);
+
           return ResponseBody.fromString(
             sampleJson,
             200,
-            headers: {Headers.contentTypeHeader: [Headers.jsonContentType]},
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
           );
-        }
-
-        // Fotmob response
-        final fotmobJson = jsonEncode({
-          'leagues': [
-            {
-              'matches': [
-                {
-                  'id': 999,
-                  'home': {'name': 'Liverpool', 'score': 2},
-                  'away': {'name': 'Manchester City', 'score': 0},
-                  'status': {'ongoing': true, 'liveTime': {'short': "35'"}},
-                }
-              ]
-            }
-          ]
         });
-        return ResponseBody.fromString(
-          fotmobJson,
-          200,
-          headers: {Headers.contentTypeHeader: [Headers.jsonContentType]},
+
+        final dataSource = YallakoraMatchesDataSource(
+          dio: dio,
+          fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
         );
-      });
+        final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
 
-      final dataSource = YallakoraMatchesDataSource(
-        dio: dio,
-        fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
-      );
+        expect(matches, hasLength(1));
+        expect(matches.first.teamHome, 'ليفربول');
+        expect(matches.first.teamAway, 'مانشستر سيتي');
+        expect(
+          requestedUrls.first,
+          'https://matches.hope-tv.site/matches.json',
+        );
 
-      final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
-      expect(matches, hasLength(1));
+        final fixtures = await dataSource.fetchLiveBigMatches();
+        expect(fixtures, hasLength(1));
+        expect(fixtures.first.homeName, 'ليفربول');
+      },
+    );
 
-      // FotMob WAS contacted because match is live!
-      expect(requestedUrls.any((url) => url.contains('fotmob')), isTrue);
-      expect(matches.first.scoreHome, '2');
-      expect(matches.first.scoreAway, '0');
-      expect(matches.first.status, "35'");
-    });
+    test(
+      'falls back to raw GitHub when candidate returns placeholder Hello world',
+      () async {
+        final requestedUrls = <String>[];
+        final dio = Dio();
+        dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+          final url = options.uri.toString();
+          requestedUrls.add(url);
+
+          if (url.contains('matches.hope-tv.site')) {
+            // Emulate initial "Hello world" response
+            return ResponseBody.fromString(
+              'Hello world',
+              200,
+              headers: {
+                Headers.contentTypeHeader: ['text/plain;charset=UTF-8'],
+              },
+            );
+          }
+
+          // GitHub raw fallback succeeds
+          final sampleJson = jsonEncode([
+            {
+              'league': 'دوري أبطال أفريقيا',
+              'team_home': 'الأهلي',
+              'team_away': 'الترجي',
+              'logo_home': 'https://example.com/ahly.png',
+              'logo_away': 'https://example.com/taraji.png',
+              'score_home': '1',
+              'score_away': '0',
+              'time': '21:00',
+              'status': 'جارية',
+              'channel': 'beIN Sports 4 HD',
+            },
+          ]);
+
+          return ResponseBody.fromString(
+            sampleJson,
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        });
+
+        final dataSource = YallakoraMatchesDataSource(
+          dio: dio,
+          fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
+        );
+        final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
+
+        expect(matches, hasLength(1));
+        expect(matches.first.teamHome, 'الأهلي');
+        expect(matches.first.teamAway, 'الترجي');
+        expect(
+          requestedUrls,
+          contains(
+            'https://raw.githubusercontent.com/mostafaazab30798/iptv/main/matches.json',
+          ),
+        );
+      },
+    );
+
+    test(
+      'fetchLiveBigMatches filters to tracked big matches and sorts live first',
+      () async {
+        final dio = Dio();
+        dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+          final sampleJson = jsonEncode([
+            {
+              'league': 'الدوري المصري',
+              'team_home': 'إيه أس بورت',
+              'team_away': 'الزمالك',
+              'time': '20:00',
+              'status': 'لم تبدأ',
+              'channel': 'ON Sport',
+            },
+            {
+              'league': 'الدوري الإنجليزي',
+              'team_home': 'إيبسويتش تاون',
+              'team_away': 'ليفربول',
+              'time': '22:00',
+              'status': 'لم تبدأ',
+              'channel': 'beIN Sports 2 HD',
+            },
+            {
+              'league': 'الدوري الإسباني',
+              'team_home': 'ريال بيتيس',
+              'team_away': 'ريال مدريد',
+              'time': '22:00',
+              'status': 'لم تبدأ',
+              'channel': 'beIN Sports 3 HD',
+            },
+            {
+              'league': 'دوري أبطال أوروبا',
+              'team_home': 'باريس سان جيرمان',
+              'team_away': 'برشلونة',
+              'time': '21:00',
+              'status': 'جارية',
+              'channel': 'beIN Sports 1 HD',
+            },
+            {
+              'league': 'الدوري الإيطالي',
+              'team_home': 'جنوى',
+              'team_away': 'كومو',
+              'time': '19:30',
+              'status': 'لم تبدأ',
+              'channel': 'AD Sports',
+            },
+          ]);
+
+          return ResponseBody.fromString(
+            sampleJson,
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        });
+
+        final dataSource = YallakoraMatchesDataSource(
+          dio: dio,
+          fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
+        );
+        // Raw list returns all 5
+        final allMatches = await dataSource.fetchTodayMatches(
+          forceRefresh: true,
+        );
+        expect(allMatches, hasLength(5));
+
+        // fetchLiveBigMatches filters down to tracked big clubs (Liverpool, Real Madrid, Barcelona, Zamalek - 4 matches)
+        final bigMatches = await dataSource.fetchLiveBigMatches(
+          now: DateTime(2026, 9, 6, 12, 0),
+        );
+        expect(bigMatches, hasLength(4));
+        final names = bigMatches
+            .map((m) => '${m.homeName} vs ${m.awayName}')
+            .toList();
+        expect(names, contains('إيبسويتش تاون vs ليفربول'));
+        expect(names, contains('ريال بيتيس vs ريال مدريد'));
+        expect(names, contains('باريس سان جيرمان vs برشلونة'));
+        expect(names, contains('إيه أس بورت vs الزمالك'));
+
+        // Live match (PSG vs Barcelona) sorted first!
+        expect(bigMatches.first.homeName, 'باريس سان جيرمان');
+        expect(bigMatches.first.awayName, 'برشلونة');
+        expect(bigMatches.first.isLive, isTrue);
+      },
+    );
+
+    test(
+      'skips FotMob network requests entirely when all matches are > 10 minutes away',
+      () async {
+        final requestedUrls = <String>[];
+        final dio = Dio();
+        dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+          requestedUrls.add(options.uri.toString());
+          // Match scheduled 8 hours in the future (23:59)
+          final sampleJson = jsonEncode([
+            {
+              'league': 'الدوري الإسباني',
+              'team_home': 'ريال مدريد',
+              'team_away': 'خيتافي',
+              'time': '23:59',
+              'status': 'لم تبدأ',
+              'channel': 'beIN Sports 1',
+            },
+          ]);
+
+          return ResponseBody.fromString(
+            sampleJson,
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        });
+
+        final dataSource = YallakoraMatchesDataSource(
+          dio: dio,
+          fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
+        );
+
+        final matches = await dataSource.fetchTodayMatches(
+          forceRefresh: true,
+          now: DateTime(2026, 9, 28, 12),
+        );
+        expect(matches, hasLength(1));
+
+        // Notice: Only matches.json was requested! ZERO FotMob URLs requested!
+        expect(requestedUrls.any((url) => url.contains('fotmob')), isFalse);
+      },
+    );
+
+    test(
+      'invokes FotMob real-time enrichment when match is live or within 10 minutes',
+      () async {
+        final requestedUrls = <String>[];
+        final dio = Dio();
+        dio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
+          requestedUrls.add(options.uri.toString());
+          if (options.uri.toString().contains('matches.json')) {
+            final sampleJson = jsonEncode([
+              {
+                'league': 'الدوري الإنجليزي',
+                'team_home': 'ليفربول',
+                'team_away': 'مانشستر سيتي',
+                'time': '18:00',
+                'status': 'جارية',
+                'channel': 'beIN Sports 1',
+              },
+            ]);
+            return ResponseBody.fromString(
+              sampleJson,
+              200,
+              headers: {
+                Headers.contentTypeHeader: [Headers.jsonContentType],
+              },
+            );
+          }
+
+          // Fotmob response
+          final fotmobJson = jsonEncode({
+            'leagues': [
+              {
+                'matches': [
+                  {
+                    'id': 999,
+                    'home': {'name': 'Liverpool', 'score': 2},
+                    'away': {'name': 'Manchester City', 'score': 0},
+                    'status': {
+                      'ongoing': true,
+                      'liveTime': {'short': "35'"},
+                    },
+                  },
+                ],
+              },
+            ],
+          });
+          return ResponseBody.fromString(
+            fotmobJson,
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        });
+
+        final dataSource = YallakoraMatchesDataSource(
+          dio: dio,
+          fotmobDataSource: FotmobRealtimeDataSource(dio: dio),
+        );
+
+        final matches = await dataSource.fetchTodayMatches(forceRefresh: true);
+        expect(matches, hasLength(1));
+
+        // FotMob WAS contacted because match is live!
+        expect(requestedUrls.any((url) => url.contains('fotmob')), isTrue);
+        expect(matches.first.scoreHome, '2');
+        expect(matches.first.scoreAway, '0');
+        expect(matches.first.status, "35'");
+      },
+    );
   });
 }

@@ -30,8 +30,37 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration)
-      ..repeat();
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant Shimmer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.duration != widget.duration) {
+      _controller.duration = widget.duration;
+    }
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    final shouldAnimate =
+        widget.enabled &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        !DeviceMemory.isLowRamDevice &&
+        TickerMode.valuesOf(context).enabled;
+    if (shouldAnimate) {
+      if (!_controller.isAnimating) {
+        _controller.repeat();
+      }
+    } else if (_controller.isAnimating) {
+      _controller.stop();
+    }
   }
 
   @override
@@ -43,7 +72,10 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    if (!widget.enabled || reduceMotion || DeviceMemory.isLowRamDevice) {
+    if (!widget.enabled ||
+        reduceMotion ||
+        DeviceMemory.isLowRamDevice ||
+        !TickerMode.valuesOf(context).enabled) {
       return widget.child;
     }
 

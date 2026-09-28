@@ -296,6 +296,19 @@
   "playerReplay10": "Replay 10s",
   "playerForward10": "Forward 10s",
 
+  "secureConnectionTryAction": "Try Secure Connection",
+  "secureConnectionWarpRequired": "Cloudflare WARP required",
+  "secureConnectionInstallBody": "Secure Connection uses the free Cloudflare WARP app, a separate third-party network service. Install it once, then return to HOPE. Cloudflare's terms and privacy policy apply.",
+  "secureConnectionInstallAction": "Install WARP",
+  "secureConnectionAlmostReady": "Almost ready",
+  "secureConnectionEnableBody": "Turn on WARP, then return to HOPE. We'll test the connection and resume your stream automatically.",
+  "secureConnectionOpenWarp": "Open WARP",
+  "secureConnectionCheckingTitle": "Checking connection",
+  "secureConnectionCheckingBody": "HOPE is checking whether the secure route can reach your stream.",
+  "secureConnectionFailedTitle": "Secure Connection could not restore this stream",
+  "secureConnectionFailedBody": "You can test the route again or continue without Secure Connection.",
+  "secureConnectionReady": "Secure Connection ready",
+
   "historyResumeAt": "Resume at {time}",
   "@historyResumeAt": {
     "placeholders": {

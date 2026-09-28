@@ -276,6 +276,19 @@
   "playerReplay10": "إرجاع 10 ثوانٍ",
   "playerForward10": "تقديم 10 ثوانٍ",
 
+  "secureConnectionTryAction": "جرّب الاتصال الآمن",
+  "secureConnectionWarpRequired": "تطبيق Cloudflare WARP مطلوب",
+  "secureConnectionInstallBody": "يستخدم الاتصال الآمن تطبيق Cloudflare WARP المجاني، وهو خدمة شبكة مستقلة من جهة خارجية. ثبّته مرة واحدة ثم ارجع إلى HOPE. تنطبق شروط وسياسة خصوصية Cloudflare.",
+  "secureConnectionInstallAction": "تثبيت WARP",
+  "secureConnectionAlmostReady": "أوشكنا على الانتهاء",
+  "secureConnectionEnableBody": "فعّل WARP ثم ارجع إلى HOPE. سنختبر الاتصال ونستأنف البث تلقائياً.",
+  "secureConnectionOpenWarp": "فتح WARP",
+  "secureConnectionCheckingTitle": "جارٍ فحص الاتصال",
+  "secureConnectionCheckingBody": "يتحقق HOPE مما إذا كان المسار الآمن يستطيع الوصول إلى البث.",
+  "secureConnectionFailedTitle": "تعذر على الاتصال الآمن استعادة هذا البث",
+  "secureConnectionFailedBody": "يمكنك اختبار المسار مرة أخرى أو المتابعة بدون الاتصال الآمن.",
+  "secureConnectionReady": "الاتصال الآمن جاهز",
+
   "historyResumeAt": "استئناف عند {time}",
   "@historyResumeAt": {
     "placeholders": {

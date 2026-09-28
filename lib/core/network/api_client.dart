@@ -37,7 +37,10 @@ class ApiClient {
             ApiConstants.userAgentHeader: ApiConstants.defaultUserAgent,
         },
         followRedirects: true,
-        validateStatus: (status) => status != null && status < 500,
+        // Let Dio surface every non-success response so authentication and
+        // server failures cannot be mistaken for valid JSON payloads.
+        validateStatus: (status) =>
+            status != null && status >= 200 && status < 300,
       ),
     )..interceptors.add(AuthInterceptor(config));
   }
@@ -66,7 +69,8 @@ class ApiClient {
         );
         return await _parse<T>(response.data, fromJson);
       } on DioException catch (e) {
-        final canRetry = attempt < retries &&
+        final canRetry =
+            attempt < retries &&
             e.type != DioExceptionType.cancel &&
             (e.type == DioExceptionType.connectionError ||
                 e.type == DioExceptionType.connectionTimeout ||
@@ -137,9 +141,13 @@ class ApiClient {
 
     // Prefer bytes → isolate decode for large Xtream payloads (cuts String peak RAM).
     if (data is Uint8List || data is List<int>) {
-      final bytes = data is Uint8List ? data : Uint8List.fromList(data as List<int>);
+      final bytes = data is Uint8List
+          ? data
+          : Uint8List.fromList(data as List<int>);
       if (bytes.isEmpty) {
-        data = (T == List || T.toString().startsWith('List<')) ? <dynamic>[] : <String, dynamic>{};
+        data = (T == List || T.toString().startsWith('List<'))
+            ? <dynamic>[]
+            : <String, dynamic>{};
       } else {
         try {
           if (bytes.length > 50000) {
@@ -149,8 +157,14 @@ class ApiClient {
           }
         } catch (e) {
           if (kDebugMode) {
-            final preview = utf8.decode(bytes.take(100).toList(), allowMalformed: true);
-            dev.log('JSON decode failed: $e. Raw preview: $preview', name: 'ApiClient');
+            final preview = utf8.decode(
+              bytes.take(100).toList(),
+              allowMalformed: true,
+            );
+            dev.log(
+              'JSON decode failed: $e. Raw preview: $preview',
+              name: 'ApiClient',
+            );
           }
         }
       }
@@ -158,7 +172,9 @@ class ApiClient {
       // Decode plain text if returned as String (legacy / interceptor path)
       final trimmed = data.trim();
       if (trimmed.isEmpty) {
-        data = (T == List || T.toString().startsWith('List<')) ? <dynamic>[] : <String, dynamic>{};
+        data = (T == List || T.toString().startsWith('List<'))
+            ? <dynamic>[]
+            : <String, dynamic>{};
       } else if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
           // Use a background isolate for large payloads (>50KB) to avoid blocking frame
@@ -170,7 +186,10 @@ class ApiClient {
           }
         } catch (e) {
           if (kDebugMode) {
-            dev.log('JSON decode failed: $e. Raw preview: ${trimmed.take(100)}', name: 'ApiClient');
+            dev.log(
+              'JSON decode failed: $e. Raw preview: ${trimmed.take(100)}',
+              name: 'ApiClient',
+            );
           }
         }
       }
@@ -207,7 +226,9 @@ class ApiClient {
     }
 
     throw ApiException(
-      ParsingError(message: 'Unexpected response type: ${data.runtimeType} (expected $T)'),
+      ParsingError(
+        message: 'Unexpected response type: ${data.runtimeType} (expected $T)',
+      ),
     );
   }
 
@@ -215,34 +236,43 @@ class ApiClient {
     return switch (e.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout =>
-        TimeoutError(message: 'Connection timed out. Check your server address and port.', cause: e),
+      DioExceptionType.receiveTimeout => TimeoutError(
+        message: 'Connection timed out. Check your server address and port.',
+        cause: e,
+      ),
       DioExceptionType.badResponse => _translateStatusCode(
-          e.response?.statusCode ?? 0, e),
-      DioExceptionType.cancel =>
-        NetworkError(message: 'Request cancelled', cause: e),
-      DioExceptionType.connectionError =>
-        NetworkError(
-          message: e.error != null
-              ? 'Could not connect to server: ${e.error}'
-              : 'Could not connect to server. Check server address, port, or internet connection.',
-          cause: e,
-        ),
+        e.response?.statusCode ?? 0,
+        e,
+      ),
+      DioExceptionType.cancel => NetworkError(
+        message: 'Request cancelled',
+        cause: e,
+      ),
+      DioExceptionType.connectionError => NetworkError(
+        message: e.error != null
+            ? 'Could not connect to server: ${e.error}'
+            : 'Could not connect to server. Check server address, port, or internet connection.',
+        cause: e,
+      ),
       _ => NetworkError(
-          message: e.message ?? e.error?.toString() ?? 'Network connection error',
-          cause: e,
-        ),
+        message: e.message ?? e.error?.toString() ?? 'Network connection error',
+        cause: e,
+      ),
     };
   }
 
   AppError _translateStatusCode(int code, DioException e) {
     return switch (code) {
-      401 || 403 =>
-        AuthenticationError(message: 'Invalid username or password.', cause: e),
-      >= 500 =>
-        ServerError(message: 'Server error ($code). Server may be offline.', statusCode: code, cause: e),
-      _ =>
-        NetworkError(message: 'HTTP $code error', cause: e),
+      401 || 403 => AuthenticationError(
+        message: 'Invalid username or password.',
+        cause: e,
+      ),
+      >= 500 => ServerError(
+        message: 'Server error ($code). Server may be offline.',
+        statusCode: code,
+        cause: e,
+      ),
+      _ => NetworkError(message: 'HTTP $code error', cause: e),
     };
   }
 }
@@ -256,4 +286,3 @@ extension on String {
 Object? _decodeJson(String source) => jsonDecode(source);
 
 Object? _decodeJsonBytes(Uint8List bytes) => jsonDecode(utf8.decode(bytes));
-

@@ -83,6 +83,7 @@ class PlatformService {
   bool get supportsFullscreen => isWindows || isWeb;
   bool get supportsPip => isAndroid || isWindows;
   bool get supportsNativePlayer => isAndroid || isWindows;
+  bool get supportsHandoffHosting => isAndroid || isWindows;
   bool get supportsMouse => isWindows || isWeb;
 
   Future<void> minimizeWindow() => plat.minimizePlatformWindow();

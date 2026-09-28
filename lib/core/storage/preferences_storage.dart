@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv/core/logging/app_logger.dart';
 
@@ -22,6 +22,9 @@ class PreferencesStorage {
   }
 
   static bool get isInitialized => _instance != null;
+
+  @visibleForTesting
+  static void resetForTesting() => _instance = null;
 
   static PreferencesStorage? get maybeInstance => _instance;
 
@@ -50,6 +53,11 @@ class PreferencesStorage {
   static const String _keyAuthPasswordEnc = 'auth_password_enc';
   static const String _keyAuthServerExpiresAt = 'auth_server_expires_at';
   static const String _keyPendingOtpEmail = 'pending_otp_email';
+  static const String _keySecureConnectionEnabledByUser =
+      'secure_connection_enabled_by_user';
+  static const String _keyWarpSetupCompleted = 'warp_setup_completed';
+  static const String _keyLastSuccessfulSecureRoute =
+      'last_successful_secure_route';
 
   // ---------------------------------------------------------------------------
   // Auth identity (non-sensitive) — password must never be stored here.
@@ -148,6 +156,25 @@ class PreferencesStorage {
       (_prefs.getInt(_keyPlayerAspectRatio) ?? 0).clamp(0, 4);
   Future<void> setPlayerAspectRatio(int index) =>
       _prefs.setInt(_keyPlayerAspectRatio, index.clamp(0, 4));
+
+  // ---------------------------------------------------------------------------
+  // Secure Connection
+  // ---------------------------------------------------------------------------
+
+  bool get secureConnectionEnabledByUser =>
+      _prefs.getBool(_keySecureConnectionEnabledByUser) ?? false;
+  Future<void> setSecureConnectionEnabledByUser(bool enabled) =>
+      _prefs.setBool(_keySecureConnectionEnabledByUser, enabled);
+
+  bool get warpSetupCompleted =>
+      _prefs.getBool(_keyWarpSetupCompleted) ?? false;
+  Future<void> setWarpSetupCompleted(bool completed) =>
+      _prefs.setBool(_keyWarpSetupCompleted, completed);
+
+  DateTime? get lastSuccessfulSecureRoute =>
+      DateTime.tryParse(_prefs.getString(_keyLastSuccessfulSecureRoute) ?? '');
+  Future<void> setLastSuccessfulSecureRoute(DateTime timestamp) => _prefs
+      .setString(_keyLastSuccessfulSecureRoute, timestamp.toIso8601String());
 
   // ---------------------------------------------------------------------------
   // Navigation

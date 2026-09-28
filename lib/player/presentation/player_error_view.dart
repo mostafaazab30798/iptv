@@ -17,6 +17,7 @@ class PlayerErrorView extends StatelessWidget {
     required this.onClose,
     this.currentBackend,
     this.onSelectBackend,
+    this.onSecureConnection,
   });
 
   final PlayerErrorType errorType;
@@ -25,6 +26,7 @@ class PlayerErrorView extends StatelessWidget {
   final VoidCallback onClose;
   final PlayerBackend? currentBackend;
   final ValueChanged<PlayerBackend>? onSelectBackend;
+  final VoidCallback? onSecureConnection;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +145,20 @@ class PlayerErrorView extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (onSecureConnection != null)
+                    FilledButton.icon(
+                      onPressed: onSecureConnection,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                      icon: const Icon(Icons.shield_outlined, size: 18),
+                      label: Text(context.l10n.secureConnectionTryAction),
+                    ),
                   if (onSelectBackend != null)
                     PopupMenuButton<PlayerBackend>(
                       tooltip: 'Choose player engine',

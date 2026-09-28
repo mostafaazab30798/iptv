@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,11 +7,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv/core/platform/platform_service.dart';
 import 'package:iptv/features/player/player_fullscreen_policy.dart';
+import 'package:iptv/features/secure_connection/domain/secure_connection_state.dart';
+import 'package:iptv/features/secure_connection/presentation/secure_connection_panel.dart';
+import 'package:iptv/features/secure_connection/secure_connection_providers.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/player/presentation/buffering_indicator.dart';
 import 'package:iptv/player/presentation/player_error_view.dart';
 import 'package:iptv/player/presentation/player_overlay.dart';
 import 'package:iptv/player/presentation/player_view.dart';
+import 'package:iptv/shared/extensions/context_extensions.dart';
 
 /// Fullscreen production IPTV player screen host.
 ///
@@ -231,6 +237,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(secureConnectionControllerProvider, (previous, next) {
+      if (previous?.phase != SecureConnectionPhase.secureRouteReady &&
+          next.phase == SecureConnectionPhase.secureRouteReady) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.secureConnectionReady)),
+        );
+      }
+    });
     // Narrow selectors — each widget only rebuilds on the fields it actually needs.
     // This prevents the entire Stack from rebuilding on every position tick from mpv.
     final isBufferingOrLoading = ref.watch(
@@ -407,7 +421,27 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                 onSelectBackend: PlatformService.instance.isAndroid
                     ? controller.selectBackend
                     : null,
+                onSecureConnection:
+                    PlatformService.instance.isAndroid &&
+                        fullPlayerState.error!.mayBenefitFromSecureConnection &&
+                        Uri.tryParse(fullPlayerState.source?.url ?? '') != null
+                    ? () {
+                        final endpoint = Uri.parse(fullPlayerState.source!.url);
+                        unawaited(
+                          ref
+                              .read(secureConnectionControllerProvider.notifier)
+                              .start(
+                                endpoint: endpoint,
+                                retry: controller.retry,
+                                headers: fullPlayerState.source!.headers,
+                              ),
+                        );
+                      }
+                    : null,
               ),
+
+            // 5. Secure Connection hand-off guidance always sits above errors.
+            const SecureConnectionPanel(),
           ],
         ),
       ),

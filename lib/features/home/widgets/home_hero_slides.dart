@@ -542,12 +542,23 @@ class _MatchStadiumBackdrop extends StatelessWidget {
         _buildDefaultGradients(isLive),
         if (wallpaperAsset != null) ...[
           Positioned.fill(
-            child: Image.asset(
-              wallpaperAsset,
-              fit: BoxFit.cover,
-              alignment: const Alignment(0, -0.15),
-              errorBuilder: (context, error, stackTrace) {
-                return const SizedBox.shrink();
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final dpr = MediaQuery.devicePixelRatioOf(context);
+                final decodedWidth = (constraints.maxWidth * dpr).ceil().clamp(
+                  1,
+                  1920,
+                );
+                return Image.asset(
+                  wallpaperAsset,
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(0, -0.15),
+                  cacheWidth: decodedWidth,
+                  filterQuality: FilterQuality.medium,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox.shrink();
+                  },
+                );
               },
             ),
           ),

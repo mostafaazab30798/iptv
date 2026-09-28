@@ -13,6 +13,7 @@ import 'package:iptv/app/theme/app_theme.dart';
 import 'package:iptv/core/analytics/analytics_event.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/features/account/account_controller.dart';
+import 'package:iptv/features/secure_connection/secure_connection_providers.dart';
 import 'package:iptv/features/updates/update_controller.dart';
 import 'package:iptv/features/updates/update_dialog.dart';
 import 'package:iptv/l10n/app_localizations.dart';
@@ -25,7 +26,6 @@ import 'package:iptv/shared/layouts/layouts.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/navigation/navigator_keys.dart';
 import 'package:iptv/shared/scroll/desktop_smooth_scroll.dart';
-
 
 /// Root application widget.
 class App extends ConsumerStatefulWidget {
@@ -57,8 +57,15 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final previous = _lifecycle;
     _lifecycle = state;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(_stopHandoffHosting());
+      return;
+    }
     if (state == AppLifecycleState.resumed) {
-      final fromBackground = previous == AppLifecycleState.paused ||
+      final fromBackground =
+          previous == AppLifecycleState.paused ||
           previous == AppLifecycleState.hidden ||
           previous == AppLifecycleState.detached;
       unawaited(_onAppResumed(fromBackground: fromBackground));
@@ -70,11 +77,9 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     if (!mounted) return;
     ref.read(localeProvider.notifier).refreshFromStorage();
 
-    // First start: binds immediately, may have an early/wrong IP if Wi-Fi just connected
-    unawaited(ref.read(audioHandoffServerProvider.notifier).startHosting(
-          playerController: ref.read(playerControllerProvider.notifier),
-          autoMuteTv: true,
-        ));
+    // Bind immediately on native host platforms. Web cannot expose dart:io
+    // sockets and should not instantiate the server merely to catch an error.
+    unawaited(_startHandoffHosting());
 
     await _syncAnalytics(ref.read(appAccountSessionProvider));
     if (CommercialApiConfig.isConfigured) {
@@ -85,19 +90,34 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     // resolving the local IP, so the correct LAN IP is broadcast in the beacon.
     await Future<void>.delayed(const Duration(seconds: 3));
     if (mounted) {
-      unawaited(ref.read(audioHandoffServerProvider.notifier).startHosting(
-            playerController: ref.read(playerControllerProvider.notifier),
-            autoMuteTv: true,
-          ));
+      unawaited(_startHandoffHosting());
     }
   }
 
+  Future<void> _startHandoffHosting() async {
+    if (!mounted || !PlatformService.instance.supportsHandoffHosting) return;
+    await ref
+        .read(audioHandoffServerProvider.notifier)
+        .startHosting(
+          playerController: ref.read(playerControllerProvider.notifier),
+          autoMuteTv: true,
+        );
+  }
 
+  Future<void> _stopHandoffHosting() async {
+    if (!mounted || !PlatformService.instance.supportsHandoffHosting) return;
+    await ref.read(audioHandoffServerProvider.notifier).stopHosting();
+  }
 
   Future<void> _onAppResumed({required bool fromBackground}) async {
     final platform = PlatformService.instance;
     if (platform.isAndroid || platform.isAndroidTv) {
-      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
+      unawaited(
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+      );
+      await ref
+          .read(secureConnectionControllerProvider.notifier)
+          .onAppResumed();
     }
     // Windows reports inactive→resumed on every click (parent vs Flutter HWND).
     // Skip handoff/update work for those focus blips.
@@ -107,10 +127,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     // Re-start handoff server on resume to refresh the LAN IP (could have changed
     // if device connected to a different network while backgrounded).
     // Refresh advertised LAN IP on resume without dropping companion clients.
-    unawaited(ref.read(audioHandoffServerProvider.notifier).startHosting(
-          playerController: ref.read(playerControllerProvider.notifier),
-          autoMuteTv: true,
-        ));
+    unawaited(_startHandoffHosting());
     if (!CommercialApiConfig.isConfigured) return;
     final updateState = ref.read(updateProvider);
     if (updateState.isMandatoryBlocking) {
@@ -185,8 +202,9 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
         // Mild TV readability nudge; phone/tablet/desktop keep clamped scale.
         if (factor == FormFactor.tv) {
           final current = textScaler.scale(1.0);
-          textScaler = TextScaler.linear(current < 1.08 ? 1.08 : current)
-              .clamp(maxScaleFactor: 1.4);
+          textScaler = TextScaler.linear(
+            current < 1.08 ? 1.08 : current,
+          ).clamp(maxScaleFactor: 1.4);
         }
 
         final Widget tree = CallbackShortcuts(
@@ -216,7 +234,8 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
                   LogicalKeyboardKey.gameButtonSelect,
                 ],
               ),
-              debugOverlay: kDebugMode &&
+              debugOverlay:
+                  kDebugMode &&
                   const bool.fromEnvironment(
                     'TV_FOCUS_INSPECTOR',
                     defaultValue: false,
@@ -243,9 +262,9 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
             child: Builder(
               builder: (scaledContext) {
                 return MediaQuery(
-                  data: MediaQuery.of(scaledContext).copyWith(
-                    textScaler: textScaler,
-                  ),
+                  data: MediaQuery.of(
+                    scaledContext,
+                  ).copyWith(textScaler: textScaler),
                   child: tree,
                 );
               },

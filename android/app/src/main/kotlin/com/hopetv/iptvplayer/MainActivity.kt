@@ -13,6 +13,7 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        WarpIntegration.register(flutterEngine, this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, platformChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

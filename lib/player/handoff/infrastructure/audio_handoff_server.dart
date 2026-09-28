@@ -18,11 +18,9 @@ typedef HandoffClientCountCallback = void Function(int connectedClients);
 /// Lightweight host server running on the TV/Player device to broadcast
 /// low-latency sync frames and stream metadata to companion phones.
 class AudioHandoffServer {
-  AudioHandoffServer({
-    int port = 8998,
-    String? deviceName,
-  })  : _port = port,
-        _deviceName = deviceName ?? _detectDefaultDeviceName();
+  AudioHandoffServer({int port = 8998, String? deviceName})
+    : _port = port,
+      _deviceName = deviceName ?? _detectDefaultDeviceName();
 
   final int _port;
   final String _deviceName;
@@ -72,11 +70,8 @@ class AudioHandoffServer {
   }) async {
     await stop();
 
-    final effectiveSource = source ??
-        const PlayerSource(
-          url: '',
-          title: 'IPTV Screen',
-        );
+    final effectiveSource =
+        source ?? const PlayerSource(url: '', title: 'IPTV Screen');
 
     _currentSource = effectiveSource;
     _getPositionMs = getPositionMs;
@@ -169,14 +164,11 @@ class AudioHandoffServer {
       serverDeviceName: _deviceName,
     );
 
-
-
     AppLogger.info(
       'Audio Handoff Server started on ws://$localIp:${_server!.port}',
       feature: 'audio_handoff',
     );
 
-    _startBroadcastLoop();
     unawaited(_discoveryBroadcaster.start(_sessionInfo!));
     return _sessionInfo!;
   }
@@ -200,6 +192,9 @@ class AudioHandoffServer {
 
   void _handleNewClient(WebSocketChannel channel) {
     _clients.add(channel);
+    if (_clients.length == 1) {
+      _startBroadcastLoop();
+    }
     AppLogger.info(
       'Companion connected. Total clients: ${_clients.length}',
       feature: 'audio_handoff',
@@ -217,6 +212,7 @@ class AudioHandoffServer {
       },
       onDone: () {
         _clients.remove(channel);
+        _stopBroadcastLoopIfIdle();
         AppLogger.info(
           'Companion disconnected. Remaining: ${_clients.length}',
           feature: 'audio_handoff',
@@ -225,6 +221,7 @@ class AudioHandoffServer {
       },
       onError: (Object error) {
         _clients.remove(channel);
+        _stopBroadcastLoopIfIdle();
         AppLogger.warning(
           'Companion socket error: $error',
           feature: 'audio_handoff',
@@ -283,6 +280,7 @@ class AudioHandoffServer {
 
   void _startBroadcastLoop() {
     _syncTimer?.cancel();
+    if (_clients.isEmpty) return;
     // Broadcast sync state every 500ms for tight sub-100ms synchronization
     _syncTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       if (_clients.isEmpty) return;
@@ -290,6 +288,12 @@ class AudioHandoffServer {
       final raw = jsonEncode(packet.toJson());
       _broadcastRaw(raw);
     });
+  }
+
+  void _stopBroadcastLoopIfIdle() {
+    if (_clients.isNotEmpty) return;
+    _syncTimer?.cancel();
+    _syncTimer = null;
   }
 
   HandoffSyncPacket _buildCurrentSyncPacket() {
@@ -383,10 +387,7 @@ class AudioHandoffServer {
         _commandHandler?.call(command);
       }
     } catch (e) {
-      AppLogger.warning(
-        'Invalid client message: $e',
-        feature: 'audio_handoff',
-      );
+      AppLogger.warning('Invalid client message: $e', feature: 'audio_handoff');
     }
   }
 
@@ -460,7 +461,6 @@ class AudioHandoffServer {
     return getAvailableLocalIps();
   }
 
-
   /// Lists all valid, non-virtual IPv4 addresses on the host device.
   Future<List<String>> getAvailableLocalIps() async {
     final physicalIps = <String>[];
@@ -497,14 +497,19 @@ class AudioHandoffServer {
         final isVirtual = virtualKeywords.any(nameLower.contains);
 
         for (final addr in iface.addresses) {
-          if (addr.isLoopback || addr.type != InternetAddressType.IPv4) continue;
+          if (addr.isLoopback || addr.type != InternetAddressType.IPv4) {
+            continue;
+          }
           final ip = addr.address;
-          if (ip.startsWith('169.254.') || ip == '0.0.0.0' || ip == '127.0.0.1') {
+          if (ip.startsWith('169.254.') ||
+              ip == '0.0.0.0' ||
+              ip == '127.0.0.1') {
             continue;
           }
 
           if (!isVirtual) {
-            final isWifiOrEth = nameLower.contains('wi-fi') ||
+            final isWifiOrEth =
+                nameLower.contains('wi-fi') ||
                 nameLower.contains('wifi') ||
                 nameLower.contains('wlan') ||
                 nameLower.contains('eth') ||
@@ -1251,4 +1256,3 @@ class AudioHandoffServer {
 ''';
   }
 }
-

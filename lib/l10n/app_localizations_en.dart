@@ -694,6 +694,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playerForward10 => 'Forward 10s';
 
   @override
+  String get secureConnectionTryAction => 'Try Secure Connection';
+
+  @override
+  String get secureConnectionWarpRequired => 'Cloudflare WARP required';
+
+  @override
+  String get secureConnectionInstallBody =>
+      'Secure Connection uses the free Cloudflare WARP app, a separate third-party network service. Install it once, then return to HOPE. Cloudflare\'s terms and privacy policy apply.';
+
+  @override
+  String get secureConnectionInstallAction => 'Install WARP';
+
+  @override
+  String get secureConnectionAlmostReady => 'Almost ready';
+
+  @override
+  String get secureConnectionEnableBody =>
+      'Turn on WARP, then return to HOPE. We\'ll test the connection and resume your stream automatically.';
+
+  @override
+  String get secureConnectionOpenWarp => 'Open WARP';
+
+  @override
+  String get secureConnectionCheckingTitle => 'Checking connection';
+
+  @override
+  String get secureConnectionCheckingBody =>
+      'HOPE is checking whether the secure route can reach your stream.';
+
+  @override
+  String get secureConnectionFailedTitle =>
+      'Secure Connection could not restore this stream';
+
+  @override
+  String get secureConnectionFailedBody =>
+      'You can test the route again or continue without Secure Connection.';
+
+  @override
+  String get secureConnectionReady => 'Secure Connection ready';
+
+  @override
   String historyResumeAt(String time) {
     return 'Resume at $time';
   }

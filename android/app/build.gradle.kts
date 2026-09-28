@@ -52,11 +52,12 @@ android {
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")
             } else {
-                // Local/dev fallback only. CI must provide key.properties.
-                signingConfigs.getByName("debug")
+                // Produce an unsigned artifact locally instead of silently
+                // shipping a release that is signed with the debug key.
+                null
             }
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }

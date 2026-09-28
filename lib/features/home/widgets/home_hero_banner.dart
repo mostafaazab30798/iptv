@@ -234,7 +234,9 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
                     controller: _pageController,
                     physics: const BouncingScrollPhysics(),
                     itemCount: items.length,
-                    allowImplicitScrolling: true,
+                    // Avoid decoding adjacent full-bleed hero artwork on
+                    // memory-constrained phones and Android TV devices.
+                    allowImplicitScrolling: false,
                     onPageChanged: (index) {
                       _currentPage.value = index;
                     },

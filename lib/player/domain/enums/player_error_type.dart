@@ -12,26 +12,44 @@ enum PlayerErrorType {
 
   /// Whether a bounded retry could potentially recover from this error.
   bool get isRetryable => switch (this) {
-        PlayerErrorType.networkUnavailable => true,
-        PlayerErrorType.timeout => true,
-        PlayerErrorType.serverUnavailable => true,
-        PlayerErrorType.playbackFailure => true,
-        PlayerErrorType.unauthorized => false,
-        PlayerErrorType.invalidSource => false,
-        PlayerErrorType.unsupportedFormat => true,
-        PlayerErrorType.codecError => false,
-        PlayerErrorType.unknown => true,
-      };
+    PlayerErrorType.networkUnavailable => true,
+    PlayerErrorType.timeout => true,
+    PlayerErrorType.serverUnavailable => true,
+    PlayerErrorType.playbackFailure => true,
+    PlayerErrorType.unauthorized => false,
+    PlayerErrorType.invalidSource => false,
+    PlayerErrorType.unsupportedFormat => true,
+    PlayerErrorType.codecError => false,
+    PlayerErrorType.unknown => true,
+  };
+
+  /// Whether another network route could plausibly recover this failure.
+  bool get mayBenefitFromSecureConnection => switch (this) {
+    PlayerErrorType.networkUnavailable ||
+    PlayerErrorType.timeout ||
+    PlayerErrorType.serverUnavailable ||
+    PlayerErrorType.playbackFailure => true,
+    PlayerErrorType.unauthorized ||
+    PlayerErrorType.invalidSource ||
+    PlayerErrorType.unsupportedFormat ||
+    PlayerErrorType.codecError ||
+    PlayerErrorType.unknown => false,
+  };
 
   String get defaultMessage => switch (this) {
-        PlayerErrorType.networkUnavailable => 'Network connection lost. Please check your internet.',
-        PlayerErrorType.timeout => 'Stream connection timed out.',
-        PlayerErrorType.serverUnavailable => 'IPTV stream server is currently unreachable.',
-        PlayerErrorType.unauthorized => 'Access denied. Please check your subscription credentials.',
-        PlayerErrorType.invalidSource => 'Invalid or expired stream URL.',
-        PlayerErrorType.unsupportedFormat => 'This stream format is not supported on this device.',
-        PlayerErrorType.codecError => 'Device codec error encountered during playback.',
-        PlayerErrorType.playbackFailure => 'Playback interrupted unexpectedly.',
-        PlayerErrorType.unknown => 'An unexpected playback error occurred.',
-      };
+    PlayerErrorType.networkUnavailable =>
+      'Network connection lost. Please check your internet.',
+    PlayerErrorType.timeout => 'Stream connection timed out.',
+    PlayerErrorType.serverUnavailable =>
+      'IPTV stream server is currently unreachable.',
+    PlayerErrorType.unauthorized =>
+      'Access denied. Please check your subscription credentials.',
+    PlayerErrorType.invalidSource => 'Invalid or expired stream URL.',
+    PlayerErrorType.unsupportedFormat =>
+      'This stream format is not supported on this device.',
+    PlayerErrorType.codecError =>
+      'Device codec error encountered during playback.',
+    PlayerErrorType.playbackFailure => 'Playback interrupted unexpectedly.',
+    PlayerErrorType.unknown => 'An unexpected playback error occurred.',
+  };
 }
