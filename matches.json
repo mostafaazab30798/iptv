@@ -5,10 +5,10 @@
     "team_away": "بوركينا فاسو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/CentralAfrica2018_7_26_19_33.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/BurkinaFaso2018_7_26_19_22.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "بى ان سبورت 8 HD"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "سيراليون",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/GuineaEquatorial2018_7_26_19_30.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/SierraLeone2018_7_26_19_31.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "الكونغو الديمقراطية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Zimbabwe2018_7_26_19_24.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/CongoDemocratic2021_7_15_10_27.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "2",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "بى ان سبورت 6 HD"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "تونس",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Botswana2018_7_26_19_24.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Tunis2018_7_24_14_48.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "22:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 1HD"
   },
   {
@@ -53,10 +53,10 @@
     "team_away": "قبرص",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Latvia2018_9_12_12_40.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Cyprus2018_9_12_12_41.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "بى ان سبورت 3 HD"
   },
   {
@@ -65,11 +65,11 @@
     "team_away": "الجبل الأسود",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Armenia2018_9_12_12_38.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Montenegro2018_9_12_12_41.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "3",
     "time": "19:00",
-    "status": "لم تبدأ",
-    "channel": "بى ان سبورت 2 HD"
+    "status": "انتهت",
+    "channel": "Not Available"
   },
   {
     "league": "دوري الأمم الأوروبية",
@@ -77,10 +77,10 @@
     "team_away": "أوكرانيا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Georgia2018_9_12_12_39.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/Ukraine2018_9_10_18_28.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "بى ان سبورت 1HD"
   },
   {
@@ -89,10 +89,10 @@
     "team_away": "ايطاليا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/Turkey2018_9_10_18_33.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/Italy2018_9_10_18_23.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "3",
     "time": "21:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 3 HD"
   },
   {
@@ -101,10 +101,10 @@
     "team_away": "المجر",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/NorthernIreland2018_9_10_18_30.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/Hungary2018_9_10_18_26.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "21:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 5 HD"
   },
   {
@@ -113,10 +113,10 @@
     "team_away": "البوسنة والهرسك",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/Romania2018_9_10_18_33.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/BosniaAndHerzegovina2018_9_10_18_27.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "3",
     "time": "21:45",
-    "status": "لم تبدأ",
+    "status": "استراحة",
     "channel": "بى ان سبورت 6 HD"
   },
   {
@@ -125,10 +125,10 @@
     "team_away": "بولندا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Sweden2018_7_24_14_43.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Poland2018_7_24_14_37.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "21:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 4 HD"
   },
   {
@@ -137,10 +137,10 @@
     "team_away": "فرنسا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Belgium2018_7_24_14_44.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/France2018_7_24_14_43.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "21:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 2 HD"
   },
   {
@@ -149,10 +149,10 @@
     "team_away": "الاتحاد المصراتي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/10/19/ahly12023_10_19_17_58.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/9/24/Elettihad Almisraty Club12026_9_24_0_11.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "4",
+    "score_away": "2",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   }
 ]
