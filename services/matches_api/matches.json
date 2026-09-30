@@ -4,11 +4,11 @@
     "team_home": "إريتريا",
     "team_away": "جنوب أفريقيا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Eritrea2021_7_15_13_18.jpg",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/9/30/pngwing.com (1)2026_9_30_0_6.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/9/30/pngwing.com2026_9_30_19_19.webp",
+    "score_home": "0",
+    "score_away": "4",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "بى ان سبورت 3 HD"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "اليمن",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Bahrain2018_7_26_19_14.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Yemen2018_7_26_19_16.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "20:30",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "الكأس 2"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "قطر",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/8/UnitedArabEmirates2021_9_8_16_51.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Qatar2018_7_26_19_13.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "20:30",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "الكأس 1"
   }
 ]
