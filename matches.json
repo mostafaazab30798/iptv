@@ -5,10 +5,10 @@
     "team_away": "القناة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2020/12/17/PyramidsFC2020_12_17_17_30.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/10/9/AlQanah2018_10_9_12_34.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "2",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport PLUS"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "الأهلي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/381138136_829473065541495_2622633524029911606_n2026_8_5_23_33.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/10/19/ahly12023_10_19_17_58.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "5",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "زد",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Zamalek2018_7_24_13_31.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/27/470102024_8_27_17_31.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "3",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "ON Sport"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "المصري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2020/12/17/cliopatraFC2020_12_17_18_1.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/elmasry2018_7_24_13_30.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "ON Sport MAX"
   },
   {
@@ -53,10 +53,10 @@
     "team_away": "ميكيلّي 70",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/4/26/Jsk--Kinshasa2023_4_26_17_21.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/10/6/Mekelle2024_10_6_23_19.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "45",
+    "score_away": "23",
     "time": "14:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -65,10 +65,10 @@
     "team_away": "الجيش الرواندي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/4/Renaissance 112026_10_4_19_21.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/3/21/APR-Handball12024_3_21_1_55.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "26",
+    "score_away": "34",
     "time": "16:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -77,11 +77,11 @@
     "team_away": "فلاورز",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/5/24/ahly-handball2024_5_24_17_24.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/10/19/flowers2024_10_19_0_44.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "44",
+    "score_away": "19",
     "time": "18:00",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
+    "status": "انتهت",
+    "channel": "قناة الاتحاد الإفريقي لليد - يوتيوب"
   },
   {
     "league": "بطولة أفريقيا للأندية لكرة اليد",
@@ -89,10 +89,10 @@
     "team_away": "بترو أتليتيكو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/3/Interclub2026_10_3_23_51.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/3/Petro Atletico handball12026_10_3_20_2.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "13",
+    "score_away": "28",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -101,10 +101,10 @@
     "team_away": "بريميرو دي أوجوستو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/10/7/Mechal-Sport--handball2024_10_7_0_7.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/4/CD_Primeiro_de_Agosto12026_10_4_0_10.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "6",
+    "score_away": "22",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "مباشر",
     "channel": "Not Available"
   },
   {
