@@ -5,10 +5,10 @@
     "team_away": "وادي دجلة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Alittihad2018_7_24_13_30.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/2/18/WadiDegla2019_2_18_10_17.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "الجونة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Almokawloon2018_7_24_13_31.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Elgouna2018_7_24_13_34.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport PLUS"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "أبو قير للاسمدة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/9/11/ghazel12024_9_11_21_58.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/10/9/AboKeer2018_10_9_12_13.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "ON Sport"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "البنك الأهلي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/7/3/modern-12024_7_3_22_17.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/31/AhlyBank2018_7_31_17_33.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "ON Sport MAX"
   },
   {
@@ -53,10 +53,10 @@
     "team_away": "الجيش الرواندي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/10/19/flowers2024_10_19_0_44.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/3/21/APR-Handball12024_3_21_1_55.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "33",
+    "score_away": "19",
     "time": "16:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -65,10 +65,10 @@
     "team_away": "الزمالك",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/10/6/Mekelle2024_10_6_23_19.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/4/18/zamalek-logo2025_4_18_0_26.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "10",
+    "score_away": "53",
     "time": "16:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "قناة الاتحاد الإفريقي لليد - يوتيوب"
   },
   {
@@ -77,10 +77,10 @@
     "team_away": "الأهلي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/3/Petro Atletico handball12026_10_3_20_2.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/5/24/ahly-handball2024_5_24_17_24.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "25",
+    "score_away": "37",
     "time": "18:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "قناة الاتحاد الإفريقي لليد - يوتيوب"
   },
   {
@@ -89,10 +89,10 @@
     "team_away": "إنتر كلوب",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/4/Renaissance 112026_10_4_19_21.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/3/Interclub2026_10_3_23_51.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "19",
+    "score_away": "23",
     "time": "18:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -101,10 +101,10 @@
     "team_away": "كينشاسا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/4/CD_Primeiro_de_Agosto12026_10_4_0_10.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/4/26/Jsk--Kinshasa2023_4_26_17_21.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "25",
+    "score_away": "29",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -113,10 +113,10 @@
     "team_away": "بروكسي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/8/1/Elnasr2018_8_1_16_20.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/5/4/42023_5_4_17_47.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -125,10 +125,10 @@
     "team_away": "السكة الحديد",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2022/11/5/harras-el-hodoud12022_11_5_0_8.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/12/5/el-sekka-el-hadid-sc-logo-png_seeklogo-6312502025_12_5_5_50.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -137,10 +137,10 @@
     "team_away": "كهرباء الإسماعيلية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/10/9/Tersana2018_10_9_12_23.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/10/kahraba2025_8_10_16_41.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "2",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -149,10 +149,10 @@
     "team_away": "الداخلية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/6/Screenshot 2025-08-06 172011_Easy-Resize.com2025_8_6_17_21.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Eldakhleya2018_7_24_13_32.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "1",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -161,10 +161,10 @@
     "team_away": "ديروط",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/12/delta club12026_8_12_19_21.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2016/3/30/22016_3_30_19_49.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -173,10 +173,10 @@
     "team_away": "الدحيل",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/8/AlShamal2021_9_8_10_36.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/AlDuhail2018_7_26_12_12.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "4",
     "time": "17:45",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -185,10 +185,10 @@
     "team_away": "الغرافة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/22026_8_5_23_0.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/25/Gharrafa2018_7_25_16_2.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "2",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "Not Available"
   },
   {
@@ -197,10 +197,10 @@
     "team_away": "نهضة بركان",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2022/8/2/22022_8_2_20_43.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/23/NahdetBourkan2021_9_23_16_20.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -209,10 +209,10 @@
     "team_away": "وداد تمارة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/AlgaishElmalaky2018_7_24_17_49.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/YK-Generic-team-logo.png",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "21:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   },
   {
@@ -221,10 +221,10 @@
     "team_away": "حسنية اغادير",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/13/Untitled-12021_7_13_0_43.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/HassaniaAgadir2018_7_24_17_51.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "2",
     "time": "21:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   },
   {
