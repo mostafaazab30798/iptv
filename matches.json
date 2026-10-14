@@ -5,10 +5,10 @@
     "team_away": "بترو أتليتيكو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/4/26/Jsk--Kinshasa2023_4_26_17_21.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/3/Petro Atletico handball12026_10_3_20_2.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "23",
+    "score_away": "20",
     "time": "12:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "الزمالك",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/5/24/ahly-handball2024_5_24_17_24.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/4/18/zamalek-logo2025_4_18_0_26.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "26",
+    "score_away": "25",
     "time": "17:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "كومو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Feyenoord2021_7_15_9_27.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/12/10472024_8_12_20_53.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 4 HD"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "ليفربول",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Lask2021_7_15_9_46.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/25/Liverpool12024_8_25_20_39.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 2 HD"
   },
   {
@@ -137,10 +137,10 @@
     "team_away": "تاي بورت",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/KashiwaReysol2018_7_26_14_1.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/ThaiPort2021_7_15_13_2.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "5",
+    "score_away": "1",
     "time": "13:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "بى ان سبورت 5 HD"
   },
   {
@@ -149,10 +149,10 @@
     "team_away": "تشونبك هيونداي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/7/26/Vissel12019_7_26_23_22.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/JeonbukHyundai2018_7_26_13_58.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "13:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "بى ان سبورت 2 HD"
   },
   {
