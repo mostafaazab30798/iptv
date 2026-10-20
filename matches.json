@@ -5,10 +5,10 @@
     "team_away": "الزمالك",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/381138136_829473065541495_2622633524029911606_n2026_8_5_23_33.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Zamalek2018_7_24_13_31.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "مودرن سبورت",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/27/470102024_8_27_17_31.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/7/3/modern-12024_7_3_22_17.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "2",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport PLUS HD"
   },
   {
@@ -48,27 +48,15 @@
     "channel": "ON Sport MAX HD"
   },
   {
-    "league": "دوري أبطال أفريقيا",
-    "team_home": "نادي 15 أوجوستو",
-    "team_away": "سيمبا",
-    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/19/15_de_Agosto_Femenino_Logo2026_10_19_23_36.webp",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Simba2018_7_24_12_50.jpg",
-    "score_home": "-",
-    "score_away": "-",
-    "time": "16:00",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
-  },
-  {
     "league": "دوري أبطال أوروبا",
     "team_home": "فنربخشة",
     "team_away": "سلافيا براج",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/8/12/Fenerbahce2018_8_12_13_1.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/8/12/SlaviaPraha2018_8_12_13_7.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 3 HD"
   },
   {
@@ -77,10 +65,10 @@
     "team_away": "بروسيا دورتموند",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/9/9/88882026_9_9_16_53.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/BorussiaDortmund2018_7_29_16_4.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 2 HD"
   },
   {
@@ -173,11 +161,11 @@
     "team_away": "الرياض",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/ak6LtnRz_400x4002026_8_2_18_32.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/xOyjlucX_400x4002026_8_2_18_28.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "18:00",
-    "status": "لم تبدأ",
-    "channel": "ثمانية 1"
+    "status": "الشوط الثاني",
+    "channel": "ثمانية 3"
   },
   {
     "league": "الدوري السعودي",
@@ -185,10 +173,10 @@
     "team_away": "القادسية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/11/10/tawwoun2023_11_10_17_9.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/23/Al_Qadsiah12024_8_23_16_52.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "18:10",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "ثمانية 2"
   },
   {
@@ -201,7 +189,7 @@
     "score_away": "-",
     "time": "21:00",
     "status": "لم تبدأ",
-    "channel": "ثمانية 1"
+    "channel": "ثمانية 2"
   },
   {
     "league": "الدوري السعودي",
@@ -213,6 +201,6 @@
     "score_away": "-",
     "time": "21:00",
     "status": "لم تبدأ",
-    "channel": "ثمانية 2"
+    "channel": "ثمانية 1"
   }
 ]
