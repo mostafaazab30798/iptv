@@ -5,10 +5,10 @@
     "team_away": "الداخلية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/8/1/Elnasr2018_8_1_16_20.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Eldakhleya2018_7_24_13_32.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "2",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "السكة الحديد",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2016/3/30/22016_3_30_19_49.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/12/5/el-sekka-el-hadid-sc-logo-png_seeklogo-6312502025_12_5_5_50.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "5",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "كهرباء الإسماعيلية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/6/Screenshot 2025-08-06 171737_Easy-Resize.com2025_8_6_17_19.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/10/kahraba2025_8_10_16_41.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "بلدية المحلة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/12/5/telecom-egypt club-logo12025_12_5_6_7.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/9/19/12023_9_19_23_45.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -53,22 +53,22 @@
     "team_away": "طنطا‏",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/12/delta club12026_8_12_19_21.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/31/Tanta2018_7_31_16_51.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "2",
     "time": "15:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
     "league": "الدوري الأوروبي",
     "team_home": "أرارات أرمينيا",
     "team_away": "الكمار",
-    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/9/8/FC-Ararat-Armenia2026_9_8_22_33.webp",
+    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/22/Armenia2026_10_22_16_44.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/AlkmaarFC2021_7_15_10_12.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 6 HD"
   },
   {
@@ -77,10 +77,10 @@
     "team_away": "إن إي سي نيميخن",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/8/12/DinamoZagreb2018_8_12_13_4.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/19/NEC Nijmegen12026_8_19_20_8.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت اكسترا 2"
   },
   {
@@ -88,11 +88,11 @@
     "team_home": "فرنتسفاروشي",
     "team_away": "تورينسي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/14/FerencvarosiTC2021_7_14_17_33.jpg",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/YK-Generic-team-logo.png",
-    "score_home": "-",
-    "score_away": "-",
+    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/22/Torreense32026_10_22_16_23.webp",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت اكسترا 3"
   },
   {
@@ -101,10 +101,10 @@
     "team_away": "رين",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/14/Juventus12021_7_14_17_22.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Rennais2018_7_29_17_14.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 1HD"
   },
   {
@@ -113,10 +113,10 @@
     "team_away": "سندرلاند",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/14/Lech-Poznan2021_7_14_18_12.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2015/3/23/Sunderland2015_3_23_13_59.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 4 HD"
   },
   {
@@ -125,10 +125,10 @@
     "team_away": "باير ليفركوزن",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/9/8/OFI Crete FC2026_9_8_23_39.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/BayerLeverkusen2018_7_29_16_6.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت اكسترا 1"
   },
   {
@@ -137,10 +137,10 @@
     "team_away": "هابويل بئر سبع",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/12/12/USG2024_12_12_17_29.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2022/9/15/YK-Generic-team-logo2022_9_15_22_0.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   },
   {
@@ -149,10 +149,10 @@
     "team_away": "مارسيليا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/19/SturmGraz2021_9_19_9_24.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/669647185_1400616615413599_4784152006441617777_n2026_8_5_17_38.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 3 HD"
   },
   {
@@ -281,10 +281,10 @@
     "team_away": "باناثينايكوس",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/19/Kairat2021_9_19_9_54.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/teamlogo/Panathinaikos7-10-2010-17-58-0.png",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "5",
     "time": "17:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "بى ان سبورت انجليش 1"
   },
   {
@@ -293,10 +293,10 @@
     "team_away": "كوبنهاجن",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/8/12/RedStar2018_8_12_13_7.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/13/Kobenhavn2018_9_13_12_36.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت اكسترا 6"
   },
   {
@@ -305,10 +305,10 @@
     "team_away": "لوجانو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Getafe2018_7_29_14_53.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2017/8/30/FC-LUGANO12017_8_30_20_37.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "2",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت اكسترا 4"
   },
   {
@@ -316,11 +316,11 @@
     "team_home": "إيبيريا تبيليسي",
     "team_away": "ميالبو سولفسبورج",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/YK-Generic-team-logo.png",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/YK-Generic-team-logo.png",
-    "score_home": "-",
-    "score_away": "-",
+    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/22/Mjällby12026_10_22_18_49.webp",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   },
   {
@@ -329,10 +329,10 @@
     "team_away": "يونيفيرسيتاتيا كرايوفا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/YK-Generic-team-logo.png",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/10/1/26065012025_10_1_18_26.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "2",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   },
   {
@@ -341,10 +341,10 @@
     "team_away": "برايتون",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/13/Jablonec2018_9_13_12_39.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Brighton2018_7_29_15_31.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 5 HD"
   },
   {
@@ -353,10 +353,10 @@
     "team_away": "بران",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/YK-Generic-team-logo.png",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/9/6/SK-Brann12025_9_6_17_38.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت انجليش 2"
   },
   {
@@ -365,10 +365,10 @@
     "team_away": "سسكا صوفيا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/11/9/52023_11_9_16_46.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/19/CSKASofia2021_9_19_9_42.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "Not Available"
   },
   {
@@ -377,10 +377,10 @@
     "team_away": "ريجا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/11/27/Pafos_FC_badge2024_11_27_18_6.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/6/5/rega12025_6_5_17_10.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت اكسترا 5"
   },
   {
@@ -389,10 +389,10 @@
     "team_away": "هارت أوف ميدلوثيان",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Trabzonspor2021_7_15_15_32.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2022/9/1/Heart-of-Midlothian-FC2022_9_1_20_41.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "بى ان سبورت 2 HD"
   },
   {
@@ -497,10 +497,10 @@
     "team_away": "الفيحاء",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/2/dowVFoYC_400x4002026_8_2_18_30.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/7/AlFayha2021_9_7_17_37.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "2",
     "time": "16:40",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -509,10 +509,10 @@
     "team_away": "الشباب",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/2/3/fath12023_2_3_16_33.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/7/29/331774651_1362804437889036_4103221782658863338_n2023_7_29_22_41.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "3",
     "time": "17:45",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -533,11 +533,11 @@
     "team_away": "السد القطري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Shahaniya2018_7_26_12_15.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/7/AlSadd2021_9_7_11_27.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "4",
     "time": "17:30",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
+    "status": "انتهت",
+    "channel": "الكأس 5"
   },
   {
     "league": "دوري نجوم قطر",
@@ -545,10 +545,10 @@
     "team_away": "الأهلي القطري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/25/Gharrafa2018_7_25_16_2.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/AlAhli2018_7_26_12_14.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
-    "channel": "Not Available"
+    "status": "الشوط الأول",
+    "channel": "الكأس 6"
   }
 ]
