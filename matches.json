@@ -5,10 +5,10 @@
     "team_away": "مودرن سبورت",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/10/9/AlQanah2018_10_9_12_34.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/7/3/modern-12024_7_3_22_17.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport PLUS"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "سيراميكا كليوباترا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/10/9/AboKeer2018_10_9_12_13.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2020/12/17/cliopatraFC2020_12_17_18_1.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "2",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "بيراميدز",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Smouha2018_7_24_13_32.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2020/12/17/PyramidsFC2020_12_17_17_30.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "ON Sport"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "بترول أسيوط",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/enppi - sharkia12026_8_5_15_41.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/381138136_829473065541495_2622633524029911606_n2026_8_5_23_33.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "ON Sport MAX"
   },
   {
@@ -53,10 +53,10 @@
     "team_away": "شتوتجارت",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/Galatasaray2018_9_10_13_8.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Stuttgart2018_7_29_16_4.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "19:45",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "beIN SPORTS 3"
   },
   {
@@ -65,11 +65,23 @@
     "team_away": "سبورتنج لشبونة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2015/2/19/Shakhtar Donetsk2015_2_19_18_31.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2020/8/5/Sporting-CP-Lisbon12020_8_5_16_42.jpg",
+    "score_home": "0",
+    "score_away": "1",
+    "time": "19:45",
+    "status": "الشوط الثاني",
+    "channel": "beIN SPORTS 4"
+  },
+  {
+    "league": "دوري أبطال أوروبا",
+    "team_home": "برشلونة",
+    "team_away": "أستون فيلا",
+    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Barcelona2018_7_29_14_44.jpg",
+    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/AstonVilla2018_9_10_12_22.jpg",
     "score_home": "-",
     "score_away": "-",
-    "time": "19:45",
+    "time": "22:00",
     "status": "لم تبدأ",
-    "channel": "beIN SPORTS 4"
+    "channel": "beIN SPORTS 3"
   },
   {
     "league": "دوري أبطال أوروبا",
@@ -121,18 +133,6 @@
   },
   {
     "league": "دوري أبطال أوروبا",
-    "team_home": "برشلونة",
-    "team_away": "أستون فيلا",
-    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/29/Barcelona2018_7_29_14_44.jpg",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/AstonVilla2018_9_10_12_22.jpg",
-    "score_home": "-",
-    "score_away": "-",
-    "time": "22:00",
-    "status": "لم تبدأ",
-    "channel": "beIN SPORTS 3"
-  },
-  {
-    "league": "دوري أبطال أوروبا",
     "team_home": "فينورد",
     "team_away": "إنتر ميلان",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Feyenoord2021_7_15_9_27.jpg",
@@ -161,10 +161,10 @@
     "team_away": "شنغهاي بورت",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/teamlogo/1425-3-2009-18-54-51.png",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/ShanghaiEastAsia2018_7_26_14_4.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "4",
     "time": "09:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 2"
   },
   {
@@ -173,10 +173,10 @@
     "team_away": "جوهور دارول تاكزيم",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/JeonbukHyundai2018_7_26_13_58.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/3/12/DarulTa'zim2019_3_12_9_55.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "12:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 4"
   },
   {
@@ -185,10 +185,10 @@
     "team_away": "دايجـو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/KashiwaReysol2018_7_26_14_1.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/2/15/Daegu-FC12019_2_15_3_29.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "12:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 2"
   },
   {
@@ -197,10 +197,10 @@
     "team_away": "راتشابوري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/7/26/Vissel12019_7_26_23_22.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Ratchaburi2021_7_15_12_52.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "2",
     "time": "12:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 3"
   },
   {
@@ -209,10 +209,10 @@
     "team_away": "كيوتو سانجا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/10/Cong An Hanoi FC2026_8_10_3_57.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/9/Kyoto Sanga FC2026_10_9_17_54.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "14:14",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 2"
   },
   {
@@ -221,10 +221,10 @@
     "team_away": "جوان بكين",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/ThaiPort2021_7_15_13_2.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2015/3/25/Beijing Guo'an2015_3_25_20_7.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "7",
+    "score_away": "4",
     "time": "14:15",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 3"
   },
   {
@@ -233,10 +233,10 @@
     "team_away": "الشمال",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Esteghlal2018_7_26_13_56.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/8/AlShamal2021_9_8_10_36.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "18:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 2"
   },
   {
@@ -245,10 +245,10 @@
     "team_away": "شباب الأهلي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/13/11142024_8_13_20_18.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/ShababAlAhliDubai2018_7_26_11_51.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "0",
     "time": "20:15",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "beIN SPORTS 2"
   },
   {
@@ -257,10 +257,10 @@
     "team_away": "الافريقي التونسي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/25/AlmalaabTunisien2018_7_25_15_54.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Africain2018_7_24_12_32.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "1",
     "time": "15:30",
-    "status": "مؤجل",
+    "status": "انتهت",
     "channel": "Not Available"
   }
 ]
