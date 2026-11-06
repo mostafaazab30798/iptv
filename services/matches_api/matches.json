@@ -4,11 +4,11 @@
     "team_home": "سموحة",
     "team_away": "المنيا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Smouha2018_7_24_13_32.jpg",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/31/Elmenia2018_7_31_16_52.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/11/6/minya12026_11_6_15_38.webp",
+    "score_home": "2",
+    "score_away": "0",
     "time": "14:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "بروكسي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/enppi - sharkia12026_8_5_15_41.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/5/4/42023_5_4_17_47.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "3",
+    "score_away": "2",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "مصر للتأمين",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Zamalek2018_7_24_13_31.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/30/misr12026_10_30_14_55.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "1",
     "time": "20:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "ON Sport"
   },
   {
@@ -65,10 +65,10 @@
     "team_away": "قاسم باشا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/7/15/Gaziantep2021_7_15_15_45.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/2/14/Kasimpasa12021_2_14_3_44.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "2",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   },
   {
@@ -125,10 +125,10 @@
     "team_away": "الأهلي القطري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/AlArabi2018_7_26_12_12.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/AlAhli2018_7_26_12_14.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "2",
+    "score_away": "2",
     "time": "16:15",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "الكأس 5"
   },
   {
@@ -137,10 +137,10 @@
     "team_away": "الشحانية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/8/5/22026_8_5_23_0.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/26/Shahaniya2018_7_26_12_15.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "3",
     "time": "18:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "الكأس 6"
   },
   {
@@ -149,10 +149,10 @@
     "team_away": "نهضة بركان",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/31/husa2026_10_31_18_20.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2021/9/23/NahdetBourkan2021_9_23_16_20.jpg",
-    "score_home": "-",
-    "score_away": "-",
-    "time": "20:00",
-    "status": "لم تبدأ",
+    "score_home": "2",
+    "score_away": "2",
+    "time": "19:00",
+    "status": "انتهت",
     "channel": "الرياضية المغربية 3"
   },
   {
@@ -169,14 +169,14 @@
   },
   {
     "league": "كرة السلة",
-    "team_home": "الأهلي",
-    "team_away": "الزمالك",
-    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/6/7/ahly19072024_6_7_1_12.jpg",
-    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/10/14/zamalek-basket2023_10_14_15_45.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "team_home": "الزمالك",
+    "team_away": "الأهلي",
+    "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2023/10/14/zamalek-basket2023_10_14_15_45.jpg",
+    "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/6/7/ahly19072024_6_7_1_12.jpg",
+    "score_home": "61",
+    "score_away": "78",
     "time": "18:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport PLUS"
   }
 ]
