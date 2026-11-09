@@ -5,10 +5,10 @@
     "team_away": "كهرباء الإسماعيلية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2019/2/18/WadiDegla2019_2_18_10_17.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/10/kahraba2025_8_10_16_41.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "14:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "سمنود الرياضي",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/8/27/470102024_8_27_17_31.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/10/25/samnoud2026_10_25_18_45.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "5",
+    "score_away": "1",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   }
 ]
