@@ -5,10 +5,10 @@
     "team_away": "الجبل الأسود",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Cyprus2018_9_12_12_41.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Montenegro2018_9_12_12_41.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "4",
     "time": "16:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 2"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "أرمينيا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Latvia2018_9_12_12_40.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Armenia2018_9_12_12_38.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "0",
     "time": "16:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "beIN SPORTS 3"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "ألبانيا",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/Belarus2018_9_12_12_37.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/Albania2018_9_10_18_29.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "2",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الثاني",
     "channel": "beIN SPORTS 2"
   },
   {
@@ -41,10 +41,10 @@
     "team_away": "سان مارينو",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/10/Finland2018_9_10_18_30.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/9/12/SanMarino2018_9_12_12_39.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "6",
+    "score_away": "2",
     "time": "19:00",
-    "status": "لم تبدأ",
+    "status": "الشوط الأول",
     "channel": "beIN SPORTS 3"
   },
   {
@@ -101,10 +101,10 @@
     "team_away": "كهرباء الإسماعيلية",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/12/5/telecom-egypt club-logo12025_12_5_6_7.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/8/10/kahraba2025_8_10_16_41.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "1",
+    "score_away": "0",
     "time": "14:30",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "Not Available"
   }
 ]
