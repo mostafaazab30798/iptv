@@ -5,10 +5,10 @@
     "team_away": "الاتحاد السكندري",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Elgouna2018_7_24_13_34.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2018/7/24/Alittihad2018_7_24_13_30.jpg",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "0",
+    "score_away": "1",
     "time": "17:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport"
   },
   {
@@ -17,10 +17,10 @@
     "team_away": "سموحة",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2024/5/24/ahly-handball2024_5_24_17_24.jpg",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/11/2/Smouha_SC_logo2025_11_2_3_18.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "29",
+    "score_away": "24",
     "time": "16:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
@@ -29,10 +29,10 @@
     "team_away": "النادي الأوليمبى",
     "logo_home": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2025/4/18/zamalek-logo2025_4_18_0_26.webp",
     "logo_away": "https://mediayk.gemini.media/img/yallakora/iosteams/120/2026/4/30/olympic112026_4_30_0_35.webp",
-    "score_home": "-",
-    "score_away": "-",
+    "score_home": "33",
+    "score_away": "19",
     "time": "18:00",
-    "status": "لم تبدأ",
+    "status": "انتهت",
     "channel": "ON Sport MAX"
   },
   {
