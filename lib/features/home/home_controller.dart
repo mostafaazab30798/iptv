@@ -755,22 +755,49 @@ class HomeController extends StateNotifier<HomeState> {
         n.contains('child') ||
         n.contains('junior') ||
         n.contains('cartoon') ||
+        n.contains('movie') ||
+        n.contains('serie') ||
+        n.contains('drama') ||
+        n.contains('cinema') ||
+        n.contains('film') ||
+        n.contains('doc') ||
+        n.contains('entertainment') ||
+        n.contains('gourmet') ||
+        n.contains('box office') ||
         n.contains('اطفال') ||
         n.contains('أطفال') ||
-        n.contains('كرتون')) {
+        n.contains('كرتون') ||
+        n.contains('افلام') ||
+        n.contains('أفلام') ||
+        n.contains('مسلسل') ||
+        n.contains('دراما') ||
+        n.contains('سينما') ||
+        n.contains('ترفيه') ||
+        n.contains('وثائق')) {
       return false;
     }
     return n.contains('sport') ||
+        n.contains('bein') ||
+        n.contains('ssc') ||
+        n.contains('alkass') ||
+        n.contains('al kass') ||
+        n.contains('ontime') ||
+        n.contains('on time') ||
         n.contains('espn') ||
         n.contains('nba') ||
         n.contains('football') ||
         n.contains('رياض') ||
+        n.contains('سبورت') ||
+        n.contains('الكاس') ||
+        n.contains('الكأس') ||
+        n.contains('كورة') ||
         n.contains('كره') ||
         n.contains('كرة');
   }
 
   static bool _isNewsCategoryName(String name) {
     final n = name.toLowerCase();
+    if (_isSportsCategoryName(name)) return false;
     return n.contains('news') ||
         n.contains('cnn') ||
         n.contains('bbc') ||

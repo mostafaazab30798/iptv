@@ -302,7 +302,11 @@ class _KidsPinDialogState extends State<KidsPinDialog>
 
     return Focus(
       focusNode: _keyboardFocusNode,
-      autofocus: true,
+      // Do not steal autofocus from the on-screen keypad button '1' so TV
+      // remotes without numeric keys can immediately use D-pad + OK.
+      // Hardware numeric keys still bubble up to this Focus node.
+      autofocus: false,
+      skipTraversal: true,
       onKeyEvent: _handleKeyEvent,
       child: Center(
         child: SingleChildScrollView(

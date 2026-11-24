@@ -35,36 +35,53 @@ void main() {
         teamHome: 'Arsenal',
         teamAway: 'Chelsea',
         time: '20:00',
+        sourceTimeZoneOffsetHours: 2,
         channel: 'beIN Sports 1',
       );
+      const tz = Duration(hours: 2);
 
       // 1. More than 10 minutes before (e.g. 18:00 -> 2 hours away)
       expect(
-        match.isEligibleForRealtime(now: DateTime(2026, 9, 6, 18, 0)),
+        match.isEligibleForRealtime(
+          now: DateTime(2026, 9, 6, 18, 0),
+          targetTimeZoneOffset: tz,
+        ),
         isFalse,
       );
 
       // 2. 11 minutes before (19:49) -> not yet in window
       expect(
-        match.isEligibleForRealtime(now: DateTime(2026, 9, 6, 19, 49)),
+        match.isEligibleForRealtime(
+          now: DateTime(2026, 9, 6, 19, 49),
+          targetTimeZoneOffset: tz,
+        ),
         isFalse,
       );
 
       // 3. Exactly 10 minutes before (19:50) -> in window!
       expect(
-        match.isEligibleForRealtime(now: DateTime(2026, 9, 6, 19, 50)),
+        match.isEligibleForRealtime(
+          now: DateTime(2026, 9, 6, 19, 50),
+          targetTimeZoneOffset: tz,
+        ),
         isTrue,
       );
 
       // 4. 5 minutes before (19:55) -> in window!
       expect(
-        match.isEligibleForRealtime(now: DateTime(2026, 9, 6, 19, 55)),
+        match.isEligibleForRealtime(
+          now: DateTime(2026, 9, 6, 19, 55),
+          targetTimeZoneOffset: tz,
+        ),
         isTrue,
       );
 
       // 5. During match (20:45 -> second half) -> live!
       expect(
-        match.isEligibleForRealtime(now: DateTime(2026, 9, 6, 20, 45)),
+        match.isEligibleForRealtime(
+          now: DateTime(2026, 9, 6, 20, 45),
+          targetTimeZoneOffset: tz,
+        ),
         isTrue,
       );
 
@@ -78,7 +95,10 @@ void main() {
         channel: 'beIN Sports 1',
       );
       expect(
-        liveMatch.isEligibleForRealtime(now: DateTime(2026, 9, 6, 18, 0)),
+        liveMatch.isEligibleForRealtime(
+          now: DateTime(2026, 9, 6, 18, 0),
+          targetTimeZoneOffset: tz,
+        ),
         isTrue,
       );
 
@@ -92,7 +112,10 @@ void main() {
         channel: 'beIN Sports 1',
       );
       expect(
-        finishedMatch.isEligibleForRealtime(now: DateTime(2026, 9, 6, 22, 30)),
+        finishedMatch.isEligibleForRealtime(
+          now: DateTime(2026, 9, 6, 22, 30),
+          targetTimeZoneOffset: tz,
+        ),
         isFalse,
       );
     });
@@ -103,15 +126,23 @@ void main() {
         teamHome: 'Real Madrid',
         teamAway: 'Barcelona',
         time: '21:00',
+        sourceTimeZoneOffsetHours: 2,
         channel: 'beIN Sports 1',
       );
+      const tz = Duration(hours: 2);
 
       // Current time is 19:00 -> window starts at 20:50 (1 hour 50 minutes = 110 minutes)
-      final wait = match.timeUntilRealtimeWindow(now: DateTime(2026, 9, 6, 19, 0));
+      final wait = match.timeUntilRealtimeWindow(
+        now: DateTime(2026, 9, 6, 19, 0),
+        targetTimeZoneOffset: tz,
+      );
       expect(wait, const Duration(hours: 1, minutes: 50));
 
       // Current time is 20:55 (already inside window) -> Duration.zero
-      final insideWait = match.timeUntilRealtimeWindow(now: DateTime(2026, 9, 6, 20, 55));
+      final insideWait = match.timeUntilRealtimeWindow(
+        now: DateTime(2026, 9, 6, 20, 55),
+        targetTimeZoneOffset: tz,
+      );
       expect(insideWait, Duration.zero);
 
       // Finished match -> null
@@ -123,7 +154,13 @@ void main() {
         status: 'انتهت',
         channel: 'beIN Sports 1',
       );
-      expect(finished.timeUntilRealtimeWindow(now: DateTime(2026, 9, 6, 23, 30)), isNull);
+      expect(
+        finished.timeUntilRealtimeWindow(
+          now: DateTime(2026, 9, 6, 23, 30),
+          targetTimeZoneOffset: tz,
+        ),
+        isNull,
+      );
     });
 
     test('needsScoreOrGoalsEnrichment returns true for finished, live, and near-kickoff matches', () {
@@ -132,28 +169,57 @@ void main() {
         teamHome: 'Everton',
         teamAway: 'Manchester United',
         time: '16:00',
+        sourceTimeZoneOffsetHours: 2,
         scoreHome: '-',
         scoreAway: '-',
         channel: 'beIN Sports 1',
       );
+      const tz = Duration(hours: 2);
 
       // Local time 20:45 (4 hours 45 minutes after kickoff -> finished!)
       final evening = DateTime(2026, 9, 6, 20, 45);
       // isEligibleForRealtime must be false (no 30s background timer needed for finished match)
-      expect(finishedModel.isEligibleForRealtime(now: evening), isFalse);
+      expect(
+        finishedModel.isEligibleForRealtime(
+          now: evening,
+          targetTimeZoneOffset: tz,
+        ),
+        isFalse,
+      );
       // needsScoreOrGoalsEnrichment MUST be true so FotMob provides final score & goals!
-      expect(finishedModel.needsScoreOrGoalsEnrichment(now: evening), isTrue);
+      expect(
+        finishedModel.needsScoreOrGoalsEnrichment(
+          now: evening,
+          targetTimeZoneOffset: tz,
+        ),
+        isTrue,
+      );
 
       // Future match 4 hours away: needsScoreOrGoalsEnrichment is false
       final morning = DateTime(2026, 9, 6, 12, 0);
-      expect(finishedModel.needsScoreOrGoalsEnrichment(now: morning), isFalse);
+      expect(
+        finishedModel.needsScoreOrGoalsEnrichment(
+          now: morning,
+          targetTimeZoneOffset: tz,
+        ),
+        isFalse,
+      );
 
       // Upcoming match within 10 minutes (15:52): true
       final nearKickoff = DateTime(2026, 9, 6, 15, 52);
-      expect(finishedModel.needsScoreOrGoalsEnrichment(now: nearKickoff), isTrue);
+      expect(
+        finishedModel.needsScoreOrGoalsEnrichment(
+          now: nearKickoff,
+          targetTimeZoneOffset: tz,
+        ),
+        isTrue,
+      );
 
       // LiveFixture behavior
-      final fixture = finishedModel.toLiveFixture(now: evening);
+      final fixture = finishedModel.toLiveFixture(
+        now: evening,
+        targetTimeZoneOffset: tz,
+      );
       expect(fixture.isEligibleForRealtime(now: evening), isFalse);
       expect(fixture.needsScoreOrGoalsEnrichment(now: evening), isTrue);
     });
@@ -165,10 +231,15 @@ void main() {
         teamHome: 'PSG',
         teamAway: 'Bayern',
         time: '22:00',
+        sourceTimeZoneOffsetHours: 2,
         channel: 'beIN Sports 1',
       );
+      const tz = Duration(hours: 2);
 
-      final fixture = model.toLiveFixture(now: now);
+      final fixture = model.toLiveFixture(
+        now: now,
+        targetTimeZoneOffset: tz,
+      );
       expect(fixture.start, DateTime(2026, 9, 6, 22, 0));
       expect(fixture.isEligibleForRealtime(now: now), isFalse);
 

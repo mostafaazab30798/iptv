@@ -5,6 +5,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 /// Reusable error view with retry action.
 class ErrorView extends StatelessWidget {
@@ -64,14 +65,21 @@ class ErrorView extends StatelessWidget {
             ),
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.xl),
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const HugeIcon(
-                  icon: AppIcons.refresh,
-                  size: 18,
-                  color: Colors.white,
+              TvFocusable(
+                autofocus: true,
+                entry: true,
+                onSelect: onRetry,
+                child: IgnorePointer(
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const HugeIcon(
+                      icon: AppIcons.refresh,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                    label: Text(context.l10n.actionTryAgain),
+                  ),
                 ),
-                label: Text(context.l10n.actionTryAgain),
               ),
             ],
             if (secondaryAction != null) ...[

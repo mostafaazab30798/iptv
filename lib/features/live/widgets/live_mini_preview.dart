@@ -8,6 +8,7 @@ import 'package:iptv/player/player.dart';
 import 'package:iptv/player/presentation/buffering_indicator.dart';
 import 'package:iptv/player/presentation/player_view.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/smart_channel_logo.dart';
 
 /// Live mini-player preview panel embedded inside the Live TV section.
@@ -213,24 +214,20 @@ class LiveMiniPreview extends ConsumerWidget {
 
                   // Tap Video Overlay -> Fullscreen
                   Positioned.fill(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: onExpandFullscreen,
-                        hoverColor: Colors.black26,
-                        splashColor: AppColors.accent.withValues(alpha: 0.15),
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.4),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const HugeIcon(
-                              icon: AppIcons.fullscreen,
-                              color: Colors.white,
-                              size: 28,
-                            ),
+                    child: TvFocusable(
+                      scale: 1.02,
+                      onSelect: onExpandFullscreen,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const HugeIcon(
+                            icon: AppIcons.fullscreen,
+                            color: Colors.white,
+                            size: 28,
                           ),
                         ),
                       ),
@@ -276,17 +273,16 @@ class LiveMiniPreview extends ConsumerWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    InkWell(
-                      onTap: () {
+                    TvFocusable(
+                      onSelect: () {
                         if (isPlaying) {
                           controller.pause();
                         } else {
                           controller.play();
                         }
                       },
-                      borderRadius: BorderRadius.circular(20),
                       child: Padding(
-                        padding: const EdgeInsets.all(2),
+                        padding: const EdgeInsets.all(4),
                         child: HugeIcon(
                           icon: isPlaying ? AppIcons.pause : AppIcons.play,
                           color: AppColors.accent,
@@ -295,9 +291,8 @@ class LiveMiniPreview extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    InkWell(
-                      onTap: controller.toggleMute,
-                      borderRadius: BorderRadius.circular(16),
+                    TvFocusable(
+                      onSelect: controller.toggleMute,
                       child: Padding(
                         padding: const EdgeInsets.all(4),
                         child: HugeIcon(
@@ -316,9 +311,8 @@ class LiveMiniPreview extends ConsumerWidget {
                         children: [
                           Tooltip(
                             message: context.l10n.playerPreviousChannel,
-                            child: InkWell(
-                              onTap: controller.previousChannel,
-                              borderRadius: BorderRadius.circular(16),
+                            child: TvFocusable(
+                              onSelect: controller.previousChannel,
                               child: const Padding(
                                 padding: EdgeInsets.all(4),
                                 child: HugeIcon(
@@ -332,9 +326,8 @@ class LiveMiniPreview extends ConsumerWidget {
                           const SizedBox(width: 2),
                           Tooltip(
                             message: context.l10n.playerNextChannel,
-                            child: InkWell(
-                              onTap: controller.nextChannel,
-                              borderRadius: BorderRadius.circular(16),
+                            child: TvFocusable(
+                              onSelect: controller.nextChannel,
                               child: const Padding(
                                 padding: EdgeInsets.all(4),
                                 child: HugeIcon(
@@ -353,14 +346,19 @@ class LiveMiniPreview extends ConsumerWidget {
                       Flexible(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: OutlinedButton.icon(
-                            onPressed: onOpenCatchUp,
-                            icon: const HugeIcon(
-                              icon: AppIcons.replay,
-                              size: 15,
-                              color: AppColors.accent,
+                          child: TvFocusable(
+                            onSelect: onOpenCatchUp,
+                            child: IgnorePointer(
+                              child: OutlinedButton.icon(
+                                onPressed: () {},
+                                icon: const HugeIcon(
+                                  icon: AppIcons.replay,
+                                  size: 15,
+                                  color: AppColors.accent,
+                                ),
+                                label: Text(context.l10n.catchUpTitle),
+                              ),
                             ),
-                            label: Text(context.l10n.catchUpTitle),
                           ),
                         ),
                       ),
@@ -369,29 +367,34 @@ class LiveMiniPreview extends ConsumerWidget {
                     Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: ElevatedButton.icon(
-                          onPressed: onExpandFullscreen,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          icon: const HugeIcon(
-                            icon: AppIcons.fullscreen,
-                            size: 16,
-                            color: Colors.black,
-                          ),
-                          label: const Text(
-                            'Fullscreen',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                        child: TvFocusable(
+                          onSelect: onExpandFullscreen,
+                          child: IgnorePointer(
+                            child: ElevatedButton.icon(
+                              onPressed: () {},
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              icon: const HugeIcon(
+                                icon: AppIcons.fullscreen,
+                                size: 16,
+                                color: Colors.black,
+                              ),
+                              label: const Text(
+                                'Fullscreen',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ),

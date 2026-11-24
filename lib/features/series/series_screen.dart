@@ -1,5 +1,5 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -23,6 +23,7 @@ import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
 import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
@@ -156,46 +157,51 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
               child: Row(
                 children: [
                   if (isCompact)
-                    IconButton(
-                      onPressed: _onBack,
-                      tooltip: context.l10n.labelCategories,
-                      icon: HugeIcon(
-                        icon: backIcon,
-                        size: 14,
-                        color: AppColors.accent,
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.accent.withAlpha(25),
+                    TvFocusable(
+                      onSelect: _onBack,
+                      child: Container(
                         padding: const EdgeInsets.all(8),
-                        shape: RoundedRectangleBorder(
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withAlpha(25),
                           borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: HugeIcon(
+                          icon: backIcon,
+                          size: 14,
+                          color: AppColors.accent,
                         ),
                       ),
                     )
                   else
-                    TextButton.icon(
-                      onPressed: _onBack,
-                      icon: HugeIcon(
-                        icon: backIcon,
-                        size: 14,
-                        color: AppColors.accent,
-                      ),
-                      label: Text(
-                        context.l10n.labelCategories,
-                        style: const TextStyle(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppColors.accent.withAlpha(25),
+                    TvFocusable(
+                      onSelect: _onBack,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
                         ),
-                        shape: RoundedRectangleBorder(
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withAlpha(25),
                           borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            HugeIcon(
+                              icon: backIcon,
+                              size: 14,
+                              color: AppColors.accent,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.l10n.labelCategories,
+                              style: const TextStyle(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -318,29 +324,35 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                         subtitle: context.l10n.searchNoResultsSubtitle,
                         icon: AppIcons.series,
                       ))
-              : GridView.builder(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  scrollCacheExtent: const ScrollCacheExtent.pixels(350),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 170,
-                    childAspectRatio: 2 / 3,
-                    crossAxisSpacing: AppSpacing.md,
-                    mainAxisSpacing: AppSpacing.md,
+              : DpadRegion(
+                  memoryKey: 'series/grid',
+                  debugLabel: 'series-grid',
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(350),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 170,
+                          childAspectRatio: 2 / 3,
+                          crossAxisSpacing: AppSpacing.md,
+                          mainAxisSpacing: AppSpacing.md,
+                        ),
+                    itemCount: seriesState.filteredSeries.length,
+                    itemBuilder: (context, i) {
+                      final series = seriesState.filteredSeries[i];
+                      return SeriesCard(
+                        series: series,
+                        expand: true,
+                        autofocus: i == 0,
+                        borderRadius: AppRadius.card,
+                        heartSize: 22,
+                        memCacheWidth: 170,
+                        memCacheHeight: 255,
+                        titlePlacement: PosterTitlePlacement.overlay,
+                        onTap: () => _openSeriesDetails(context, series),
+                      );
+                    },
                   ),
-                  itemCount: seriesState.filteredSeries.length,
-                  itemBuilder: (context, i) {
-                    final series = seriesState.filteredSeries[i];
-                    return SeriesCard(
-                      series: series,
-                      expand: true,
-                      borderRadius: AppRadius.card,
-                      heartSize: 22,
-                      memCacheWidth: 170,
-                      memCacheHeight: 255,
-                      titlePlacement: PosterTitlePlacement.overlay,
-                      onTap: () => _openSeriesDetails(context, series),
-                    );
-                  },
                 ),
         ),
       ],
@@ -733,22 +745,41 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
                                     ? '$seasonTitle ($epCount)'
                                     : seasonTitle;
 
-                                return ChoiceChip(
-                                  label: Text(labelText),
-                                  selected: isSelected,
-                                  onSelected: (_) => setState(
+                                return TvFocusable(
+                                  scale: 1.04,
+                                  onSelect: () => setState(
                                     () => _selectedSeasonIndex = idx,
                                   ),
-                                  selectedColor: AppColors.accent,
-                                  backgroundColor: AppColors.bg2,
-                                  labelStyle: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : AppColors.textSecondary,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    fontSize: 12,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppColors.accent
+                                          : AppColors.bg2,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? AppColors.accent
+                                            : AppColors.border,
+                                        width: isSelected ? 1.2 : 0.8,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      labelText,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.black
+                                            : AppColors.textSecondary,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ),
                                 );
                               },
@@ -781,6 +812,8 @@ class _SeriesDetailsModalState extends ConsumerState<_SeriesDetailsModal> {
                                     final ep = _seasons[safeSeasonIndex]
                                         .episodes[epIdx];
                                     return FocusableCard(
+                                      autofocus: epIdx == 0,
+                                      entry: epIdx == 0,
                                       onTap: () => _playEpisode(ep),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,

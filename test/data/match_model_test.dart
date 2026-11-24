@@ -77,21 +77,91 @@ void main() {
         'channel': 'beIN Sports 1',
       });
 
-      // Simulated current time: 20:30 (30 mins after kickoff)
-      final testTimeLive = DateTime(2026, 9, 4, 20, 30);
+      final localStart = model.resolvedLocalStartTime(
+        now: DateTime(2026, 9, 4, 12, 0),
+      )!;
+      final expectedLocalTimeStr = MatchModel.formatTimeHHmm(localStart);
+
+      // Simulated current time: 30 mins after local kickoff
+      final testTimeLive = localStart.add(const Duration(minutes: 30));
       final liveFixture = model.toLiveFixture(now: testTimeLive);
       expect(liveFixture.isLive, isTrue);
       expect(liveFixture.isUpcoming, isFalse);
       expect(liveFixture.state, 'in');
       expect(liveFixture.clock, "'+30");
 
-      // Simulated current time: 18:00 (2 hours before kickoff)
-      final testTimeUpcoming = DateTime(2026, 9, 4, 18, 0);
+      // Simulated current time: 2 hours before local kickoff
+      final testTimeUpcoming = localStart.subtract(const Duration(hours: 2));
       final upcomingFixture = model.toLiveFixture(now: testTimeUpcoming);
       expect(upcomingFixture.isLive, isFalse);
       expect(upcomingFixture.isUpcoming, isTrue);
       expect(upcomingFixture.state, 'pre');
-      expect(upcomingFixture.clock, '20:00');
+      expect(upcomingFixture.clock, expectedLocalTimeStr);
+    });
+
+    test('converts match time from UTC / Cairo UTC+2 across every country timezone', () {
+      // Yallakora raw time 22:00 (UTC+2) => 20:00 UTC
+      final model = MatchModel.fromJson({
+        'team_home': 'ريال مدريد',
+        'team_away': 'برشلونة',
+        'time': '22:00',
+        'time_utc': '20:00',
+        'timezone_offset': 2,
+        'status': 'لم تبدأ',
+        'channel': 'beIN Sports 1',
+      });
+
+      final refNow = DateTime(2026, 11, 24, 15, 0);
+
+      // In UTC+3 (Saudi Arabia / Qatar / Iraq / Kuwait / Jordan / etc.): 22:00 UTC+2 -> 23:00
+      final fixtureUtcPlus3 = model.toLiveFixture(
+        now: refNow,
+        targetTimeZoneOffset: const Duration(hours: 3),
+      );
+      expect(fixtureUtcPlus3.scheduledTime, '23:00');
+      expect(fixtureUtcPlus3.clock, '23:00');
+
+      // In UTC+2 (Egypt): 22:00
+      final fixtureUtcPlus2 = model.toLiveFixture(
+        now: refNow,
+        targetTimeZoneOffset: const Duration(hours: 2),
+      );
+      expect(fixtureUtcPlus2.scheduledTime, '22:00');
+
+      // In UTC+4 (UAE / Oman): 00:00
+      final fixtureUtcPlus4 = model.toLiveFixture(
+        now: refNow,
+        targetTimeZoneOffset: const Duration(hours: 4),
+      );
+      expect(fixtureUtcPlus4.scheduledTime, '00:00');
+
+      // In UTC+1 (Morocco / Tunisia / Algeria / CET): 21:00
+      final fixtureUtcPlus1 = model.toLiveFixture(
+        now: refNow,
+        targetTimeZoneOffset: const Duration(hours: 1),
+      );
+      expect(fixtureUtcPlus1.scheduledTime, '21:00');
+
+      // In UTC+0 (UK / GMT): 20:00
+      final fixtureUtc0 = model.toLiveFixture(
+        now: refNow,
+        targetTimeZoneOffset: Duration.zero,
+      );
+      expect(fixtureUtc0.scheduledTime, '20:00');
+
+      // Legacy matches.json without time_utc (falls back to UTC+2 source -> UTC -> device local)
+      final legacyModel = MatchModel.fromJson({
+        'team_home': 'الأهلي',
+        'team_away': 'الزمالك',
+        'time': '22:00',
+        'status': 'لم تبدأ',
+        'channel': 'ON Sport',
+      });
+      final legacyUtcPlus3 = legacyModel.toLiveFixture(
+        now: refNow,
+        targetTimeZoneOffset: const Duration(hours: 3),
+      );
+      expect(legacyUtcPlus3.scheduledTime, '23:00');
     });
   });
 }

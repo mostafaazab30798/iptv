@@ -70,6 +70,13 @@ bool FlutterWindow::OnCreate() {
         }
       });
 
+  // Apply initial borderless fullscreen AFTER child content is parented so the
+  // top-level HWND and Flutter child view do not match the monitor rect at the
+  // same size while the window is being activated/deactivated (which triggers
+  // Windows DXGI Independent Flip / Multiplane Overlay promotion and blanks
+  // external HDMI/DisplayPort monitors for ~1 second on every Alt-Tab / click).
+  this->SetFullScreen(true);
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -98,6 +105,18 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Prevent screen_brightness_windows / window_manager WindowProc delegates
+  // from running synchronous DDC/CI SetMonitorBrightness / GetMonitorBrightness
+  // I2C transactions or non-client activation redraws when focus changes.
+  // External monitors freeze or black out for ~1 second when DDC/CI VCP 0x10
+  // commands are sent on WM_ACTIVATEAPP / WM_SIZE.
+  if (message == WM_ACTIVATEAPP) {
+    return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+  }
+  if (message == WM_NCACTIVATE && IsFullScreen()) {
+    return TRUE;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

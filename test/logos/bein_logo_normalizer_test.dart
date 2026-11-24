@@ -71,12 +71,27 @@ void main() {
       expect(BeinLogoNormalizer.normalize('beIN Kids'), isNull);
       expect(BeinLogoNormalizer.normalize('beIN Junior HD'), isNull);
       expect(BeinLogoNormalizer.normalize('beIN Movies 1'), isNull);
+      expect(BeinLogoNormalizer.normalize('beIN Series 1 HD'), isNull);
+      expect(BeinLogoNormalizer.normalize('beIN Drama 1'), isNull);
+      expect(BeinLogoNormalizer.normalize('beIN Gourmet HD'), isNull);
+      expect(BeinLogoNormalizer.normalize('beIN Box Office 1'), isNull);
+      expect(BeinLogoNormalizer.normalize('beIN Sports Series 1'), isNull);
       expect(BeinLogoNormalizer.normalize('بي إن أطفال'), isNull);
+      expect(BeinLogoNormalizer.normalize('بي ان مسلسلات 1'), isNull);
+      expect(BeinLogoNormalizer.normalize('بي ان افلام 1'), isNull);
       expect(BeinLogoNormalizer.normalize('Sky Sports Premier League'), isNull);
       expect(BeinLogoNormalizer.normalize('BBC One HD'), isNull);
       expect(BeinLogoNormalizer.normalize('Canal+ Sport'), isNull);
       expect(BeinLogoNormalizer.normalize(''), isNull);
       expect(BeinLogoNormalizer.normalize(null), isNull);
+    });
+
+    test('Handles attached digits like 1HD, HD1, MAX1, BEIN1', () {
+      expect(BeinLogoNormalizer.normalize('beIN Sports 1HD'), 'bein_sports_1');
+      expect(BeinLogoNormalizer.normalize('beIN Sports HD1'), 'bein_sports_1');
+      expect(BeinLogoNormalizer.normalize('بى ان سبورت 1HD'), 'bein_sports_1');
+      expect(BeinLogoNormalizer.normalize('beIN Sports MAX1'), 'bein_sports_1_max');
+      expect(BeinLogoNormalizer.normalize('BEIN1 FHD'), 'bein_sports_1');
     });
   });
 }

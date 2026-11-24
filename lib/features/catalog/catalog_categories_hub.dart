@@ -1,5 +1,5 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/domain/entities/category.dart';
 import 'package:iptv/features/catalog/catalog_controller.dart';
@@ -58,41 +58,47 @@ class CatalogCategoriesHub<TItem, TLeading> extends StatelessWidget {
                     subtitle: context.l10n.homeCheckConnection,
                     icon: emptyIcon,
                   ))
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              scrollCacheExtent: const ScrollCacheExtent.pixels(350),
-              itemCount: categories.length + 1,
-              separatorBuilder: (_, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                if (index == 0) {
+          : DpadRegion(
+              memoryKey: 'catalog/categories-${hubKey.toString()}',
+              debugLabel: 'catalog-categories',
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.md,
+                ),
+                scrollCacheExtent: const ScrollCacheExtent.pixels(350),
+                itemCount: categories.length + 1,
+                separatorBuilder: (_, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return CategoryCard(
+                      title: allTitle,
+                      itemCount: state.totalCount,
+                      itemCountLabel: itemCountLabel,
+                      isAllCard: true,
+                      autofocus: true,
+                      entry: true,
+                      onTap: onSelectAll,
+                    );
+                  }
+
+                  final category = categories[index - 1];
+                  final count = state.categoryCounts[category.id] ?? 0;
+                  final leading = state.categoryLeading[category.id];
+                  final logoUrl = leading == null
+                      ? null
+                      : (leadingUrlOf?.call(leading) ??
+                            (leading is String ? leading : null));
+
                   return CategoryCard(
-                    title: allTitle,
-                    itemCount: state.totalCount,
+                    title: category.name,
+                    itemCount: count,
                     itemCountLabel: itemCountLabel,
-                    isAllCard: true,
-                    onTap: onSelectAll,
+                    logoUrl: logoUrl,
+                    onTap: () => onSelectCategory(category),
                   );
-                }
-
-                final category = categories[index - 1];
-                final count = state.categoryCounts[category.id] ?? 0;
-                final leading = state.categoryLeading[category.id];
-                final logoUrl = leading == null
-                    ? null
-                    : (leadingUrlOf?.call(leading) ??
-                          (leading is String ? leading : null));
-
-                return CategoryCard(
-                  title: category.name,
-                  itemCount: count,
-                  itemCountLabel: itemCountLabel,
-                  logoUrl: logoUrl,
-                  onTap: () => onSelectCategory(category),
-                );
-              },
+                },
+              ),
             ),
     );
   }

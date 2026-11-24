@@ -79,7 +79,7 @@ class FocusableCard extends StatelessWidget {
         }
 
         return AnimatedScale(
-          scale: pressed ? 0.97 : 1.06,
+          scale: pressed ? 0.97 : 1.05,
           duration: AppMotion.focusDuration,
           curve: AppMotion.focusCurve,
           child: AnimatedContainer(

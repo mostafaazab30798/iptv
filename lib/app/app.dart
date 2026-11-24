@@ -199,12 +199,14 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
         final factor = FormFactorResolver.of(context);
 
         var textScaler = mediaQuery.textScaler.clamp(maxScaleFactor: 1.4);
-        // Mild TV readability nudge; phone/tablet/desktop keep clamped scale.
+        // On TV,PhoneDesignScaler normalizes the viewport to the 10-foot reference
+        // canvas; clamp textScaler to 1.0..1.15 so TV firmware font settings never
+        // blow up cards or headers.
         if (factor == FormFactor.tv) {
-          final current = textScaler.scale(1.0);
-          textScaler = TextScaler.linear(
-            current < 1.08 ? 1.08 : current,
-          ).clamp(maxScaleFactor: 1.4);
+          textScaler = mediaQuery.textScaler.clamp(
+            minScaleFactor: 1.0,
+            maxScaleFactor: 1.15,
+          );
         }
 
         final Widget tree = CallbackShortcuts(
@@ -226,14 +228,9 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
             child: Dpad(
               theme: const DpadThemeData(
                 effects: [ArmedDpadEffects()],
-                scrollPadding: 56,
+                scrollPadding: 64,
               ),
-              keySet: const DpadKeySet().copyWith(
-                select: [
-                  ...DpadKeySet.defaultSelect,
-                  LogicalKeyboardKey.gameButtonSelect,
-                ],
-              ),
+              keySet: RemoteFocus.keySet,
               debugOverlay:
                   kDebugMode &&
                   const bool.fromEnvironment(

@@ -1,3 +1,4 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import 'package:iptv/domain/entities/movie.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/cached_image.dart';
 import 'package:iptv/shared/widgets/favorite_toggle_button.dart';
 
@@ -116,8 +118,11 @@ class _MovieDetailsModalState extends ConsumerState<_MovieDetailsModal> {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
-        return Column(
-          children: [
+        return DpadRegion(
+          memoryKey: 'movie-details/${_movie.streamId}',
+          debugLabel: 'movie-details',
+          child: Column(
+            children: [
             // Handle bar
             Container(
               margin: const EdgeInsets.symmetric(vertical: 10),
@@ -336,31 +341,39 @@ class _MovieDetailsModalState extends ConsumerState<_MovieDetailsModal> {
                   const SizedBox(height: 16),
 
                   // Prominent Play Action Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: ElevatedButton.icon(
-                      onPressed: _playMovie,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: AppColors.textOnAccent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 4,
-                        shadowColor: AppColors.accentGlow,
-                      ),
-                      icon: const HugeIcon(
-                        icon: AppIcons.play,
-                        color: AppColors.textOnAccent,
-                        size: 20,
-                      ),
-                      label: Text(
-                        context.l10n.actionPlay,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
+                  TvFocusable(
+                    autofocus: true,
+                    entry: true,
+                    scale: 1.03,
+                    onSelect: _playMovie,
+                    child: IgnorePointer(
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: AppColors.textOnAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 4,
+                            shadowColor: AppColors.accentGlow,
+                          ),
+                          icon: const HugeIcon(
+                            icon: AppIcons.play,
+                            color: AppColors.textOnAccent,
+                            size: 20,
+                          ),
+                          label: Text(
+                            context.l10n.actionPlay,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -459,6 +472,7 @@ class _MovieDetailsModalState extends ConsumerState<_MovieDetailsModal> {
               ),
             ),
           ],
+          ),
         );
       },
     );

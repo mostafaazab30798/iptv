@@ -54,7 +54,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
         _controller = ref.read(playerControllerProvider.notifier);
         _isLiveSource = ref.read(playerControllerProvider).isLive;
         _controller?.setPlayerRouteActive(true);
-        _enterFullscreenMode();
+        if (PlatformService.instance.isWindows) {
+          // On Windows, preserve the user's current app-level fullscreen or
+          // windowed state when entering/leaving the player route instead of
+          // forcing a display transition.
+          _controller?.setFullscreen(
+            PlatformService.instance.isFullScreenNotifier.value,
+          );
+        } else {
+          _enterFullscreenMode();
+        }
       }
     });
   }
@@ -171,7 +180,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
       _onFullscreenChanged,
     );
     _restoreDefaultOrientations();
-    PlatformService.instance.setFullScreen(false);
+    if (!PlatformService.instance.isWindows) {
+      PlatformService.instance.setFullScreen(false);
+    }
     final controller = _controller;
     final shouldStopOnDispose =
         kIsWeb ||
@@ -198,9 +209,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 
     if (!alreadyPopped) {
       _restoreDefaultOrientations();
-      // Exit OS immersive mode immediately. Surface ownership is released in
-      // dispose so LiveMiniPreview remounts after this Video is gone.
-      PlatformService.instance.setFullScreen(false);
+      // Exit OS immersive mode immediately on mobile/web. On Windows, keep the
+      // user's app-level fullscreen/windowed mode intact.
+      if (!PlatformService.instance.isWindows) {
+        PlatformService.instance.setFullScreen(false);
+      }
       if (mounted) {
         _isLiveSource = ref.read(playerControllerProvider).isLive;
       }

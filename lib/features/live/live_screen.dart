@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -17,6 +16,7 @@ import 'package:iptv/features/live/live_controller.dart';
 import 'package:iptv/features/live/widgets/live_mini_preview.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/layouts/layouts.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/category_card.dart';
@@ -238,6 +238,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                       itemCount: totalCount,
                       itemCountLabel: context.l10n.labelChannels,
                       isAllCard: true,
+                      autofocus: true,
+                      entry: true,
                       onTap: () => _selectCategory(null, isAll: true),
                     );
                   }
@@ -303,46 +305,51 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
               child: Row(
                 children: [
                   if (isCompact)
-                    IconButton(
-                      onPressed: _onBack,
-                      tooltip: context.l10n.labelCategories,
-                      icon: HugeIcon(
-                        icon: backIcon,
-                        size: 14,
-                        color: AppColors.accent,
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.accent.withAlpha(25),
+                    TvFocusable(
+                      onSelect: _onBack,
+                      child: Container(
                         padding: const EdgeInsets.all(8),
-                        shape: RoundedRectangleBorder(
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withAlpha(25),
                           borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: HugeIcon(
+                          icon: backIcon,
+                          size: 14,
+                          color: AppColors.accent,
                         ),
                       ),
                     )
                   else
-                    TextButton.icon(
-                      onPressed: _onBack,
-                      icon: HugeIcon(
-                        icon: backIcon,
-                        size: 14,
-                        color: AppColors.accent,
-                      ),
-                      label: Text(
-                        context.l10n.labelCategories,
-                        style: const TextStyle(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppColors.accent.withAlpha(25),
+                    TvFocusable(
+                      onSelect: _onBack,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
                         ),
-                        shape: RoundedRectangleBorder(
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withAlpha(25),
                           borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            HugeIcon(
+                              icon: backIcon,
+                              size: 14,
+                              color: AppColors.accent,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.l10n.labelCategories,
+                              style: const TextStyle(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -386,17 +393,19 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  IconButton(
+                  TvFocusable(
                     key: const ValueKey('live_view_mode_toggle'),
-                    icon: HugeIcon(
-                      icon: _isGridView ? AppIcons.listView : AppIcons.gridView,
-                      size: 20,
-                      color: AppColors.textSecondary,
+                    onSelect: () => setState(() => _isGridView = !_isGridView),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: HugeIcon(
+                        icon: _isGridView
+                            ? AppIcons.listView
+                            : AppIcons.gridView,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                    tooltip: _isGridView
-                        ? 'Switch to List View'
-                        : 'Switch to Grid View',
-                    onPressed: () => setState(() => _isGridView = !_isGridView),
                   ),
                 ],
               ),
@@ -465,9 +474,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
               }
 
               final previewWidth = switch (formFactor) {
-                FormFactor.tv => (constraints.maxWidth * 0.32).clamp(
-                  260.0,
-                  320.0,
+                FormFactor.tv => (constraints.maxWidth * 0.34).clamp(
+                  300.0,
+                  400.0,
                 ),
                 FormFactor.desktop => (constraints.maxWidth * 0.30).clamp(
                   320.0,
@@ -574,54 +583,66 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
     }
 
     if (_isGridView) {
-      return GridView.builder(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        scrollCacheExtent: const ScrollCacheExtent.pixels(350),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 155,
-          childAspectRatio: 1.15,
-          crossAxisSpacing: AppSpacing.sm,
-          mainAxisSpacing: AppSpacing.sm,
+      return DpadRegion(
+        memoryKey: 'live/channels-grid',
+        debugLabel: 'live-channels-grid',
+        child: GridView.builder(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          scrollCacheExtent: const ScrollCacheExtent.pixels(350),
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 155,
+            childAspectRatio: 1.15,
+            crossAxisSpacing: AppSpacing.sm,
+            mainAxisSpacing: AppSpacing.sm,
+          ),
+          itemCount: filteredChannels.length,
+          itemBuilder: (context, i) {
+            final channel = filteredChannels[i];
+            final isPlaying = activeChannelId == channel.streamId;
+            return ChannelCard(
+              channel: channel,
+              isPlaying: isPlaying,
+              showBadge: isPlaying,
+              autofocus: i == 0,
+              entry: i == 0,
+              onTap: () => _playChannel(channel),
+            );
+          },
         ),
-        itemCount: filteredChannels.length,
-        itemBuilder: (context, i) {
-          final channel = filteredChannels[i];
-          final isPlaying = activeChannelId == channel.streamId;
-          return ChannelCard(
-            channel: channel,
-            isPlaying: isPlaying,
-            showBadge: isPlaying,
-            onTap: () => _playChannel(channel),
-          );
-        },
       );
     }
 
     // Fixed extent: tile padding (10*2) + logo row (~44) ≈ 72 + separator 8 via
     // prototypeItem would need separated; use itemExtent on plain ListView.
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      scrollCacheExtent: const ScrollCacheExtent.pixels(350),
-      itemExtent: 80,
-      itemCount: filteredChannels.length,
-      itemBuilder: (context, i) {
-        final channel = filteredChannels[i];
-        final isPlaying = activeChannelId == channel.streamId;
-        final catName =
-            categoryNames[channel.categoryId] ?? context.l10n.navLive;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: ChannelListTile(
-            channel: channel,
-            isPlaying: isPlaying,
-            categoryName: catName,
-            onTap: () => _playChannel(channel),
-            onCatchUp: channel.hasTvArchive
-                ? () => _openCatchUp(channel)
-                : null,
-          ),
-        );
-      },
+    return DpadRegion(
+      memoryKey: 'live/channels-list',
+      debugLabel: 'live-channels-list',
+      child: ListView.builder(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        scrollCacheExtent: const ScrollCacheExtent.pixels(350),
+        itemExtent: 80,
+        itemCount: filteredChannels.length,
+        itemBuilder: (context, i) {
+          final channel = filteredChannels[i];
+          final isPlaying = activeChannelId == channel.streamId;
+          final catName =
+              categoryNames[channel.categoryId] ?? context.l10n.navLive;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: ChannelListTile(
+              channel: channel,
+              isPlaying: isPlaying,
+              categoryName: catName,
+              autofocus: i == 0,
+              entry: i == 0,
+              onTap: () => _playChannel(channel),
+              onCatchUp: channel.hasTvArchive
+                  ? () => _openCatchUp(channel)
+                  : null,
+            ),
+          );
+        },
+      ),
     );
   }
 }

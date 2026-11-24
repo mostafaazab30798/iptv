@@ -97,6 +97,30 @@ void main() {
         BigMatchDetector.isAllowedMatchChannel('Barcelona TV 4K'),
         isFalse,
       );
+      expect(
+        BigMatchDetector.isAllowedMatchChannel('beIN Series 1 HD'),
+        isFalse,
+      );
+      expect(
+        BigMatchDetector.isAllowedMatchChannel('beIN Movies 1 4K'),
+        isFalse,
+      );
+      expect(
+        BigMatchDetector.isAllowedMatchChannel('beIN Drama 1 HD'),
+        isFalse,
+      );
+      expect(
+        BigMatchDetector.isAllowedMatchChannel('beIN Junior HD'),
+        isFalse,
+      );
+      expect(
+        BigMatchDetector.isAllowedMatchChannel('ON Sport 1 HD'),
+        isTrue,
+      );
+      expect(
+        BigMatchDetector.isAllowedMatchChannel('ثمانية 1 HD'),
+        isTrue,
+      );
     });
   });
 }

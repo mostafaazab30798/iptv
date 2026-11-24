@@ -501,6 +501,45 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     setState(() {});
   }
 
+  void _openQuickSettingsSheet() {
+    _hideControlsTimer?.cancel();
+    final isPhone = MediaQuery.sizeOf(context).shortestSide < 600;
+    PlayerQuickSettingsSheet.show(
+      context,
+      playerState: widget.playerState,
+      onSelectPlaybackRate: widget.onSelectPlaybackRate,
+      onSelectAspectRatio: widget.onSelectAspectRatio,
+      onOpenAudioTracks: () {
+        AudioTrackSelectorModal.show(
+          context,
+          tracks: widget.playerState.availableAudioTracks,
+          currentTrack: widget.playerState.currentAudioTrack,
+          onSelect: widget.onSelectAudioTrack,
+        );
+      },
+      onOpenSubtitles: () {
+        SubtitleSelectorModal.show(
+          context,
+          tracks: widget.playerState.availableSubtitleTracks,
+          currentTrack: widget.playerState.currentSubtitleTrack,
+          onSelect: widget.onSelectSubtitleTrack,
+        );
+      },
+      onSelectBufferMode: widget.onSelectBufferMode,
+      onSelectBackend: widget.onSelectBackend,
+      onSetSleepTimer: _setSleepTimer,
+      onAudioHandoff: isPhone
+          ? null
+          : () {
+              AudioHandoffTvDialog.show(
+                context,
+              ).then((_) => _scheduleHide());
+            },
+      activeSleepLabel: _activeSleepLabel,
+      activeSleepDuration: _activeSleepDuration,
+    ).then((_) => _scheduleHide());
+  }
+
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
@@ -509,7 +548,9 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     final key = event.logicalKey;
     final chromeOpen = _controlsVisible && !widget.playerState.isLocked;
 
-    if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack) {
+    if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.browserBack) {
       if (widget.playerState.isLocked) {
         widget.onToggleLock();
         return KeyEventResult.handled;
@@ -531,6 +572,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
       return KeyEventResult.handled;
     }
 
+    // Physical TV remote media keys work at all times (even when chrome is open)
     if (key == LogicalKeyboardKey.mediaPlayPause ||
         (key == LogicalKeyboardKey.mediaPlay &&
             !widget.playerState.isPlaying) ||
@@ -543,6 +585,51 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
     if (key == LogicalKeyboardKey.mediaPlay ||
         key == LogicalKeyboardKey.mediaPause) {
       _showOverlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaStop) {
+      widget.onClose();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaFastForward) {
+      if (widget.playerState.canSeek) {
+        widget.onSeekRelative(const Duration(seconds: 10));
+        _showSeekRippleOnly(DoubleTapSeekSide.right);
+      }
+      _showOverlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaRewind) {
+      if (widget.playerState.canSeek) {
+        widget.onSeekRelative(const Duration(seconds: -10));
+        _showSeekRippleOnly(DoubleTapSeekSide.left);
+      }
+      _showOverlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.channelUp ||
+        key == LogicalKeyboardKey.mediaTrackPrevious ||
+        key == LogicalKeyboardKey.pageUp) {
+      widget.onPreviousChannel();
+      _showOverlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.channelDown ||
+        key == LogicalKeyboardKey.mediaTrackNext ||
+        key == LogicalKeyboardKey.pageDown) {
+      widget.onNextChannel();
+      _showOverlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.contextMenu ||
+        key == LogicalKeyboardKey.info ||
+        key == LogicalKeyboardKey.guide ||
+        key == LogicalKeyboardKey.settings ||
+        key == LogicalKeyboardKey.tvContentsMenu ||
+        key == LogicalKeyboardKey.mediaTopMenu) {
+      if (!widget.playerState.isLocked) {
+        _openQuickSettingsSheet();
+      }
       return KeyEventResult.handled;
     }
 
@@ -750,48 +837,7 @@ class _PlayerOverlayState extends State<PlayerOverlay> {
                             ).then((_) => _scheduleHide());
                           },
                           onToggleLock: widget.onToggleLock,
-                          onOpenQuickSettings: () {
-                            _hideControlsTimer?.cancel();
-                            PlayerQuickSettingsSheet.show(
-                              context,
-                              playerState: widget.playerState,
-                              onSelectPlaybackRate: widget.onSelectPlaybackRate,
-                              onSelectAspectRatio: widget.onSelectAspectRatio,
-                              onOpenAudioTracks: () {
-                                AudioTrackSelectorModal.show(
-                                  context,
-                                  tracks:
-                                      widget.playerState.availableAudioTracks,
-                                  currentTrack:
-                                      widget.playerState.currentAudioTrack,
-                                  onSelect: widget.onSelectAudioTrack,
-                                );
-                              },
-                              onOpenSubtitles: () {
-                                SubtitleSelectorModal.show(
-                                  context,
-                                  tracks: widget
-                                      .playerState
-                                      .availableSubtitleTracks,
-                                  currentTrack:
-                                      widget.playerState.currentSubtitleTrack,
-                                  onSelect: widget.onSelectSubtitleTrack,
-                                );
-                              },
-                              onSelectBufferMode: widget.onSelectBufferMode,
-                              onSelectBackend: widget.onSelectBackend,
-                              onSetSleepTimer: _setSleepTimer,
-                              onAudioHandoff: isPhone
-                                  ? null
-                                  : () {
-                                      AudioHandoffTvDialog.show(
-                                        context,
-                                      ).then((_) => _scheduleHide());
-                                    },
-                              activeSleepLabel: _activeSleepLabel,
-                              activeSleepDuration: _activeSleepDuration,
-                            ).then((_) => _scheduleHide());
-                          },
+                          onOpenQuickSettings: _openQuickSettingsSheet,
                           onToggleFullscreen: widget.onToggleFullscreen,
                           onAudioHandoff: isPhone
                               ? null

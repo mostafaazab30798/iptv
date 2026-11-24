@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv/shared/layouts/form_factor.dart';
+import 'package:iptv/shared/layouts/phone_design_scaler.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -77,5 +78,38 @@ void main() {
       expect(tv.dock, 0);
       expect(tv.heroFraction, 0.40);
     });
+  });
+
+  group('PhoneDesignScaler TV 10-foot scaling', () {
+    testWidgets(
+      'scales 960x540 Android TV viewport to 10-foot reference shortest side (680dp)',
+      (tester) async {
+        late Size innerSize;
+
+        await tester.pumpWidget(
+          MediaQuery(
+            data: const MediaQueryData(size: Size(960, 540)),
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: PhoneDesignScaler(
+                formFactor: FormFactor.tv,
+                child: Builder(
+                  builder: (context) {
+                    innerSize = MediaQuery.sizeOf(context);
+                    return const SizedBox.expand();
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          innerSize.shortestSide,
+          closeTo(PhoneDesignScaler.tvReferenceShortestSide, 0.5),
+        );
+        expect(innerSize.width, greaterThan(1200));
+      },
+    );
   });
 }

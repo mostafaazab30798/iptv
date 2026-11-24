@@ -18,6 +18,7 @@ class SeriesCard extends StatelessWidget {
     this.width = PosterCardLayout.defaultWidth,
     this.height = PosterCardLayout.defaultPosterHeight,
     this.expand = false,
+    this.autofocus = false,
     this.borderRadius = AppRadius.lg,
     this.heartSize = 20,
     this.memCacheWidth,
@@ -33,6 +34,7 @@ class SeriesCard extends StatelessWidget {
   /// When true, ignore [width]/[height] and scale from parent constraints
   /// (grid cells). Prefer explicit sizes for horizontal rows.
   final bool expand;
+  final bool autofocus;
 
   final double borderRadius;
   final double heartSize;
@@ -111,6 +113,7 @@ class SeriesCard extends StatelessWidget {
             width: w,
             height: posterH,
             child: PosterHeartCard(
+              autofocus: autofocus,
               onTap: onTap,
               borderRadius: _radius,
               favorite: _favorite,
@@ -170,6 +173,7 @@ class SeriesCard extends StatelessWidget {
       width: w,
       height: posterH,
       child: PosterHeartCard(
+        autofocus: autofocus,
         onTap: onTap,
         borderRadius: _radius,
         favorite: _favorite,

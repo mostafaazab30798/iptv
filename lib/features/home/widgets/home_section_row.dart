@@ -1,6 +1,5 @@
 import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/shared/widgets/section_header.dart';
 
@@ -37,6 +36,7 @@ class HomeSectionRow<T> extends StatelessWidget {
     return DpadRegion(
       memoryKey: 'home/${title.toLowerCase()}',
       debugLabel: title,
+      horizontalEdge: DpadEdgeBehavior.stop,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -55,9 +55,10 @@ class HomeSectionRow<T> extends StatelessWidget {
               // Keep off-screen card FocusNodes / images from staying warm forever.
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: true,
-              // Small cache: decoding/painting off-screen posters is a top jank source.
-              scrollCacheExtent: const ScrollCacheExtent.pixels(120),
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
+              // Generous cache extent so D-pad Left/Right finds adjacent cards
+              // synchronously without pausing for lazy-scroll retries.
+              scrollCacheExtent: const ScrollCacheExtent.pixels(420),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
               itemCount: items.length,
               itemExtent: itemWidth == null ? null : itemWidth! + 12,
               itemBuilder: (context, index) {

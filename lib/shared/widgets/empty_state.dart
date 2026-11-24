@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
 import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 /// Reusable empty state view.
 class EmptyState extends StatelessWidget {
@@ -82,7 +83,17 @@ class EmptyState extends StatelessWidget {
             ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.lg),
-              ElevatedButton(onPressed: onAction, child: Text(actionLabel!)),
+              TvFocusable(
+                autofocus: true,
+                entry: true,
+                onSelect: onAction,
+                child: IgnorePointer(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    child: Text(actionLabel!),
+                  ),
+                ),
+              ),
             ],
             if (secondaryAction != null) ...[
               const SizedBox(height: AppSpacing.sm),

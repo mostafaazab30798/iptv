@@ -1,15 +1,15 @@
 import 'package:flutter/widgets.dart';
 import 'package:iptv/shared/layouts/form_factor.dart';
 
-/// Scales phone UI so every handset matches the S24 Ultra reference composition.
+/// Scales phone UI so every handset matches the S24 Ultra reference composition,
+/// and scales Android TV UI so every TV box renders at a consistent 10-foot canvas.
 ///
-/// Design baseline: shortest side = [referenceShortestSide] (411 logical dp —
-/// Galaxy S24 Ultra at default display size). Smaller phones shrink uniformly;
-/// slightly larger phones grow uniformly. Tablet / desktop / TV are unchanged.
-///
-/// Implementation: present a virtual [MediaQuery] whose shortest side is always
-/// 411, then [Transform.scale] to fill the physical viewport. Fixed logical
-/// sizes (hero, rows, posters, chrome) keep the same relative layout everywhere.
+/// Phone baseline: shortest side = [referenceShortestSide] (411 logical dp —
+/// Galaxy S24 Ultra at default display size).
+/// TV baseline: shortest side = [tvReferenceShortestSide] (680 logical dp —
+/// ≈1209×680 at 16:9). Standard Android TV boxes report 960×540 logical dp
+/// (1080p at `tvdpi` 2.0x) or 640×360, which makes unscaled mobile/desktop
+/// widgets appear huge on a television screen.
 class PhoneDesignScaler extends StatelessWidget {
   const PhoneDesignScaler({
     super.key,
@@ -20,21 +20,35 @@ class PhoneDesignScaler extends StatelessWidget {
   /// Galaxy S24 Ultra portrait width / landscape height at default density.
   static const double referenceShortestSide = 411.0;
 
+  /// Reference 10-foot TV shortest side (≈ 1209×680 at 16:9).
+  /// Scales 960×540 Android TV viewports down by ~0.79x so cards, headers,
+  /// dialogs, and rows look crisp and proportionate instead of oversized.
+  static const double tvReferenceShortestSide = 680.0;
+
   /// Skip transform when already within ~1% of the reference (perf + crispness).
   static const double _identityEpsilon = 0.01;
 
   final FormFactor formFactor;
   final Widget child;
 
+  static double? referenceShortestSideFor(FormFactor factor) {
+    return switch (factor) {
+      FormFactor.phone => referenceShortestSide,
+      FormFactor.tv => tvReferenceShortestSide,
+      FormFactor.tablet || FormFactor.desktop => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (formFactor != FormFactor.phone) return child;
+    final targetShortestSide = referenceShortestSideFor(formFactor);
+    if (targetShortestSide == null) return child;
 
     final mediaQuery = MediaQuery.of(context);
     final size = mediaQuery.size;
     if (size.shortestSide <= 0) return child;
 
-    final scale = size.shortestSide / referenceShortestSide;
+    final scale = size.shortestSide / targetShortestSide;
     if ((scale - 1.0).abs() < _identityEpsilon) return child;
 
     final inverse = 1.0 / scale;

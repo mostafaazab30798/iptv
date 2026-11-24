@@ -455,8 +455,10 @@ class _MatchHeroCopy extends StatelessWidget {
     final isLive = fixture?.isLive ?? false;
     final scheduledTime = fixture?.scheduledTime ?? fixture?.clock ?? '';
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    final rawChannel =
-        fixture?.broadcastChannel ?? item.channel?.name ?? match.channel.name;
+    final rawChannel = _displayChannelName(
+      broadcastChannel: fixture?.broadcastChannel,
+      boundChannelName: item.channel?.name ?? match.channel.name,
+    );
     final channel = SportsLocalization.localizeChannel(
       rawChannel,
       isArabic: isArabic,
@@ -524,6 +526,25 @@ class _MatchHeroCopy extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Selects the channel label to show on the match hero card.
+///
+/// Prefers the scraped [broadcastChannel] when it is available and not a
+/// "Not Available" / "غير متوفر" placeholder; otherwise falls back to the
+/// bound IPTV channel name so the card never displays "Not Available" when
+/// clicking opens a valid stream.
+String _displayChannelName({
+  required String? broadcastChannel,
+  required String boundChannelName,
+}) {
+  final b = broadcastChannel?.trim() ?? '';
+  if (b.isNotEmpty &&
+      b.toLowerCase() != 'not available' &&
+      !b.contains('غير متوفر')) {
+    return b;
+  }
+  return boundChannelName;
 }
 
 class _MatchStadiumBackdrop extends StatelessWidget {

@@ -34,8 +34,10 @@ class MatchPosterCard extends StatelessWidget {
     final isLive = fixture?.isLive ?? false;
     final scheduledTime = fixture?.scheduledTime ?? fixture?.clock ?? '';
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    final rawChannel =
-        fixture?.broadcastChannel ?? item?.channel?.name ?? match.channel.name;
+    final rawChannel = _displayChannelName(
+      broadcastChannel: fixture?.broadcastChannel,
+      boundChannelName: item?.channel?.name ?? match.channel.name,
+    );
     final channel = SportsLocalization.localizeChannel(
       rawChannel,
       isArabic: isArabic,
@@ -439,7 +441,10 @@ class _PortraitMatchSlide extends StatelessWidget {
     final isLive = fixture?.isLive ?? false;
     final scheduledTime = fixture?.scheduledTime ?? fixture?.clock ?? '';
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    final rawChannel = fixture?.broadcastChannel ?? match.channel.name;
+    final rawChannel = _displayChannelName(
+      broadcastChannel: fixture?.broadcastChannel,
+      boundChannelName: match.channel.name,
+    );
     final channel = SportsLocalization.localizeChannel(
       rawChannel,
       isArabic: isArabic,

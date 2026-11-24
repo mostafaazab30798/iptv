@@ -8,23 +8,36 @@
     allowing side-by-side installation with the mobile build on test devices.
 
 .PARAMETER Release
-    Build in release mode (requires key.properties for signing). Defaults to debug.
+    Build in release mode (default: true when key.properties exists).
+
+.PARAMETER Debug
+    Build in debug mode instead of release mode.
 
 .PARAMETER SeparatePackageId
     Appends `.tv` to the applicationId (resulting in `com.hopetv.iptvplayer.tv`).
+
+.PARAMETER TargetPlatform
+    Target Android ABI platforms. Defaults to `android-arm,android-arm64` for universal 32/64-bit TV builds,
+    or pass `android-arm64` for 64-bit-only TV builds.
+
+.PARAMETER Universal
+    Build a universal 32-bit + 64-bit (`android-arm,android-arm64`) TV APK.
 
 .PARAMETER ConfigFile
     Path to environment configuration file (defaults to .env.tv if present, otherwise .env.local).
 
 .EXAMPLE
     .\scripts\android\build_tv_apk.ps1
-    .\scripts\android\build_tv_apk.ps1 -Release
+    .\scripts\android\build_tv_apk.ps1 -TargetPlatform android-arm64
     .\scripts\android\build_tv_apk.ps1 -SeparatePackageId
 #>
 
 param(
     [switch]$Release,
+    [switch]$Debug,
     [switch]$SeparatePackageId,
+    [switch]$Universal,
+    [string]$TargetPlatform = "",
     [string]$ConfigFile = ""
 )
 
@@ -33,7 +46,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $repoRoot
 
 Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "   HOPE IPTV — Android TV APK Builder           " -ForegroundColor Cyan
+Write-Host "   HOPE IPTV -- Android TV APK Builder          " -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
 # Resolve configuration file
@@ -47,13 +60,25 @@ if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
 
 $flutterArgs = @("build", "apk")
 
-if ($Release) {
-    $flutterArgs += "--release"
+$hasKeyProperties = Test-Path (Join-Path $repoRoot "android\key.properties")
+$useRelease = if ($Debug) { $false } elseif ($Release) { $true } else { $hasKeyProperties }
+
+if ($useRelease) {
+    $flutterArgs += @(
+        "--release",
+        "--tree-shake-icons",
+        "--split-debug-info=build/app/outputs/symbols"
+    )
     $buildMode = "release"
 } else {
     $flutterArgs += "--debug"
     $buildMode = "debug"
 }
+
+if ([string]::IsNullOrWhiteSpace($TargetPlatform)) {
+    $TargetPlatform = "android-arm,android-arm64"
+}
+$flutterArgs += "--target-platform=$TargetPlatform"
 
 if (-not [string]::IsNullOrWhiteSpace($ConfigFile) -and (Test-Path $ConfigFile)) {
     Write-Host "[*] Using environment: $ConfigFile" -ForegroundColor Gray
@@ -62,18 +87,30 @@ if (-not [string]::IsNullOrWhiteSpace($ConfigFile) -and (Test-Path $ConfigFile))
     Write-Host "[*] No .env.tv or .env.local found. Building without external defines." -ForegroundColor Yellow
 }
 
-$gradleArgs = @()
+$gradleArgs = @("-PtvOptimize=true")
 if ($SeparatePackageId) {
     Write-Host "[*] Building with separate TV Package ID (com.hopetv.iptvplayer.tv)" -ForegroundColor Green
     $gradleArgs += "-PtvBuild=true"
+}
+if ($TargetPlatform -eq "android-arm64") {
+    $gradleArgs += "-PtargetAbis=arm64-v8a"
+} elseif ($TargetPlatform -eq "android-arm") {
+    $gradleArgs += "-PtargetAbis=armeabi-v7a"
 }
 
 if ($gradleArgs.Count -gt 0) {
     $flutterArgs += $gradleArgs
 }
 
-Write-Host "[*] Running: flutter $($flutterArgs -join ' ')" -ForegroundColor Cyan
-& flutter @flutterArgs
+$flutterCmd = "flutter"
+if (-not (Get-Command $flutterCmd -ErrorAction SilentlyContinue)) {
+    if (Test-Path "C:\Users\HOPE\dev\flutter\bin\flutter.bat") {
+        $flutterCmd = "C:\Users\HOPE\dev\flutter\bin\flutter.bat"
+    }
+}
+
+Write-Host "[*] Running: $flutterCmd $($flutterArgs -join ' ')" -ForegroundColor Cyan
+& $flutterCmd @flutterArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Flutter APK build failed with exit code $LASTEXITCODE"

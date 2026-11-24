@@ -165,6 +165,8 @@ jobs:
             --release
             --split-per-abi
             --target-platform android-arm64
+            --tree-shake-icons
+            --split-debug-info=build/app/outputs/symbols-mobile
             "--dart-define=SUPABASE_URL=${SUPABASE_URL}"
             "--dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
             "--dart-define=PORTAL_ORIGIN=${PORTAL}"
@@ -206,12 +208,16 @@ jobs:
           TV_BUILD_ARGS=(
             --release
             --target-platform android-arm,android-arm64
+            --tree-shake-icons
+            --split-debug-info=build/app/outputs/symbols-tv
             "--dart-define=SUPABASE_URL=${SUPABASE_URL}"
             "--dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
             "--dart-define=PORTAL_ORIGIN=${PORTAL}"
             "--dart-define=ENTITLEMENT_PUBLIC_KEYS_JSON=${ENTITLEMENT_KEYS}"
             "--dart-define=RELEASE_PUBLIC_KEYS_JSON=${RELEASE_PUBLIC_KEYS_JSON}"
             -PtvBuild=true
+            -PtvOptimize=true
+            -PtargetAbis=armeabi-v7a,arm64-v8a
           )
 
           flutter build apk "${TV_BUILD_ARGS[@]}"

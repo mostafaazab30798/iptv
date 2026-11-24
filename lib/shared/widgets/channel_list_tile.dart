@@ -31,6 +31,8 @@ class ChannelListTile extends ConsumerWidget {
     this.timeOrEpg,
     this.onMoreOptions,
     this.onCatchUp,
+    this.autofocus = false,
+    this.entry = false,
   });
 
   final Channel channel;
@@ -40,6 +42,8 @@ class ChannelListTile extends ConsumerWidget {
   final String? timeOrEpg;
   final VoidCallback? onMoreOptions;
   final VoidCallback? onCatchUp;
+  final bool autofocus;
+  final bool entry;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,6 +53,8 @@ class ChannelListTile extends ConsumerWidget {
       children: [
         Expanded(
           child: FocusableCard(
+            autofocus: autofocus,
+            entry: entry,
             onTap: onTap,
             borderRadius: BorderRadius.circular(16),
             backgroundColor: isPlaying

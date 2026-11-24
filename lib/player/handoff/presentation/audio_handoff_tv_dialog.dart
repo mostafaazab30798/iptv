@@ -8,6 +8,7 @@ import 'package:iptv/app/theme/app_icons.dart';
 import 'package:iptv/player/handoff/application/audio_handoff_server_controller.dart';
 import 'package:iptv/player/player.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -127,13 +128,16 @@ class _AudioHandoffTvDialogState extends ConsumerState<AudioHandoffTvDialog> {
                           ],
                         ),
                       ),
-                    IconButton(
-                      icon: const HugeIcon(
-                        icon: AppIcons.close,
-                        color: Colors.white70,
-                        size: 20,
+                    TvFocusable(
+                      onSelect: () => Navigator.of(context).pop(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: HugeIcon(
+                          icon: AppIcons.close,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
@@ -323,13 +327,13 @@ class _AudioHandoffTvDialogState extends ConsumerState<AudioHandoffTvDialog> {
                   children: [
                     // Mute TV speaker toggle
                     Expanded(
-                      child: InkWell(
-                        onTap: () {
+                      child: TvFocusable(
+                        scale: 1.03,
+                        onSelect: () {
                           unawaited(
                             serverController.toggleTvMute(playerController),
                           );
                         },
-                        borderRadius: BorderRadius.circular(10),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -380,45 +384,59 @@ class _AudioHandoffTvDialogState extends ConsumerState<AudioHandoffTvDialog> {
                     const SizedBox(width: 12),
 
                     // Stop Handoff button
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
-                        side: const BorderSide(color: Colors.redAccent),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () async {
+                    TvFocusable(
+                      scale: 1.03,
+                      onSelect: () async {
                         await serverController.stopHosting(playerController);
                         if (context.mounted) {
                           Navigator.of(context).pop();
                         }
                       },
-                      child: const Text('Stop Handoff'),
+                      child: IgnorePointer(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.redAccent,
+                            side: const BorderSide(color: Colors.redAccent),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {},
+                          child: const Text('Stop Handoff'),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 10),
 
                     // Done / Keep running in background
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
+                    TvFocusable(
+                      autofocus: true,
+                      entry: true,
+                      scale: 1.03,
+                      onSelect: () => Navigator.of(context).pop(),
+                      child: IgnorePointer(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {},
+                          child: const Text(
+                            'Keep Playing',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'Keep Playing',
-                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],

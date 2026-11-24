@@ -6,6 +6,8 @@ import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/constants/server_presets.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 
 /// Modular Server Gateway Picker Dialog capable of scaling smoothly to 10, 20+ servers.
@@ -132,18 +134,16 @@ class ServerGatewayPickerDialogState extends State<ServerGatewayPickerDialog> {
                           ],
                         ),
                       ),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
+                      TvFocusable(
+                        onSelect: () => Navigator.of(context).pop(),
+                        child: const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: HugeIcon(
+                            icon: AppIcons.close,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
                         ),
-                        icon: const HugeIcon(
-                          icon: AppIcons.close,
-                          color: AppColors.textSecondary,
-                          size: 20,
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
                   ),
@@ -274,187 +274,162 @@ class ServerGatewayPickerDialogState extends State<ServerGatewayPickerDialog> {
                               final isCustom =
                                   preset.id == ServerPresets.customServerId;
 
-                              return Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    widget.onSelected(preset);
-                                    Navigator.of(context).pop();
-                                  },
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadius.sm,
-                                  ),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? AppColors.accent.withValues(
-                                              alpha: 0.12,
-                                            )
-                                          : AppColors.bg1,
-                                      borderRadius: BorderRadius.circular(
-                                        AppRadius.sm,
-                                      ),
-                                      border: Border.all(
+                              return FocusableCard(
+                                autofocus: isSelected || index == 0,
+                                entry: isSelected || index == 0,
+                                onTap: () {
+                                  widget.onSelected(preset);
+                                  Navigator.of(context).pop();
+                                },
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.sm,
+                                ),
+                                backgroundColor: isSelected
+                                    ? AppColors.accent.withValues(alpha: 0.12)
+                                    : AppColors.bg1,
+                                borderColor: isSelected
+                                    ? AppColors.accent
+                                    : AppColors.border,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    // Status / Icon Indicator
+                                    Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: BoxDecoration(
                                         color: isSelected
-                                            ? AppColors.accent
-                                            : AppColors.border,
-                                        width: isSelected ? 1.5 : 1,
+                                            ? AppColors.accent.withValues(
+                                                alpha: 0.2,
+                                              )
+                                            : AppColors.bg2,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Center(
+                                        child: HugeIcon(
+                                          icon: isCustom
+                                              ? AppIcons.tune
+                                              : AppIcons.dns,
+                                          size: 18,
+                                          color: isSelected
+                                              ? AppColors.accent
+                                              : AppColors.textSecondary,
+                                        ),
                                       ),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        // Status / Icon Indicator
-                                        Container(
-                                          width: 34,
-                                          height: 34,
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? AppColors.accent.withValues(
-                                                    alpha: 0.2,
-                                                  )
-                                                : AppColors.bg2,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Center(
-                                            child: HugeIcon(
-                                              icon: isCustom
-                                                  ? AppIcons.tune
-                                                  : AppIcons.dns,
-                                              size: 18,
-                                              color: isSelected
-                                                  ? AppColors.accent
-                                                  : AppColors.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
+                                    const SizedBox(width: 12),
 
-                                        // Server Details
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                    // Server Details
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
                                             children: [
-                                              Row(
-                                                children: [
-                                                  Flexible(
-                                                    child: Text(
-                                                      preset.name,
-                                                      style: TextStyle(
-                                                        color: isSelected
-                                                            ? AppColors
-                                                                  .textPrimary
-                                                            : AppColors
-                                                                  .textPrimary
-                                                                  .withValues(
-                                                                    alpha: 0.9,
-                                                                  ),
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 2,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color: isCustom
-                                                          ? AppColors.warning
-                                                                .withValues(
-                                                                  alpha: 0.15,
-                                                                )
-                                                          : AppColors.success
-                                                                .withValues(
-                                                                  alpha: 0.15,
-                                                                ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            4,
-                                                          ),
-                                                    ),
-                                                    child: Text(
-                                                      isCustom
-                                                          ? context
-                                                                .l10n
-                                                                .onboardingManual
-                                                          : context
-                                                                .l10n
-                                                                .onboardingOnline,
-                                                      style: TextStyle(
-                                                        color: isCustom
-                                                            ? AppColors.warning
-                                                            : AppColors.success,
-                                                        fontSize: 9,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                isCustom
-                                                    ? context
-                                                          .l10n
-                                                          .onboardingEnterCustomUrl
-                                                    : (preset.description ??
-                                                          preset.url),
-                                                style: const TextStyle(
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                  fontSize: 11,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              if (!isCustom &&
-                                                  preset.url.isNotEmpty) ...[
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  preset.url,
+                                              Flexible(
+                                                child: Text(
+                                                  preset.name,
                                                   style: TextStyle(
-                                                    color: AppColors
-                                                        .textDisabled
-                                                        .withValues(alpha: 0.8),
-                                                    fontSize: 10,
-                                                    fontFamily: 'monospace',
+                                                    color: isSelected
+                                                        ? AppColors.textPrimary
+                                                        : AppColors.textPrimary
+                                                              .withValues(
+                                                                alpha: 0.9,
+                                                              ),
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w700,
                                                   ),
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                 ),
-                                              ],
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: isCustom
+                                                      ? AppColors.warning
+                                                            .withValues(
+                                                              alpha: 0.15,
+                                                            )
+                                                      : AppColors.success
+                                                            .withValues(
+                                                              alpha: 0.15,
+                                                            ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  isCustom
+                                                      ? context
+                                                            .l10n
+                                                            .onboardingManual
+                                                      : context
+                                                            .l10n
+                                                            .onboardingOnline,
+                                                  style: TextStyle(
+                                                    color: isCustom
+                                                        ? AppColors.warning
+                                                        : AppColors.success,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
                                             ],
                                           ),
-                                        ),
-                                        const SizedBox(width: 10),
-
-                                        // Selection Radio Icon
-                                        HugeIcon(
-                                          icon: isSelected
-                                              ? AppIcons.checkCircle
-                                              : AppIcons.circle,
-                                          color: isSelected
-                                              ? AppColors.accent
-                                              : AppColors.textDisabled,
-                                          size: 20,
-                                        ),
-                                      ],
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            isCustom
+                                                ? context
+                                                      .l10n
+                                                      .onboardingEnterCustomUrl
+                                                : (preset.description ??
+                                                      preset.url),
+                                            style: const TextStyle(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 11,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (!isCustom &&
+                                              preset.url.isNotEmpty) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              preset.url,
+                                              style: TextStyle(
+                                                color: AppColors.textDisabled
+                                                    .withValues(alpha: 0.8),
+                                                fontSize: 10,
+                                                fontFamily: 'monospace',
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 10),
+
+                                    // Selection Radio Icon
+                                    HugeIcon(
+                                      icon: isSelected
+                                          ? AppIcons.checkCircle
+                                          : AppIcons.circle,
+                                      color: isSelected
+                                          ? AppColors.accent
+                                          : AppColors.textDisabled,
+                                      size: 20,
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -471,9 +446,9 @@ class ServerGatewayPickerDialogState extends State<ServerGatewayPickerDialog> {
 
   Widget _buildFilterTab(String category, String label) {
     final isCurrent = _filterCategory == category;
-    return InkWell(
-      onTap: () => setState(() => _filterCategory = category),
-      borderRadius: BorderRadius.circular(6),
+    return TvFocusable(
+      scale: 1.04,
+      onSelect: () => setState(() => _filterCategory = category),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(

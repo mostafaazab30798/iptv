@@ -20,13 +20,26 @@ Future<bool> isTelevision() async {
 }
 
 Future<void> initPlatformWindow() async {
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+  if (Platform.isWindows) {
+    // Native Win32 runner manages window styles, fullscreen, and sizing on
+    // Windows. Also disable screen_brightness_windows auto-reset so it never
+    // sends DDC/CI SetMonitorBrightness I2C commands to external monitors on
+    // window resize or app focus changes.
+    try {
+      const brightnessChannel = MethodChannel(
+        'github.com/aaassseee/screen_brightness',
+      );
+      await brightnessChannel.invokeMethod<void>('setAutoReset', {
+        'isAutoReset': false,
+      });
+    } catch (_) {}
+    return;
+  }
+  if (Platform.isLinux || Platform.isMacOS) {
     try {
       await windowManager.ensureInitialized();
       await windowManager.setMinimumSize(const Size(720, 480));
-      if (!Platform.isWindows) {
-        await windowManager.setSize(const Size(1280, 720));
-      }
+      await windowManager.setSize(const Size(1280, 720));
     } catch (_) {}
   }
 }

@@ -103,6 +103,8 @@ class AppShell extends ConsumerWidget {
     final topNav = DpadRegion(
       memoryKey: 'shell/nav',
       debugLabel: 'shell-nav',
+      horizontalEdge: DpadEdgeBehavior.stop,
+      upEdge: DpadEdgeBehavior.stop,
       child: _ShellTopNav(
         items: navItems,
         selectedIndex: selectedIndex,

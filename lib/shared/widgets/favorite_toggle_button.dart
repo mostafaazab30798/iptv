@@ -180,6 +180,14 @@ class _PosterHeartCardState extends State<PosterHeartCard> {
           borderColor: widget.borderColor,
           onDirection: (direction) {
             if (direction == towardHeart) {
+              // When the poster lives inside a DpadRegion (e.g., a horizontal
+              // Home row or a catalog grid), left/right must move smoothly
+              // between adjacent posters instead of getting trapped on every
+              // card's heart icon. Standalone posters outside a region keep the
+              // direct left-to-heart shortcut.
+              if (DpadRegion.maybeOf(context) != null) {
+                return false;
+              }
               _heartFocus.requestFocus();
               return true;
             }

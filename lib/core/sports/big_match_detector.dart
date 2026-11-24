@@ -99,6 +99,19 @@ abstract final class BigMatchDetector {
 
   static final _arabicScript = RegExp(r'[\u0600-\u06FF]');
 
+  static final _nonSportsStationTokens = RegExp(
+    r'(^| )(movie|movies|serie|series|drama|gourmet|box\s*office|boxoffice|cinema|film|films|star|stars|documentary|doc|docs|entertainment|junior|kid|kids|child|children|cartoon|cartoons|baraem|jeem|music|song|songs|radio|tod|افلام|مسلسلات|دراما|سينما|اطفال|الاطفال|براعم|جيم|وثايقي|وثائقي|ترفيه|طبخ)( |$)',
+  );
+
+  /// Entertainment, movie, series, documentary, or kids channels (e.g. "beIN Series 1",
+  /// "beIN Movies 1", "beIN Drama", "beIN Junior") that share a network brand name
+  /// with a sports network.
+  static bool isNonSportsStation(String channelName) {
+    final n = normalize(channelName);
+    if (n.isEmpty) return false;
+    return _nonSportsStationTokens.hasMatch(n);
+  }
+
   /// Club 24/7 stations such as "Barcelona TV" / "Bayern TV".
   static bool isOfficialClubChannel(String channelName) {
     final teams = teamsIn(channelName);
@@ -133,12 +146,15 @@ abstract final class BigMatchDetector {
   static bool isBeinOrArabicSportsNetwork(String channelName) {
     final n = normalize(channelName);
     if (n.isEmpty) return false;
+    if (isNonSportsStation(channelName)) return false;
 
     if (n.contains('bein') ||
         n.contains('be in sport') ||
         n.contains('beinsport') ||
         channelName.contains('بي ان') ||
         channelName.contains('بي إن') ||
+        channelName.contains('بى ان') ||
+        channelName.contains('بى إن') ||
         channelName.contains('بين سبورت')) {
       return true;
     }
@@ -157,12 +173,19 @@ abstract final class BigMatchDetector {
       'saudi sport',
       'on time',
       'ontime',
+      'on sport',
+      'onsport',
+      'thmanyah',
+      'thamanyah',
+      'ثمانيه',
+      'ثمانية',
       'nile sport',
       'qatar sport',
       'oman sport',
       'kuwait sport',
       'bahrain sport',
       'iraq sport',
+      'iraqia sport',
       'jordan sport',
     ];
     for (final token in arabicRegionSports) {
@@ -172,7 +195,11 @@ abstract final class BigMatchDetector {
     if (_arabicScript.hasMatch(channelName) &&
         (n.contains('sport') ||
             channelName.contains('رياض') ||
+            channelName.contains('سبورت') ||
+            channelName.contains('الكاس') ||
+            channelName.contains('الكأس') ||
             channelName.contains('كورة') ||
+            channelName.contains('كره') ||
             channelName.contains('كرة'))) {
       return true;
     }
@@ -183,6 +210,7 @@ abstract final class BigMatchDetector {
   /// Channels we are allowed to open for a live big match.
   static bool isAllowedMatchChannel(String channelName) {
     if (isOfficialClubChannel(channelName)) return false;
+    if (isNonSportsStation(channelName)) return false;
     if (isBeinOrArabicSportsNetwork(channelName)) return true;
     return hasArabicBroadcastMarker(channelName) &&
         looksLikeMatchEvent(channelName);

@@ -25,7 +25,13 @@ android {
     }
 
     val isTvBuild = project.hasProperty("tvBuild") || project.findProperty("appSuffix") == "tv"
+    val isTvOptimized = isTvBuild || project.hasProperty("tvOptimize")
+    val isSplitPerAbi = project.findProperty("split-per-abi")?.toString()?.toBoolean() == true
     val appIdSuffix = if (isTvBuild) ".tv" else ""
+    val requestedAbis = (project.findProperty("targetAbis") as String?)
+        ?.split(",")
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() }
 
     defaultConfig {
         applicationId = "com.hopetv.iptvplayer$appIdSuffix"
@@ -34,6 +40,51 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["appLabel"] = if (isTvBuild) "HOPE TV" else "HOPE IPTV"
+
+        if (!isSplitPerAbi) {
+            ndk {
+                if (!requestedAbis.isNullOrEmpty()) {
+                    abiFilters.addAll(requestedAbis)
+                } else {
+                    // Exclude dead x86/x86_64 native libraries (~76 MB) from universal APKs.
+                    abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+                }
+            }
+        }
+    }
+
+    packaging {
+        jniLibs {
+            // Deflate-compress native .so libraries (libvlc, libmpv, libflutter, libapp)
+            // inside the APK instead of storing them raw/uncompressed (~55-60% smaller APK).
+            useLegacyPackaging = true
+            excludes += setOf(
+                "**/x86/**",
+                "**/x86_64/**",
+            )
+            if (isTvOptimized) {
+                // Android TV displays a QR code for companion sign-in and never uses
+                // a rear camera to scan barcodes; exclude ML Kit barcode camera libs.
+                excludes += setOf(
+                    "**/libbarhopper_v3.so",
+                    "**/libimage_processing_util_jni.so",
+                    "**/libsurface_util_jni.so",
+                )
+            }
+        }
+        resources {
+            excludes += setOf(
+                "DebugProbesKt.bin",
+                "kotlin-tooling-metadata.json",
+                "META-INF/*.version",
+                "META-INF/proguard/**",
+            )
+            if (isTvOptimized) {
+                excludes += setOf(
+                    "assets/mlkit_barcode_models/**",
+                )
+            }
+        }
     }
 
     signingConfigs {
@@ -58,6 +109,10 @@ android {
             }
             isMinifyEnabled = true
             isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

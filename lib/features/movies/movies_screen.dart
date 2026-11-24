@@ -1,5 +1,5 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iptv/app/theme/app_colors.dart';
@@ -17,6 +17,7 @@ import 'package:iptv/features/movies/movies_controller.dart';
 export 'package:iptv/features/movies/movie_details_sheet.dart'
     show showMovieDetailsModal;
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/navigation/app_back_navigation.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
 import 'package:iptv/shared/widgets/error_view.dart';
@@ -136,46 +137,51 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
               child: Row(
                 children: [
                   if (isCompact)
-                    IconButton(
-                      onPressed: _onBack,
-                      tooltip: context.l10n.labelCategories,
-                      icon: HugeIcon(
-                        icon: backIcon,
-                        size: 14,
-                        color: AppColors.accent,
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.accent.withAlpha(25),
+                    TvFocusable(
+                      onSelect: _onBack,
+                      child: Container(
                         padding: const EdgeInsets.all(8),
-                        shape: RoundedRectangleBorder(
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withAlpha(25),
                           borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: HugeIcon(
+                          icon: backIcon,
+                          size: 14,
+                          color: AppColors.accent,
                         ),
                       ),
                     )
                   else
-                    TextButton.icon(
-                      onPressed: _onBack,
-                      icon: HugeIcon(
-                        icon: backIcon,
-                        size: 14,
-                        color: AppColors.accent,
-                      ),
-                      label: Text(
-                        context.l10n.labelCategories,
-                        style: const TextStyle(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppColors.accent.withAlpha(25),
+                    TvFocusable(
+                      onSelect: _onBack,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
                         ),
-                        shape: RoundedRectangleBorder(
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withAlpha(25),
                           borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            HugeIcon(
+                              icon: backIcon,
+                              size: 14,
+                              color: AppColors.accent,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.l10n.labelCategories,
+                              style: const TextStyle(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -295,29 +301,35 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
                         subtitle: context.l10n.searchNoResultsSubtitle,
                         icon: AppIcons.movies,
                       ))
-              : GridView.builder(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  scrollCacheExtent: const ScrollCacheExtent.pixels(350),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 170,
-                    childAspectRatio: 2 / 3,
-                    crossAxisSpacing: AppSpacing.md,
-                    mainAxisSpacing: AppSpacing.md,
+              : DpadRegion(
+                  memoryKey: 'movies/grid',
+                  debugLabel: 'movies-grid',
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(350),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 170,
+                          childAspectRatio: 2 / 3,
+                          crossAxisSpacing: AppSpacing.md,
+                          mainAxisSpacing: AppSpacing.md,
+                        ),
+                    itemCount: moviesState.filteredMovies.length,
+                    itemBuilder: (context, i) {
+                      final movie = moviesState.filteredMovies[i];
+                      return MovieCard(
+                        movie: movie,
+                        expand: true,
+                        autofocus: i == 0,
+                        borderRadius: AppRadius.card,
+                        heartSize: 22,
+                        memCacheWidth: 170,
+                        memCacheHeight: 255,
+                        titlePlacement: PosterTitlePlacement.overlay,
+                        onTap: () => showMovieDetailsModal(context, movie),
+                      );
+                    },
                   ),
-                  itemCount: moviesState.filteredMovies.length,
-                  itemBuilder: (context, i) {
-                    final movie = moviesState.filteredMovies[i];
-                    return MovieCard(
-                      movie: movie,
-                      expand: true,
-                      borderRadius: AppRadius.card,
-                      heartSize: 22,
-                      memCacheWidth: 170,
-                      memCacheHeight: 255,
-                      titlePlacement: PosterTitlePlacement.overlay,
-                      onTap: () => showMovieDetailsModal(context, movie),
-                    );
-                  },
                 ),
         ),
       ],

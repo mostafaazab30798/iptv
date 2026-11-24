@@ -93,10 +93,20 @@ abstract final class SportsLocalization {
       final lower = trimmed.toLowerCase();
       if (info.network == 'bein') {
         var out = 'beIN Sports';
-        if (info.number != null) out += ' ${info.number}';
-        if (info.isPremium) out += ' Premium';
-        if (info.isXtra) out += ' Xtra';
-        if (lower.contains('4k')) {
+        if (info.isNews) {
+          out += ' News';
+        } else if (info.isNba) {
+          out += ' NBA';
+        } else {
+          if (info.number != null) out += ' ${info.number}';
+          if (info.isPremium) out += ' Premium';
+          if (info.isMax) out += ' Max';
+          if (info.isXtra) out += ' Xtra';
+          if (info.isAfc) out += ' AFC';
+          if (info.isEnglish) out += ' English';
+          if (info.isFrench) out += ' French';
+        }
+        if (lower.contains('4k') || norm.contains('فور كي')) {
           out += ' 4K';
         } else if (lower.contains('fhd')) {
           out += ' FHD';
@@ -106,8 +116,9 @@ abstract final class SportsLocalization {
         return out;
       } else if (info.network == 'ontime') {
         var out = 'ON Time Sports';
-        if (lower.contains('max')) {
+        if (info.isMax || lower.contains('max')) {
           out = 'ON Sport MAX';
+          if (info.number != null) out += ' ${info.number}';
         } else if (info.number != null) {
           out += ' ${info.number}';
         } else {
@@ -118,16 +129,22 @@ abstract final class SportsLocalization {
       } else if (info.network == 'ssc') {
         var out = 'SSC';
         if (info.number != null) out += ' ${info.number}';
-        if (lower.contains('extra')) out += ' Extra';
+        if (info.isXtra || lower.contains('extra')) out += ' Extra';
         if (lower.contains('hd')) out += ' HD';
         return out;
       } else if (info.network == 'adsports') {
         var out = 'AD Sports';
         if (info.number != null) out += ' ${info.number}';
+        if (info.isPremium) out += ' Premium';
         if (lower.contains('hd')) out += ' HD';
         return out;
       } else if (info.network == 'alkass') {
         var out = 'Alkass';
+        if (info.number != null) out += ' ${info.number}';
+        if (lower.contains('hd')) out += ' HD';
+        return out;
+      } else if (info.network == 'thmanyah') {
+        var out = 'Thmanyah';
         if (info.number != null) out += ' ${info.number}';
         if (lower.contains('hd')) out += ' HD';
         return out;

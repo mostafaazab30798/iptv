@@ -34,7 +34,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 
 Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "   HOPE IPTV — Android TV ADB Installer         " -ForegroundColor Cyan
+Write-Host "   HOPE IPTV -- Android TV ADB Installer        " -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
 # Check ADB availability

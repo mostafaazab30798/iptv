@@ -7,6 +7,7 @@ import 'package:iptv/app/theme/app_radius.dart';
 import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/utils/m3u_converter.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 
 /// Dedicated dialog to paste and convert any M3U link or playlist content to Xtream.
@@ -136,18 +137,16 @@ class M3uConverterDialogState extends State<M3uConverterDialog> {
                             ],
                           ),
                         ),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
+                        TvFocusable(
+                          onSelect: () => Navigator.of(context).pop(),
+                          child: const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: HugeIcon(
+                              icon: AppIcons.close,
+                              color: AppColors.textSecondary,
+                              size: 20,
+                            ),
                           ),
-                          icon: const HugeIcon(
-                            icon: AppIcons.close,
-                            color: AppColors.textSecondary,
-                            size: 20,
-                          ),
-                          onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
                     ),
@@ -169,13 +168,14 @@ class M3uConverterDialogState extends State<M3uConverterDialog> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        InkWell(
-                          onTap: _pasteFromClipboard,
-                          borderRadius: BorderRadius.circular(4),
+                        TvFocusable(
+                          autofocus: true,
+                          entry: true,
+                          onSelect: _pasteFromClipboard,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
-                              vertical: 2,
+                              vertical: 4,
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -366,50 +366,72 @@ class M3uConverterDialogState extends State<M3uConverterDialog> {
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            onPressed: _previewCreds == null
+                          child: TvFocusable(
+                            enabled: _previewCreds != null,
+                            onSelect: _previewCreds == null
                                 ? null
                                 : () => _apply(false),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.textPrimary,
-                              side: const BorderSide(color: AppColors.border),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.button,
+                            child: IgnorePointer(
+                              child: OutlinedButton(
+                                onPressed: _previewCreds == null
+                                    ? null
+                                    : () {},
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.textPrimary,
+                                  side: const BorderSide(
+                                    color: AppColors.border,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  context.l10n.actionApply,
+                                  style: const TextStyle(fontSize: 13),
                                 ),
                               ),
-                            ),
-                            child: Text(
-                              context.l10n.actionApply,
-                              style: const TextStyle(fontSize: 13),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           flex: 2,
-                          child: ElevatedButton(
-                            onPressed: _previewCreds == null
+                          child: TvFocusable(
+                            enabled: _previewCreds != null,
+                            onSelect: _previewCreds == null
                                 ? null
                                 : () => _apply(true),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accent,
-                              foregroundColor: AppColors.textOnAccent,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.button,
+                            child: IgnorePointer(
+                              child: ElevatedButton(
+                                onPressed: _previewCreds == null
+                                    ? null
+                                    : () {},
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.accent,
+                                  foregroundColor: AppColors.textOnAccent,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  context.l10n.actionConvertAndConnect,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                            ),
-                            child: Text(
-                              context.l10n.actionConvertAndConnect,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),

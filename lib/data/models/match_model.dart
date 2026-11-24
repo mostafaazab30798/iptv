@@ -12,6 +12,9 @@ class MatchModel {
     this.scoreHome,
     this.scoreAway,
     required this.time,
+    this.timeUtc,
+    this.kickoffUtc,
+    this.sourceTimeZoneOffsetHours = defaultSourceTimeZoneOffsetHours,
     this.status = '',
     required this.channel,
     this.homePenScore,
@@ -19,6 +22,10 @@ class MatchModel {
     this.homeGoals = const [],
     this.awayGoals = const [],
   });
+
+  /// Yallakora's server outputs times in Cairo Standard Time (UTC+2) when
+  /// scraped from UTC servers.
+  static const int defaultSourceTimeZoneOffsetHours = 2;
 
   final String league;
   final String teamHome;
@@ -28,6 +35,17 @@ class MatchModel {
   final String? scoreHome;
   final String? scoreAway;
   final String time;
+
+  /// Match kickoff time in Universal Time (UTC) as "HH:MM" (if provided by JSON).
+  final String? timeUtc;
+
+  /// Full ISO-8601 UTC timestamp for kickoff (if provided by JSON).
+  final String? kickoffUtc;
+
+  /// Timezone offset (in hours from UTC) of the raw [time] field when [timeUtc]
+  /// is not explicitly provided. Defaults to [defaultSourceTimeZoneOffsetHours] (UTC+2).
+  final int sourceTimeZoneOffsetHours;
+
   final String status;
   final String channel;
   final int? homePenScore;
@@ -36,6 +54,11 @@ class MatchModel {
   final List<MatchGoal> awayGoals;
 
   factory MatchModel.fromJson(Map<String, dynamic> json) {
+    final rawOffset = json['timezone_offset'];
+    final parsedOffset = rawOffset is num
+        ? rawOffset.toInt()
+        : int.tryParse(rawOffset?.toString().trim() ?? '');
+
     return MatchModel(
       league: json['league']?.toString().trim() ?? 'Unknown League',
       teamHome: json['team_home']?.toString().trim() ?? 'Unknown',
@@ -45,6 +68,10 @@ class MatchModel {
       scoreHome: _nullIfEmpty(json['score_home']?.toString().trim()),
       scoreAway: _nullIfEmpty(json['score_away']?.toString().trim()),
       time: json['time']?.toString().trim() ?? '00:00',
+      timeUtc: _nullIfEmpty(json['time_utc']?.toString().trim()),
+      kickoffUtc: _nullIfEmpty(json['kickoff_utc']?.toString().trim()),
+      sourceTimeZoneOffsetHours:
+          parsedOffset ?? defaultSourceTimeZoneOffsetHours,
       status: json['status']?.toString().trim() ?? '',
       channel: json['channel']?.toString().trim() ?? 'Not Available',
     );
@@ -60,6 +87,9 @@ class MatchModel {
       'score_home': scoreHome,
       'score_away': scoreAway,
       'time': time,
+      if (timeUtc != null) 'time_utc': timeUtc,
+      if (kickoffUtc != null) 'kickoff_utc': kickoffUtc,
+      'timezone_offset': sourceTimeZoneOffsetHours,
       'status': status,
       'channel': channel,
     };
@@ -75,38 +105,167 @@ class MatchModel {
     return result;
   }
 
-  /// Parses scheduled kickoff time string (e.g. "20:00" or " 20:00 ") into a [DateTime].
-  /// Handles Eastern-Arabic numerals and cross-midnight scheduling.
-  static DateTime? parseStartTime(String time, {DateTime? now}) {
+  /// Formats a [DateTime] into "HH:MM" (24-hour local format).
+  static String formatTimeHHmm(DateTime dateTime) {
+    final h = dateTime.hour.toString().padLeft(2, '0');
+    final m = dateTime.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  /// Converts a match time from Universal Time (UTC) or the source timezone
+  /// (defaulting to Yallakora's UTC+2) into the device's local timezone
+  /// (or [targetTimeZoneOffset] if provided for deterministic testing).
+  ///
+  /// Example:
+  /// - Source time "22:00" (UTC+2) -> 20:00 UTC -> "23:00" in a UTC+3 country.
+  /// - Explicit [timeUtc] "20:00" (UTC) -> "23:00" in a UTC+3 country.
+  static DateTime? parseStartTime(
+    String time, {
+    DateTime? now,
+    String? timeUtc,
+    String? kickoffUtc,
+    int? sourceTimeZoneOffsetHours,
+    Duration? targetTimeZoneOffset,
+  }) {
     final current = now ?? DateTime.now();
-    final normalized = normalizeDigits(time).trim();
+    final localOffset = targetTimeZoneOffset ?? current.timeZoneOffset;
+
+    // 1. If a full ISO-8601 UTC timestamp is provided and no explicit test `now`
+    // overrides the date context, parse it directly and shift to the local timezone.
+    if (kickoffUtc != null && kickoffUtc.trim().isNotEmpty && now == null) {
+      final parsedIso = DateTime.tryParse(kickoffUtc.trim());
+      if (parsedIso != null) {
+        final utcMoment = parsedIso.toUtc();
+        if (targetTimeZoneOffset != null) {
+          final shifted = utcMoment.add(targetTimeZoneOffset);
+          return DateTime(
+            shifted.year,
+            shifted.month,
+            shifted.day,
+            shifted.hour,
+            shifted.minute,
+          );
+        }
+        final localMoment = utcMoment.toLocal();
+        return DateTime(
+          localMoment.year,
+          localMoment.month,
+          localMoment.day,
+          localMoment.hour,
+          localMoment.minute,
+        );
+      }
+    }
+
+    // 2. Determine the raw time string and its origin UTC offset.
+    final bool hasExplicitUtc = timeUtc != null && timeUtc.trim().isNotEmpty;
+    final rawTimeStr = hasExplicitUtc ? timeUtc : time;
+    final normalized = normalizeDigits(rawTimeStr).trim();
     final parts = normalized.split(':');
     if (parts.length < 2) return null;
 
-    final hour = int.tryParse(parts[0].trim());
-    final minute = int.tryParse(parts[1].trim());
-    if (hour == null || minute == null) return null;
+    final rawHour = int.tryParse(parts[0].trim());
+    final rawMinute = int.tryParse(parts[1].trim());
+    if (rawHour == null || rawMinute == null) return null;
+
+    // Convert source time -> Universal Time (UTC) -> Device Local Time.
+    final Duration sourceOffset = hasExplicitUtc
+        ? Duration.zero
+        : (sourceTimeZoneOffsetHours != null
+              ? Duration(hours: sourceTimeZoneOffsetHours)
+              : localOffset);
+
+    final totalSourceMinutes = rawHour * 60 + rawMinute;
+    final utcMinutes = totalSourceMinutes - sourceOffset.inMinutes;
+    final localTotalMinutes = utcMinutes + localOffset.inMinutes;
+
+    var dayDelta = 0;
+    var wrappedMinutes = localTotalMinutes;
+    while (wrappedMinutes < 0) {
+      wrappedMinutes += 1440;
+      dayDelta -= 1;
+    }
+    while (wrappedMinutes >= 1440) {
+      wrappedMinutes -= 1440;
+      dayDelta += 1;
+    }
+
+    final localHour = wrappedMinutes ~/ 60;
+    final localMinute = wrappedMinutes % 60;
 
     var matchStartTime = DateTime(
       current.year,
       current.month,
       current.day,
-      hour,
-      minute,
-    );
+      localHour,
+      localMinute,
+    ).add(Duration(days: dayDelta));
 
-    // If it's early in the morning (00:00 - 05:59) and the match was scheduled
-    // for evening (18:00 - 23:59), the match was kicked off yesterday evening.
-    if (current.hour < 6 && hour >= 18) {
-      matchStartTime = matchStartTime.subtract(const Duration(days: 1));
-    }
-    // If it's late evening (18:00 - 23:59) and the match is scheduled
-    // for early morning (00:00 - 05:59), it's kicking off tomorrow morning.
-    else if (current.hour >= 18 && hour < 6) {
-      matchStartTime = matchStartTime.add(const Duration(days: 1));
+    // When no timezone shift caused a calendar day wrap, apply cross-midnight
+    // heuristic for raw local time strings without full date info.
+    if (dayDelta == 0) {
+      // If it's early in the morning (00:00 - 05:59) and the match was scheduled
+      // for evening (18:00 - 23:59), the match was kicked off yesterday evening.
+      if (current.hour < 6 && localHour >= 18) {
+        matchStartTime = matchStartTime.subtract(const Duration(days: 1));
+      }
+      // If it's late evening (18:00 - 23:59) and the match is scheduled
+      // for early morning (00:00 - 05:59), it's kicking off tomorrow morning.
+      else if (current.hour >= 18 && localHour < 6) {
+        matchStartTime = matchStartTime.add(const Duration(days: 1));
+      }
     }
 
     return matchStartTime;
+  }
+
+  /// Converts a match time string to the device's local "HH:MM" representation
+  /// via Universal Time (UTC).
+  static String formatLocalTime(
+    String time, {
+    DateTime? now,
+    String? timeUtc,
+    String? kickoffUtc,
+    int? sourceTimeZoneOffsetHours = defaultSourceTimeZoneOffsetHours,
+    Duration? targetTimeZoneOffset,
+  }) {
+    final parsed = parseStartTime(
+      time,
+      now: now,
+      timeUtc: timeUtc,
+      kickoffUtc: kickoffUtc,
+      sourceTimeZoneOffsetHours: sourceTimeZoneOffsetHours,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+    if (parsed == null) return time;
+    return formatTimeHHmm(parsed);
+  }
+
+  /// The match's scheduled time converted from UTC to the phone's local timezone.
+  String localTimeLabel({DateTime? now, Duration? targetTimeZoneOffset}) {
+    return formatLocalTime(
+      time,
+      now: now,
+      timeUtc: timeUtc,
+      kickoffUtc: kickoffUtc,
+      sourceTimeZoneOffsetHours: sourceTimeZoneOffsetHours,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+  }
+
+  /// Resolves the match start [DateTime] in the phone's local timezone.
+  DateTime? resolvedLocalStartTime({
+    DateTime? now,
+    Duration? targetTimeZoneOffset,
+  }) {
+    return parseStartTime(
+      time,
+      now: now,
+      timeUtc: timeUtc,
+      kickoffUtc: kickoffUtc,
+      sourceTimeZoneOffsetHours: sourceTimeZoneOffsetHours,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
   }
 
   /// Whether the match needs score or goal enrichment from FotMob.
@@ -115,14 +274,27 @@ class MatchModel {
   bool needsScoreOrGoalsEnrichment({
     DateTime? now,
     Duration window = const Duration(minutes: 10),
+    Duration? targetTimeZoneOffset,
   }) {
     final current = now ?? DateTime.now();
-    final timing = resolveMatchTiming(status: status, time: time, now: current);
+    final localTime = localTimeLabel(
+      now: current,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+    final startTime = resolvedLocalStartTime(
+      now: current,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+    final timing = resolveMatchTiming(
+      status: status,
+      time: localTime,
+      now: current,
+      startTime: startTime,
+    );
 
     // Matches in progress or finished today need score and goal data
     if (timing.state == 'in' || timing.state == 'post') return true;
 
-    final startTime = parseStartTime(time, now: current);
     if (startTime == null) return false;
 
     // Past kickoff time
@@ -140,9 +312,23 @@ class MatchModel {
   bool isEligibleForRealtime({
     DateTime? now,
     Duration window = const Duration(minutes: 10),
+    Duration? targetTimeZoneOffset,
   }) {
     final current = now ?? DateTime.now();
-    final timing = resolveMatchTiming(status: status, time: time, now: current);
+    final localTime = localTimeLabel(
+      now: current,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+    final startTime = resolvedLocalStartTime(
+      now: current,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+    final timing = resolveMatchTiming(
+      status: status,
+      time: localTime,
+      now: current,
+      startTime: startTime,
+    );
 
     // If already in progress, always track real-time
     if (timing.state == 'in') return true;
@@ -151,7 +337,6 @@ class MatchModel {
     if (timing.state == 'post') return false;
 
     // For upcoming matches, only track if within the pre-kickoff window
-    final startTime = parseStartTime(time, now: current);
     if (startTime == null) return false;
 
     final windowStart = startTime.subtract(window);
@@ -167,13 +352,26 @@ class MatchModel {
   Duration? timeUntilRealtimeWindow({
     DateTime? now,
     Duration window = const Duration(minutes: 10),
+    Duration? targetTimeZoneOffset,
   }) {
     final current = now ?? DateTime.now();
-    final timing = resolveMatchTiming(status: status, time: time, now: current);
+    final localTime = localTimeLabel(
+      now: current,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+    final startTime = resolvedLocalStartTime(
+      now: current,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+    final timing = resolveMatchTiming(
+      status: status,
+      time: localTime,
+      now: current,
+      startTime: startTime,
+    );
     if (timing.state == 'post') return null;
     if (timing.state == 'in') return Duration.zero;
 
-    final startTime = parseStartTime(time, now: current);
     if (startTime == null) return null;
 
     final windowStart = startTime.subtract(window);
@@ -190,6 +388,7 @@ class MatchModel {
     required String status,
     required String time,
     DateTime? now,
+    DateTime? startTime,
   }) {
     final current = now ?? DateTime.now();
     final lowerStatus = status.toLowerCase().trim();
@@ -214,7 +413,7 @@ class MatchModel {
     }
 
     // 3. Real-time vs scheduled start time check
-    final matchStartTime = parseStartTime(time, now: current);
+    final matchStartTime = startTime ?? parseStartTime(time, now: current);
     if (matchStartTime != null) {
       if (current.isAfter(matchStartTime) ||
           current.isAtSameMomentAs(matchStartTime)) {
@@ -254,6 +453,9 @@ class MatchModel {
     String? scoreHome,
     String? scoreAway,
     String? time,
+    String? timeUtc,
+    String? kickoffUtc,
+    int? sourceTimeZoneOffsetHours,
     String? status,
     String? channel,
     int? homePenScore,
@@ -270,6 +472,10 @@ class MatchModel {
       scoreHome: scoreHome ?? this.scoreHome,
       scoreAway: scoreAway ?? this.scoreAway,
       time: time ?? this.time,
+      timeUtc: timeUtc ?? this.timeUtc,
+      kickoffUtc: kickoffUtc ?? this.kickoffUtc,
+      sourceTimeZoneOffsetHours:
+          sourceTimeZoneOffsetHours ?? this.sourceTimeZoneOffsetHours,
       status: status ?? this.status,
       channel: channel ?? this.channel,
       homePenScore: homePenScore ?? this.homePenScore,
@@ -279,9 +485,22 @@ class MatchModel {
     );
   }
 
-  LiveFixture toLiveFixture({DateTime? now}) {
+  LiveFixture toLiveFixture({
+    DateTime? now,
+    Duration? targetTimeZoneOffset,
+  }) {
     final teams = BigMatchDetector.teamsIn('$teamHome $teamAway');
-    final timing = resolveMatchTiming(status: status, time: time, now: now);
+    final localStart = resolvedLocalStartTime(
+      now: now,
+      targetTimeZoneOffset: targetTimeZoneOffset,
+    );
+    final localTime = localStart != null ? formatTimeHHmm(localStart) : time;
+    final timing = resolveMatchTiming(
+      status: status,
+      time: localTime,
+      now: now,
+      startTime: localStart,
+    );
 
     final cleanScoreHome =
         (scoreHome != null && scoreHome != '-') ? scoreHome : null;
@@ -302,9 +521,9 @@ class MatchModel {
       homeLogoUrl: logoHome,
       awayLogoUrl: logoAway,
       broadcastChannel: cleanChannel,
-      scheduledTime: time,
+      scheduledTime: localTime,
       rawStatus: status,
-      start: parseStartTime(time, now: now),
+      start: localStart,
       homePenScore: homePenScore,
       awayPenScore: awayPenScore,
       homeGoals: homeGoals,

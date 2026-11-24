@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import requests
 from bs4 import BeautifulSoup
 
@@ -29,12 +29,54 @@ def sanitize_url(url: str) -> str:
     return cleaned
 
 
+# Yallakora renders match times in Cairo Standard Time (UTC+2) when scraped
+# from non-Egyptian servers (such as GitHub Actions in UTC).
+YALLAKORA_SOURCE_TZ = timezone(timedelta(hours=2))
+
+
+def convert_source_time_to_utc(time_str: str, base_date: datetime) -> tuple[str, str]:
+    """
+    Converts a Yallakora match time ("HH:MM" in UTC+2) into:
+    - time_utc: "HH:MM" in Universal Time (UTC)
+    - kickoff_utc: ISO-8601 UTC timestamp ("YYYY-MM-DDTHH:MM:00Z")
+    """
+    cleaned = (time_str or "").strip()
+    parts = cleaned.split(":")
+    if len(parts) < 2:
+        return "00:00", ""
+    try:
+        hour = int(parts[0].strip())
+        minute = int(parts[1].strip())
+    except ValueError:
+        return "00:00", ""
+
+    source_dt = datetime(
+        base_date.year,
+        base_date.month,
+        base_date.day,
+        hour,
+        minute,
+        tzinfo=YALLAKORA_SOURCE_TZ,
+    )
+    utc_dt = source_dt.astimezone(timezone.utc)
+    return utc_dt.strftime("%H:%M"), utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def fetch_today_matches(output_path: str = DEFAULT_OUTPUT, target_date: str = None) -> list:
     """
     Fetches matches from Yallakora match center and writes sanitized static JSON.
     target_date format if provided: MM/DD/YYYY
     """
-    date_str = target_date or datetime.now().strftime("%m/%d/%Y")
+    now_source = datetime.now(YALLAKORA_SOURCE_TZ)
+    if target_date:
+        try:
+            base_date = datetime.strptime(target_date, "%m/%d/%Y")
+        except ValueError:
+            base_date = now_source
+        date_str = target_date
+    else:
+        base_date = now_source
+        date_str = now_source.strftime("%m/%d/%Y")
     url = f"{YALLAKORA_URL}/?date={date_str}"
 
     print(f"Fetching matches from: {url}")
@@ -81,6 +123,7 @@ def fetch_today_matches(output_path: str = DEFAULT_OUTPUT, target_date: str = No
                 m_result = match.find("div", class_="MResult")
                 time_el = m_result.find("span", class_="time") if m_result else None
                 time = time_el.text.strip() if time_el else "00:00"
+                time_utc, kickoff_utc = convert_source_time_to_utc(time, base_date)
 
                 scores = m_result.find_all("span", class_="score") if m_result else []
                 score_a = scores[0].text.strip() if len(scores) > 0 else "-"
@@ -92,7 +135,7 @@ def fetch_today_matches(output_path: str = DEFAULT_OUTPUT, target_date: str = No
                 channel_div = match.find("div", class_="channel")
                 channel = channel_div.text.strip() if channel_div else "Not Available"
 
-                matches_data.append({
+                match_entry = {
                     "league": league,
                     "team_home": team_a,
                     "team_away": team_b,
@@ -101,9 +144,14 @@ def fetch_today_matches(output_path: str = DEFAULT_OUTPUT, target_date: str = No
                     "score_home": score_a,
                     "score_away": score_b,
                     "time": time,
+                    "time_utc": time_utc,
+                    "timezone_offset": 2,
                     "status": status,
                     "channel": channel,
-                })
+                }
+                if kickoff_utc:
+                    match_entry["kickoff_utc"] = kickoff_utc
+                matches_data.append(match_entry)
 
         parent_dir = os.path.dirname(os.path.abspath(output_path))
         if parent_dir and not os.path.exists(parent_dir):

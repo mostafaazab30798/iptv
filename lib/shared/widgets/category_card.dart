@@ -26,6 +26,8 @@ class CategoryCard extends StatefulWidget {
     this.isAllCard = false,
     this.leadingChannel,
     this.logoUrl,
+    this.autofocus = false,
+    this.entry = false,
   });
 
   final String title;
@@ -38,6 +40,8 @@ class CategoryCard extends StatefulWidget {
   final bool isAllCard;
   final Channel? leadingChannel;
   final String? logoUrl;
+  final bool autofocus;
+  final bool entry;
 
   @override
   State<CategoryCard> createState() => _CategoryCardState();
@@ -59,6 +63,8 @@ class _CategoryCardState extends State<CategoryCard> {
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
       child: FocusableCard(
+        autofocus: widget.autofocus,
+        entry: widget.entry,
         onTap: widget.onTap,
         padding: EdgeInsets.zero,
         borderRadius: BorderRadius.circular(16),
@@ -289,26 +295,28 @@ class _CategoryCardState extends State<CategoryCard> {
     if (isAll) return AppIcons.gridView;
     final lower = name.toLowerCase();
 
-    if (lower.contains('sport') || lower.contains('bein') || lower.contains('football') || lower.contains('fifa') || lower.contains('nba') || lower.contains('رياض') || lower.contains('كورة') || lower.contains('بين')) {
-      return AppIcons.sports;
+    // Check Kids, Movies, Series, Documentaries, and News BEFORE generic 'bein'
+    // so categories like 'beIN Movies', 'beIN Series', or 'beIN Kids' get their proper icon.
+    if (lower.contains('kid') || lower.contains('junior') || lower.contains('child') || lower.contains('cartoon') || lower.contains('anim') || lower.contains('disney') || lower.contains('أطفال') || lower.contains('اطفال') || lower.contains('كرتون') || lower.contains('أنمي') || lower.contains('انمي')) {
+      return HugeIcons.strokeRoundedGameController01;
     }
-    if (lower.contains('news') || lower.contains('cnn') || lower.contains('bbc') || lower.contains('al jazeera') || lower.contains('أخبار') || lower.contains('إخبار') || lower.contains('الجزيرة') || lower.contains('العربية')) {
-      return AppIcons.news;
-    }
-    if (lower.contains('movie') || lower.contains('cinema') || lower.contains('film') || lower.contains('hollywood') || lower.contains('netflix') || lower.contains('أفلام') || lower.contains('فيلم') || lower.contains('سينما')) {
+    if (lower.contains('movie') || lower.contains('cinema') || lower.contains('film') || lower.contains('box office') || lower.contains('hollywood') || lower.contains('netflix') || lower.contains('أفلام') || lower.contains('افلام') || lower.contains('فيلم') || lower.contains('سينما')) {
       return AppIcons.movies;
     }
-    if (lower.contains('series') || lower.contains('tv show') || lower.contains('drama') || lower.contains('episode') || lower.contains('مسلسل') || lower.contains('دراما')) {
+    if (lower.contains('series') || lower.contains('serie') || lower.contains('tv show') || lower.contains('drama') || lower.contains('episode') || lower.contains('مسلسل') || lower.contains('دراما')) {
       return AppIcons.series;
     }
-    if (lower.contains('kid') || lower.contains('cartoon') || lower.contains('anim') || lower.contains('disney') || lower.contains('أطفال') || lower.contains('كرتون') || lower.contains('أنمي')) {
-      return HugeIcons.strokeRoundedGameController01;
+    if (lower.contains('doc') || lower.contains('geo') || lower.contains('discovery') || lower.contains('nature') || lower.contains('وثائقي') || lower.contains('وثايقي')) {
+      return AppIcons.globe;
+    }
+    if (lower.contains('news') || lower.contains('cnn') || lower.contains('bbc') || lower.contains('al jazeera') || lower.contains('أخبار') || lower.contains('اخبار') || lower.contains('إخبار') || lower.contains('الجزيرة') || lower.contains('العربية')) {
+      return AppIcons.news;
+    }
+    if (lower.contains('sport') || lower.contains('bein') || lower.contains('ssc') || lower.contains('alkass') || lower.contains('football') || lower.contains('fifa') || lower.contains('nba') || lower.contains('رياض') || lower.contains('سبورت') || lower.contains('كورة') || lower.contains('كرة') || lower.contains('بين')) {
+      return AppIcons.sports;
     }
     if (lower.contains('music') || lower.contains('song') || lower.contains('radio') || lower.contains('mtv') || lower.contains('موسيقى') || lower.contains('أغاني') || lower.contains('طرب')) {
       return AppIcons.music;
-    }
-    if (lower.contains('doc') || lower.contains('geo') || lower.contains('discovery') || lower.contains('nature') || lower.contains('وثائقي')) {
-      return AppIcons.globe;
     }
     if (lower.contains('action') || lower.contains('adventure') || lower.contains('war') || lower.contains('حركة') || lower.contains('أكشن') || lower.contains('قتال')) {
       return AppIcons.trending;
@@ -338,26 +346,26 @@ class _CategoryCardState extends State<CategoryCard> {
     if (isAll) return AppColors.accent;
     final lower = name.toLowerCase();
 
-    if (lower.contains('sport') || lower.contains('bein')) {
-      return AppColors.liveGreen; // Emerald Green / LIVE
+    if (lower.contains('kid') || lower.contains('junior') || lower.contains('child') || lower.contains('cartoon') || lower.contains('أطفال') || lower.contains('اطفال')) {
+      return const Color(0xFFFF4081); // Neon Pink
     }
-    if (lower.contains('news')) {
-      return const Color(0xFFFF5252); // Vivid Red
-    }
-    if (lower.contains('movie') || lower.contains('cinema')) {
+    if (lower.contains('movie') || lower.contains('cinema') || lower.contains('film') || lower.contains('box office') || lower.contains('أفلام') || lower.contains('افلام')) {
       return const Color(0xFFFF9100); // Amber Orange
     }
-    if (lower.contains('series') || lower.contains('drama')) {
+    if (lower.contains('series') || lower.contains('serie') || lower.contains('drama') || lower.contains('مسلسل') || lower.contains('دراما')) {
       return const Color(0xFF7C4DFF); // Deep Purple
     }
-    if (lower.contains('kid') || lower.contains('cartoon')) {
-      return const Color(0xFFFF4081); // Neon Pink
+    if (lower.contains('doc') || lower.contains('geo') || lower.contains('وثائق')) {
+      return AppColors.accent; // Sky Blue
+    }
+    if (lower.contains('news') || lower.contains('أخبار') || lower.contains('اخبار') || lower.contains('إخبار')) {
+      return const Color(0xFFFF5252); // Vivid Red
+    }
+    if (lower.contains('sport') || lower.contains('bein') || lower.contains('ssc') || lower.contains('alkass') || lower.contains('رياض') || lower.contains('سبورت')) {
+      return AppColors.liveGreen; // Emerald Green / LIVE
     }
     if (lower.contains('music')) {
       return AppColors.accent; // Electric Cyan
-    }
-    if (lower.contains('doc') || lower.contains('geo')) {
-      return AppColors.accent; // Sky Blue
     }
     if (lower.contains('action') || lower.contains('4k')) {
       return const Color(0xFFFFAB00); // Radiant Gold

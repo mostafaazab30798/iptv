@@ -96,4 +96,30 @@ void main() {
 
     expect(matches.single.channel.streamId, 21);
   });
+
+  test('never binds or falls back to beIN Series 1 or beIN Movies 1', () {
+    final fixtureWithBein1 = LiveFixture(
+      homeName: 'Ipswich Town',
+      awayName: 'Liverpool',
+      teams: [liverpool],
+      state: 'in',
+      clock: "67'",
+      league: 'English Premier League',
+      broadcastChannel: 'بى ان سبورت 1HD',
+    );
+
+    final matches = LiveMatchFinder.bindFixtures(
+      fixtures: [fixtureWithBein1],
+      channels: [
+        _ch(10, 'beIN Series 1 4K'),
+        _ch(11, 'beIN Movies 1 4K'),
+        _ch(12, 'beIN Drama 1 FHD'),
+        _ch(13, 'beIN Sports 1 HD'),
+      ],
+    );
+
+    expect(matches, hasLength(1));
+    expect(matches.single.channel.streamId, 13);
+    expect(matches.single.channel.name, 'beIN Sports 1 HD');
+  });
 }

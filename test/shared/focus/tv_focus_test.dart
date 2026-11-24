@@ -167,6 +167,80 @@ void main() {
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'poster');
   });
 
+  testWidgets(
+    'left/right inside a DpadRegion row moves between posters without getting trapped on hearts',
+    (tester) async {
+      var selectedPoster = '';
+
+      await tester.pumpWidget(
+        _tvApp(
+          home: Scaffold(
+            body: DpadRegion(
+              memoryKey: 'test/poster-row',
+              horizontalEdge: DpadEdgeBehavior.stop,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 120,
+                    height: 180,
+                    child: PosterHeartCard(
+                      autofocus: true,
+                      onTap: () => selectedPoster = 'first',
+                      favorite: (heartFocus, onHeartDirection) => TvFocusable(
+                        focusNode: heartFocus,
+                        onDirection: onHeartDirection,
+                        onSelect: () => selectedPoster = 'first-heart',
+                        child: const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Text('H1'),
+                        ),
+                      ),
+                      child: const SizedBox.expand(child: Text('Poster 1')),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 120,
+                    height: 180,
+                    child: PosterHeartCard(
+                      onTap: () => selectedPoster = 'second',
+                      favorite: (heartFocus, onHeartDirection) => TvFocusable(
+                        focusNode: heartFocus,
+                        onDirection: onHeartDirection,
+                        onSelect: () => selectedPoster = 'second-heart',
+                        child: const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Text('H2'),
+                        ),
+                      ),
+                      child: const SizedBox.expand(child: Text('Poster 2')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Move right to Poster 2, then left back to Poster 1 without stopping on H2
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+      expect(selectedPoster, 'second');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+      expect(selectedPoster, 'first');
+    },
+  );
+
   testWidgets('rtl poster keeps heart at start opposite the rating end', (
     tester,
   ) async {

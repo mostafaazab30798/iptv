@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -33,6 +32,7 @@ import 'package:iptv/features/series/series_screen.dart';
 import 'package:iptv/player/player_controller.dart';
 import 'package:iptv/player/player_source.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/scroll/desktop_smooth_scroll.dart';
 import 'package:iptv/shared/layouts/layouts.dart';
 import 'package:iptv/shared/widgets/empty_state.dart';
@@ -185,16 +185,23 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => ref
+            TvFocusable(
+              autofocus: true,
+              entry: true,
+              onSelect: () => ref
                   .read(homeControllerProvider.notifier)
                   .loadData(forceRefresh: true),
-              icon: const HugeIcon(
-                icon: AppIcons.refresh,
-                size: 18,
-                color: Colors.black,
+              child: IgnorePointer(
+                child: ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const HugeIcon(
+                    icon: AppIcons.refresh,
+                    size: 18,
+                    color: Colors.black,
+                  ),
+                  label: Text(context.l10n.actionTryAgain),
+                ),
               ),
-              label: Text(context.l10n.actionTryAgain),
             ),
           ],
         ),
@@ -229,7 +236,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                 controller: _scrollController,
                 // Platform-default physics; AlwaysScrollable enables pull-to-refresh.
                 physics: const AlwaysScrollableScrollPhysics(),
-                scrollCacheExtent: const ScrollCacheExtent.pixels(240),
+                // Larger cache extent on Home so adjacent horizontal rows are
+                // already mounted when pressing D-pad Down/Up on Android TV.
+                scrollCacheExtent: const ScrollCacheExtent.pixels(520),
                 slivers: [
                   _HomeHeroSliver(autoPlayNotifier: _heroAutoPlayNotifier),
                   const _HomeContinueWatchingSliver(),

@@ -6,6 +6,7 @@ import 'package:iptv/player/domain/enums/player_error_type.dart';
 import 'package:iptv/player/domain/enums/player_backend.dart';
 
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 
 /// User-friendly error overlay view with clear retry or back actions.
 class PlayerErrorView extends StatelessWidget {
@@ -96,68 +97,86 @@ class PlayerErrorView extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 10,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: onClose,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white24),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
+                  TvFocusable(
+                    onSelect: onClose,
+                    child: IgnorePointer(
+                      child: OutlinedButton.icon(
+                        onPressed: () {},
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white24),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                        ),
+                        icon:
+                            Directionality.maybeOf(context) == TextDirection.rtl
+                            ? Transform.flip(
+                                flipX: true,
+                                child: const HugeIcon(
+                                  icon: AppIcons.arrowBack,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const HugeIcon(
+                                icon: AppIcons.arrowBack,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                        label: Text(context.l10n.actionBack),
                       ),
                     ),
-                    icon: Directionality.maybeOf(context) == TextDirection.rtl
-                        ? Transform.flip(
-                            flipX: true,
-                            child: const HugeIcon(
-                              icon: AppIcons.arrowBack,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const HugeIcon(
-                            icon: AppIcons.arrowBack,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                    label: Text(context.l10n.actionBack),
                   ),
                   if (canRetry) ...[
-                    ElevatedButton.icon(
-                      onPressed: onRetry,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                    TvFocusable(
+                      autofocus: true,
+                      entry: true,
+                      onSelect: onRetry,
+                      child: IgnorePointer(
+                        child: ElevatedButton.icon(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            elevation: 2,
+                          ),
+                          icon: const HugeIcon(
+                            icon: AppIcons.refresh,
+                            size: 18,
+                            color: Colors.black,
+                          ),
+                          label: Text(
+                            context.l10n.actionRetry,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
-                        elevation: 2,
-                      ),
-                      icon: const HugeIcon(
-                        icon: AppIcons.refresh,
-                        size: 18,
-                        color: Colors.black,
-                      ),
-                      label: Text(
-                        context.l10n.actionRetry,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
                   if (onSecureConnection != null)
-                    FilledButton.icon(
-                      onPressed: onSecureConnection,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
+                    TvFocusable(
+                      onSelect: onSecureConnection,
+                      child: IgnorePointer(
+                        child: FilledButton.icon(
+                          onPressed: () {},
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
+                          icon: const Icon(Icons.shield_outlined, size: 18),
+                          label: Text(context.l10n.secureConnectionTryAction),
                         ),
                       ),
-                      icon: const Icon(Icons.shield_outlined, size: 18),
-                      label: Text(context.l10n.secureConnectionTryAction),
                     ),
                   if (onSelectBackend != null)
                     PopupMenuButton<PlayerBackend>(

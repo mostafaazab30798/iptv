@@ -353,10 +353,12 @@ void main() {
     );
   });
 
-  test('beIN kids categories are not classified as sports', () async {
-    final kids = [
+  test('beIN kids, movies, and series categories are not classified as sports', () async {
+    final nonSports = [
       _ch(id: 700, name: 'beIN Junior', categoryId: 7),
       _ch(id: 701, name: 'beIN Kids', categoryId: 7),
+      _ch(id: 702, name: 'beIN Series 1', categoryId: 8),
+      _ch(id: 703, name: 'beIN Movies 1', categoryId: 9),
     ];
     final liveRepo = _FakeLiveRepo(
       categories: const [
@@ -366,9 +368,25 @@ void main() {
           type: CategoryType.live,
           name: 'BEIN KIDS',
         ),
+        Category(
+          id: 8,
+          serverId: 1,
+          type: CategoryType.live,
+          name: 'BEIN SERIES',
+        ),
+        Category(
+          id: 9,
+          serverId: 1,
+          type: CategoryType.live,
+          name: 'BEIN MOVIES',
+        ),
       ],
-      channelsByCategory: {7: kids},
-      allChannels: kids,
+      channelsByCategory: {
+        7: nonSports.sublist(0, 2),
+        8: [nonSports[2]],
+        9: [nonSports[3]],
+      },
+      allChannels: nonSports,
     );
 
     final controller = HomeController(
@@ -383,7 +401,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 10));
     }
 
-    expect(controller.state.liveChannels, hasLength(2));
+    expect(controller.state.liveChannels, hasLength(4));
     expect(controller.state.sportsChannels, isEmpty);
     expect(liveRepo.requestedCategoryIds, isNot(contains(7)));
   });

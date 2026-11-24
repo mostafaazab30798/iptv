@@ -20,6 +20,8 @@ class ChannelCard extends StatelessWidget {
     this.showBadge = true,
     this.isPlaying = false,
     this.categoryName,
+    this.autofocus = false,
+    this.entry = false,
   });
 
   final Channel channel;
@@ -29,6 +31,8 @@ class ChannelCard extends StatelessWidget {
   final bool showBadge;
   final bool isPlaying;
   final String? categoryName;
+  final bool autofocus;
+  final bool entry;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +40,8 @@ class ChannelCard extends StatelessWidget {
       width: width,
       height: height,
       child: FocusableCard(
+        autofocus: autofocus,
+        entry: entry,
         onTap: onTap,
         padding: const EdgeInsets.all(5),
         borderRadius: BorderRadius.circular(14),

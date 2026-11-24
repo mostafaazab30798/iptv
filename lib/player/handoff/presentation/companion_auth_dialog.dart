@@ -16,6 +16,7 @@ import 'package:iptv/features/home/home_controller.dart';
 import 'package:iptv/player/handoff/domain/audio_handoff_models.dart';
 import 'package:iptv/player/handoff/infrastructure/companion_auth_server.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -269,10 +270,14 @@ class _CompanionAuthDialogState extends ConsumerState<CompanionAuthDialog>
             ],
           ),
         ),
-        IconButton(
-          onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-          icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
-          tooltip: context.l10n.actionCancel,
+        TvFocusable(
+          autofocus: true,
+          entry: true,
+          onSelect: () => Navigator.of(context, rootNavigator: true).pop(),
+          child: const Padding(
+            padding: EdgeInsets.all(8),
+            child: Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+          ),
         ),
       ],
     );
@@ -635,14 +640,20 @@ class _CompanionAuthDialogState extends ConsumerState<CompanionAuthDialog>
             ),
           ],
           const SizedBox(height: AppSpacing.lg),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.black,
+          TvFocusable(
+            autofocus: true,
+            onSelect: _startServer,
+            child: IgnorePointer(
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: () {},
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text(context.l10n.actionRetry),
+              ),
             ),
-            onPressed: _startServer,
-            icon: const Icon(Icons.refresh, size: 18),
-            label: Text(context.l10n.actionRetry),
           ),
         ],
       ),

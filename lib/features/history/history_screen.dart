@@ -229,162 +229,193 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     final item = items[i];
                     final progress = item.progressFraction;
 
-                    return Dismissible(
-                      key: ValueKey('history_${item.id}'),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: AlignmentDirectional.centerEnd,
-                        padding: const EdgeInsetsDirectional.only(end: 20),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withAlpha(200),
-                          borderRadius: BorderRadius.circular(10),
+                      return Dismissible(
+                        key: ValueKey('history_${item.id}'),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: AlignmentDirectional.centerEnd,
+                          padding: const EdgeInsetsDirectional.only(end: 20),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withAlpha(200),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const HugeIcon(
+                            icon: AppIcons.delete,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                         ),
-                        child: const HugeIcon(
-                          icon: AppIcons.delete,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                      onDismissed: (_) => _deleteHistoryItem(items, item),
-                      child: FocusableCard(
-                        autofocus: i == 0,
-                        entry: i == 0,
-                        onTap: () => _playHistoryItem(context, item),
-                        padding: const EdgeInsets.all(12),
+                        onDismissed: (_) => _deleteHistoryItem(items, item),
                         child: Row(
                           children: [
-                            Stack(
-                              children: [
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.bg2,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: CachedImage(
-                                    imageUrl: item.imageUrl,
-                                    fallbackIcon: AppIcons.play,
-                                    fit: BoxFit.cover,
-                                    borderRadius: BorderRadius.circular(8),
-                                    memCacheWidth: 64,
-                                    memCacheHeight: 64,
-                                  ),
-                                ),
-                                if (progress > 0)
-                                  Positioned(
-                                    bottom: 4,
-                                    left: 4,
-                                    right: 4,
-                                    child: Container(
-                                      height: 3.5,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                          100,
+                            Expanded(
+                              child: FocusableCard(
+                                autofocus: i == 0,
+                                entry: i == 0,
+                                onTap: () => _playHistoryItem(context, item),
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Stack(
+                                      children: [
+                                        Container(
+                                          width: 56,
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.bg2,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: CachedImage(
+                                            imageUrl: item.imageUrl,
+                                            fallbackIcon: AppIcons.play,
+                                            fit: BoxFit.cover,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            memCacheWidth: 64,
+                                            memCacheHeight: 64,
+                                          ),
                                         ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withAlpha(120),
-                                            blurRadius: 2,
+                                        if (progress > 0)
+                                          Positioned(
+                                            bottom: 4,
+                                            left: 4,
+                                            right: 4,
+                                            child: Container(
+                                              height: 3.5,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(100),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withAlpha(120),
+                                                    blurRadius: 2,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Directionality(
+                                                textDirection:
+                                                    TextDirection.ltr,
+                                                child: ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        100,
+                                                      ),
+                                                  child:
+                                                      LinearProgressIndicator(
+                                                        value: progress.clamp(
+                                                          0.0,
+                                                          1.0,
+                                                        ),
+                                                        backgroundColor: Colors
+                                                            .white
+                                                            .withAlpha(60),
+                                                        valueColor:
+                                                            const AlwaysStoppedAnimation(
+                                                              AppColors.accent,
+                                                            ),
+                                                        minHeight: 3.5,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              100,
+                                                            ),
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.name,
+                                            style: const TextStyle(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.bg2,
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  _typeLabel(
+                                                    context,
+                                                    item.type,
+                                                  ),
+                                                  style: const TextStyle(
+                                                    color: AppColors.accent,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (item.durationSecs != null &&
+                                                  item.durationSecs! > 0) ...[
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  '${(progress * 100).round()}%',
+                                                  style: TextStyle(
+                                                    color: progress >= 0.9
+                                                        ? AppColors.accent
+                                                        : AppColors
+                                                              .textSecondary,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _buildSubtitle(context, item),
+                                            style: const TextStyle(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 11.5,
+                                            ),
                                           ),
                                         ],
                                       ),
-                                      child: Directionality(
-                                        textDirection: TextDirection.ltr,
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            100,
-                                          ),
-                                          child: LinearProgressIndicator(
-                                            value: progress.clamp(0.0, 1.0),
-                                            backgroundColor: Colors.white
-                                                .withAlpha(60),
-                                            valueColor:
-                                                const AlwaysStoppedAnimation(
-                                                  AppColors.accent,
-                                                ),
-                                            minHeight: 3.5,
-                                            borderRadius: BorderRadius.circular(
-                                              100,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
                                     ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.name,
-                                    style: const TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
+                                    const SizedBox(width: 8),
+                                    const HugeIcon(
+                                      icon: AppIcons.play,
+                                      color: AppColors.accent,
+                                      size: 24,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.bg2,
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _typeLabel(context, item.type),
-                                          style: const TextStyle(
-                                            color: AppColors.accent,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                      if (item.durationSecs != null &&
-                                          item.durationSecs! > 0) ...[
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '${(progress * 100).round()}%',
-                                          style: TextStyle(
-                                            color: progress >= 0.9
-                                                ? AppColors.accent
-                                                : AppColors.textSecondary,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _buildSubtitle(context, item),
-                                    style: const TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 11.5,
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                            // Remote-accessible delete (swipe still works on touch).
+                            const SizedBox(width: 6),
+                            // Remote-accessible delete (sibling of FocusableCard so it isn't swallowed by ExcludeFocus).
                             TvFocusable(
-                              scale: 1.06,
+                              scale: 1.1,
                               onSelect: () => _deleteHistoryItem(items, item),
                               child: const Padding(
-                                padding: EdgeInsets.all(6),
+                                padding: EdgeInsets.all(8),
                                 child: HugeIcon(
                                   icon: AppIcons.delete,
                                   color: AppColors.textDisabled,
@@ -392,16 +423,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const HugeIcon(
-                              icon: AppIcons.play,
-                              color: AppColors.accent,
-                              size: 24,
-                            ),
                           ],
                         ),
-                      ),
-                    );
+                      );
                   },
                 ),
               ),
@@ -516,17 +540,30 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         title: Text(context.l10n.historyClearDialogTitle),
         content: Text(context.l10n.historyClearDialogContent),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              context.l10n.actionCancel,
-              style: const TextStyle(color: AppColors.textSecondary),
+          TvFocusable(
+            autofocus: true,
+            onSelect: () => Navigator.of(ctx).pop(false),
+            child: IgnorePointer(
+              child: TextButton(
+                onPressed: () {},
+                child: Text(
+                  context.l10n.actionCancel,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
             ),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text(context.l10n.actionClearAll),
+          TvFocusable(
+            onSelect: () => Navigator.of(ctx).pop(true),
+            child: IgnorePointer(
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                ),
+                child: Text(context.l10n.actionClearAll),
+              ),
+            ),
           ),
         ],
       ),

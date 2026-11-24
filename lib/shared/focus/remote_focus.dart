@@ -2,22 +2,40 @@ import 'package:dpad/dpad.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:iptv/app/theme/app_colors.dart';
+import 'package:iptv/core/platform/platform_service.dart';
 
-/// Session flag: TV focus chrome stays hidden until a real remote / D-pad
-/// key is pressed. Touch, mouse, and startup autofocus must not light it up.
+/// Session flag: on touch/desktop platforms, TV focus chrome stays hidden until
+/// a real remote / D-pad key is pressed. On Android TV, focus chrome is armed
+/// immediately so the user always sees where the remote is pointing on launch.
 abstract final class RemoteFocus {
-  static final ValueNotifier<bool> armed = ValueNotifier<bool>(false);
+  static final ValueNotifier<bool> armed = ValueNotifier<bool>(
+    PlatformService.instance.isAndroidTv,
+  );
 
-  static const DpadKeySet _keys = DpadKeySet(
+  /// Comprehensive remote key set for Android TV, Fire TV, Google TV, and gamepads.
+  static const DpadKeySet keySet = DpadKeySet(
     select: [
       ...DpadKeySet.defaultSelect,
       LogicalKeyboardKey.gameButtonSelect,
+      LogicalKeyboardKey.open,
+    ],
+    back: [
+      ...DpadKeySet.defaultBack,
+      LogicalKeyboardKey.browserBack,
+    ],
+    menu: [
+      ...DpadKeySet.defaultMenu,
+      LogicalKeyboardKey.info,
+      LogicalKeyboardKey.guide,
+      LogicalKeyboardKey.settings,
+      LogicalKeyboardKey.tvContentsMenu,
+      LogicalKeyboardKey.mediaTopMenu,
     ],
   );
 
   static bool watch(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<_RemoteFocus>()?.armed ??
-        false;
+        PlatformService.instance.isAndroidTv;
   }
 
   static void arm() {
@@ -27,24 +45,30 @@ abstract final class RemoteFocus {
   }
 
   static void reset() {
-    armed.value = false;
+    armed.value = PlatformService.instance.isAndroidTv;
   }
 
   static bool isRemoteKey(LogicalKeyboardKey key) {
-    return _keys.directionOf(key) != null ||
-        _keys.isSelect(key) ||
-        _keys.isBack(key) ||
-        _keys.isMenu(key) ||
+    return keySet.directionOf(key) != null ||
+        keySet.isSelect(key) ||
+        keySet.isBack(key) ||
+        keySet.isMenu(key) ||
         key == LogicalKeyboardKey.mediaPlayPause ||
         key == LogicalKeyboardKey.mediaPlay ||
         key == LogicalKeyboardKey.mediaPause ||
+        key == LogicalKeyboardKey.mediaStop ||
+        key == LogicalKeyboardKey.mediaFastForward ||
+        key == LogicalKeyboardKey.mediaRewind ||
         key == LogicalKeyboardKey.mediaTrackNext ||
         key == LogicalKeyboardKey.mediaTrackPrevious ||
         key == LogicalKeyboardKey.channelUp ||
-        key == LogicalKeyboardKey.channelDown;
+        key == LogicalKeyboardKey.channelDown ||
+        key == LogicalKeyboardKey.pageUp ||
+        key == LogicalKeyboardKey.pageDown;
   }
 
-  /// Visual state for D-pad widgets: idle until a remote key has been used.
+  /// Visual state for D-pad widgets: idle until a remote key has been used
+  /// (or immediately armed on Android TV).
   static DpadFocusState visualOf(BuildContext context, DpadFocusState state) {
     if (watch(context)) return state;
     return const DpadFocusState(focused: false, pressed: false);
@@ -66,6 +90,9 @@ class _RemoteFocusScopeState extends State<RemoteFocusScope> {
   @override
   void initState() {
     super.initState();
+    if (PlatformService.instance.isAndroidTv) {
+      RemoteFocus.arm();
+    }
     HardwareKeyboard.instance.addHandler(_onKey);
     RemoteFocus.armed.addListener(_onArmedChanged);
   }

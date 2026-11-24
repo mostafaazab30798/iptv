@@ -106,16 +106,23 @@ abstract final class LiveMatchFinder {
   /// When EPG never names the clubs, still open a main beIN / Arabic sports 1.
   static Channel? fallbackWatchChannel(Iterable<Channel> channels) {
     Channel? best;
-    var bestScore = -1;
+    var bestScore = -1000;
     for (final channel in channels) {
       if (!BigMatchDetector.isBeinOrArabicSportsNetwork(channel.name)) {
         continue;
       }
       if (BigMatchDetector.isOfficialClubChannel(channel.name)) continue;
+      if (BigMatchDetector.isNonSportsStation(channel.name)) continue;
+      final info = ChannelMapper.extractNetworkInfo(channel.name);
+      if (info.isNews || info.isNba) continue;
+
       final n = BigMatchDetector.normalize(channel.name);
       var score = _channelPreferenceScore(channel);
-      if (RegExp(r'(^| )1($| )').hasMatch(n)) score += 20;
-      if (n.contains('bein')) score += 3;
+      if (info.number == '1' || RegExp(r'(^| )1($| )').hasMatch(n)) {
+        score += 20;
+      }
+      if (info.network == 'bein' || n.contains('bein')) score += 5;
+      if (!info.isXtra && !info.isMax && !info.isAfc) score += 10;
       if (score > bestScore) {
         best = channel;
         bestScore = score;
@@ -126,7 +133,12 @@ abstract final class LiveMatchFinder {
 
   static int _channelPreferenceScore(Channel channel) {
     var score = BigMatchDetector.channelQuality(channel.name);
-    if (ChannelMapper.isFrenchVariant(channel.name)) score -= 100;
+    if (ChannelMapper.isFrenchVariant(channel.name) ||
+        ChannelMapper.isEnglishVariant(channel.name) ||
+        ChannelMapper.isSpanishVariant(channel.name) ||
+        ChannelMapper.isTurkishVariant(channel.name)) {
+      score -= 100;
+    }
     return score;
   }
 

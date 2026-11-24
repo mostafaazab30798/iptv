@@ -220,6 +220,12 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
     }
 
+    case WM_ACTIVATEAPP:
+      // Suppress default and plugin activation transitions in borderless
+      // fullscreen so Windows DWM and monitor drivers never renegotiate the
+      // display/MPO state when entering or leaving the app.
+      return 0;
+
     case WM_ACTIVATE:
       // Only forward focus to the Flutter view when *becoming* active.
       // Calling SetFocus on WA_INACTIVE fights Windows' deactivation, which
@@ -279,6 +285,21 @@ void Win32Window::SetChildContent(HWND content) {
 RECT Win32Window::GetClientArea() {
   RECT frame;
   GetClientRect(window_handle_, &frame);
+  if (is_fullscreen_ && window_handle_ != nullptr) {
+    HMONITOR monitor =
+        ::MonitorFromWindow(window_handle_, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi = {sizeof(mi)};
+    if (::GetMonitorInfo(monitor, &mi)) {
+      const LONG monitor_width = mi.rcMonitor.right - mi.rcMonitor.left;
+      const LONG monitor_height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+      if (frame.right - frame.left > monitor_width) {
+        frame.right = frame.left + monitor_width;
+      }
+      if (frame.bottom - frame.top > monitor_height) {
+        frame.bottom = frame.top + monitor_height;
+      }
+    }
+  }
   return frame;
 }
 
@@ -334,12 +355,30 @@ void Win32Window::SetFullScreen(bool fullscreen) {
     // Mark the state before frame messages are dispatched so non-client
     // activation cannot repaint a transient caption over the video.
     is_fullscreen_ = true;
+
+    // Extend the top-level window 1 physical pixel past the bottom of the
+    // monitor while keeping the Flutter child view clamped to the exact monitor
+    // bounds in GetClientArea(). If a borderless WS_POPUP window and its Direct3D
+    // swapchain match mi.rcMonitor to the exact pixel, Windows DWM promotes the
+    // surface into exclusive DirectFlip / hardware Multiplane Overlay (MPO) or
+    // Auto-HDR / VRR fullscreen mode; on external HDMI/DisplayPort monitors,
+    // entering or leaving the app then forces a 1-second display mode / link
+    // renegotiation (screen blacks out and turns back on). The 1px off-screen
+    // overhang is invisible on the monitor, still covers the taskbar, and keeps
+    // the window in standard DWM desktop composition with zero mode switch.
+    const LONG monitor_width = mi.rcMonitor.right - mi.rcMonitor.left;
+    const LONG monitor_height = mi.rcMonitor.bottom - mi.rcMonitor.top;
     ::SetWindowPos(hwnd, HWND_TOP,
                    mi.rcMonitor.left, mi.rcMonitor.top,
-                   mi.rcMonitor.right - mi.rcMonitor.left,
-                   mi.rcMonitor.bottom - mi.rcMonitor.top,
+                   monitor_width,
+                   monitor_height + 1,
                    SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_NOACTIVATE |
                        SWP_SHOWWINDOW);
+    if (child_content_ != nullptr) {
+      RECT frame = GetClientArea();
+      ::MoveWindow(child_content_, frame.left, frame.top,
+                   frame.right - frame.left, frame.bottom - frame.top, FALSE);
+    }
   } else {
     DWORD target_style = style_prev_ != 0 ? style_prev_ : WS_OVERLAPPEDWINDOW;
     target_style |= WS_CLIPCHILDREN | WS_VISIBLE;

@@ -43,6 +43,23 @@ abstract final class BeinLogoNormalizer {
     // Replace brackets, separators, and punctuation with spaces
     s = s.replaceAll(RegExp(r'[\[\]\(\)\{\}\-_:\|/\\,\.\+★*#]'), ' ');
 
+    // Separate attached resolution tags and numbers (e.g. "1hd", "hd1", "max2", "bein1")
+    // while keeping "4k", "8k", "1080p", "720p", "50fps", "60fps", "h264", "h265" intact.
+    s = s.replaceAllMapped(
+      RegExp(
+        r'\b(1[0-6]|[1-9])(fhd|uhd|hd|sd|max|xtra|extra|premium|prem)\b',
+        caseSensitive: false,
+      ),
+      (m) => '${m.group(1)} ${m.group(2)}',
+    );
+    s = s.replaceAllMapped(
+      RegExp(
+        r'\b(bein|beinsports|sport|sports|fhd|uhd|hd|sd|max|xtra|extra|premium|prem)(1[0-6]|[1-9])\b',
+        caseSensitive: false,
+      ),
+      (m) => '${m.group(1)} ${m.group(2)}',
+    );
+
     // Collapse multiple spaces
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
 
@@ -70,7 +87,8 @@ abstract final class BeinLogoNormalizer {
   }
 
   static bool _isBein(String line, List<String> tokens) {
-    final hasBrand = tokens.contains('bein') ||
+    final hasBrand =
+        tokens.contains('bein') ||
         tokens.contains('beinsports') ||
         line.startsWith('bein ') ||
         line.contains(' bein ') ||
@@ -93,24 +111,43 @@ abstract final class BeinLogoNormalizer {
     };
     if (tokens.any(childTokens.contains)) return false;
 
-    final hasSportsMarker = tokens.contains('sport') ||
-        tokens.contains('sports') ||
-        tokens.contains('beinsports');
-    if (hasSportsMarker) return true;
-
     const nonSportsTokens = {
       'movie',
       'movies',
+      'serie',
       'series',
       'drama',
       'gourmet',
+      'boxoffice',
+      'box',
+      'office',
+      'cinema',
+      'film',
+      'films',
+      'star',
+      'stars',
       'entertainment',
       'documentary',
+      'doc',
+      'docs',
+      'music',
+      'tod',
       'سينما',
       'افلام',
       'مسلسلات',
+      'دراما',
+      'ترفيه',
+      'وثائقي',
+      'وثايقي',
+      'طبخ',
     };
     if (tokens.any(nonSportsTokens.contains)) return false;
+
+    final hasSportsMarker =
+        tokens.contains('sport') ||
+        tokens.contains('sports') ||
+        tokens.contains('beinsports');
+    if (hasSportsMarker) return true;
 
     // Preserve established short aliases such as "beIN 1" and specific
     // sports sub-brands, but reject an otherwise generic beIN channel.
@@ -134,7 +171,10 @@ abstract final class BeinLogoNormalizer {
 
   static String? _resolveCanonicalKey(List<String> tokens) {
     // Check specific sub-brands
-    final hasNews = tokens.contains('news') || tokens.contains('akhbar') || tokens.contains('ikhbariya');
+    final hasNews =
+        tokens.contains('news') ||
+        tokens.contains('akhbar') ||
+        tokens.contains('ikhbariya');
     final hasNba = tokens.contains('nba');
     final has4k = tokens.contains('4k') || tokens.contains('uhd4k');
     final hasPremium = tokens.contains('premium') || tokens.contains('prem');
@@ -203,12 +243,12 @@ abstract final class BeinLogoNormalizer {
   static String _normalizeArabicTokens(String s) {
     var out = s;
 
-    // Normalizing Arabic beIN variants
-    out = out.replaceAll(RegExp(r'بي\s*إن\s*سبورت(س)?'), 'bein sports');
-    out = out.replaceAll(RegExp(r'بي\s*ان\s*سبورت(س)?'), 'bein sports');
+    // Normalizing Arabic beIN variants (including Alif Maqsura بى)
+    out = out.replaceAll(RegExp(r'ب[يى]\s*إن\s*سبورت(س)?'), 'bein sports');
+    out = out.replaceAll(RegExp(r'ب[يى]\s*ان\s*سبورت(س)?'), 'bein sports');
     out = out.replaceAll(RegExp(r'بين\s*سبورت(س)?'), 'bein sports');
-    out = out.replaceAll(RegExp(r'بي\s*إن'), 'bein');
-    out = out.replaceAll(RegExp(r'بي\s*ان'), 'bein');
+    out = out.replaceAll(RegExp(r'ب[يى]\s*إن'), 'bein');
+    out = out.replaceAll(RegExp(r'ب[يى]\s*ان'), 'bein');
     out = out.replaceAll(RegExp(r'بين'), 'bein');
 
     // Qualifiers
@@ -216,7 +256,10 @@ abstract final class BeinLogoNormalizer {
     out = out.replaceAll(RegExp(r'بريميوم|بريميم'), 'premium');
     out = out.replaceAll(RegExp(r'ماكس|مكس'), 'max');
     out = out.replaceAll(RegExp(r'اكسترا|إكسترا'), 'xtra');
-    out = out.replaceAll(RegExp(r'الإنجليزية|الانجليزية|انجليزي|إنجليزي'), 'english');
+    out = out.replaceAll(
+      RegExp(r'الإنجليزية|الانجليزية|انجليزي|إنجليزي'),
+      'english',
+    );
     out = out.replaceAll(RegExp(r'الفرنسية|فرنسي'), 'french');
     out = out.replaceAll(RegExp(r'فور\s*كي|فور\s*كيه|4\s*كي'), '4k');
 

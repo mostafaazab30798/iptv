@@ -41,57 +41,53 @@ class TvFocusable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onSelect,
-      child: DpadFocusable(
-        autofocus: autofocus,
-        enabled: enabled,
-        entry: entry,
-        focusNode: focusNode,
-        onSelect: onSelect,
-        onFocusChange: onFocusChange,
-        onDirection: onDirection,
-        debugLabel: debugLabel,
-        tapToSelect: tapToSelect,
-        builder: (context, state, child) {
-          final visual = RemoteFocus.visualOf(context, state);
-          final focused = visual.focused;
-          final pressed = visual.pressed;
+    return DpadFocusable(
+      autofocus: autofocus,
+      enabled: enabled,
+      entry: entry,
+      focusNode: focusNode,
+      onSelect: onSelect,
+      onFocusChange: onFocusChange,
+      onDirection: onDirection,
+      debugLabel: debugLabel,
+      tapToSelect: tapToSelect,
+      builder: (context, state, child) {
+        final visual = RemoteFocus.visualOf(context, state);
+        final focused = visual.focused;
+        final pressed = visual.pressed;
 
-          if (!focused && !pressed) {
-            return child;
-          }
+        if (!focused && !pressed) {
+          return child;
+        }
 
-          return AnimatedScale(
-            scale: pressed ? 0.94 : scale,
+        return AnimatedScale(
+          scale: pressed ? 0.95 : scale,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
             duration: const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: focused ? AppColors.accent : Colors.transparent,
-                  width: 2,
-                ),
-                boxShadow: focused
-                    ? [
-                        BoxShadow(
-                          color: AppColors.accent.withValues(alpha: 0.45),
-                          blurRadius: 12,
-                          spreadRadius: 0.5,
-                        ),
-                      ]
-                    : null,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: focused ? AppColors.accent : Colors.transparent,
+                width: 2.2,
               ),
-              child: child,
+              boxShadow: focused
+                  ? [
+                      BoxShadow(
+                        color: AppColors.accent.withValues(alpha: 0.5),
+                        blurRadius: 14,
+                        spreadRadius: 1.0,
+                      ),
+                    ]
+                  : null,
             ),
-          );
-        },
-        child: child,
-      ),
+            child: child,
+          ),
+        );
+      },
+      child: child,
     );
   }
 }

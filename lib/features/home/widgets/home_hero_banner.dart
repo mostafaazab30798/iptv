@@ -153,12 +153,30 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
 
   bool _focusUp(BuildContext context) => focusUpToShell(context);
 
+  bool _scrollHomeToTop(BuildContext context) {
+    final scrollable = Scrollable.maybeOf(context);
+    if (scrollable != null &&
+        scrollable.position.hasPixels &&
+        scrollable.position.pixels > 1.0) {
+      scrollable.position.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+      return true;
+    }
+    return false;
+  }
+
   bool _handleHeroDirection(
     BuildContext context,
     TraversalDirection direction,
     int itemCount,
   ) {
     if (direction == TraversalDirection.up) {
+      if (_scrollHomeToTop(context)) {
+        return _focusUp(context);
+      }
       return _focusUp(context);
     }
     if (itemCount <= 1) return false;
@@ -294,29 +312,51 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> {
                 top: posterFocus.top,
                 width: posterFocus.width,
                 height: posterFocus.height,
-                child: DpadFocusable(
-                  autofocus: true,
-                  debugLabel: 'hero-entry',
-                  onSelect: () => widget.onPlay(items[_currentPage.value]),
-                  onDirection: (direction) =>
-                      _handleHeroDirection(context, direction, items.length),
-                  builder: (context, state, child) {
-                    final visual = RemoteFocus.visualOf(context, state);
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 140),
-                      decoration: visual.focused
-                          ? BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppColors.accent,
-                                width: 2,
-                              ),
-                            )
-                          : null,
-                      child: child,
-                    );
-                  },
-                  child: const SizedBox.expand(),
+                child: DpadRegion(
+                  memoryKey: 'home/hero-poster',
+                  debugLabel: 'home-hero-poster',
+                  child: DpadFocusable(
+                    autofocus: true,
+                    entry: true,
+                    debugLabel: 'hero-entry',
+                    onFocusChange: (focused) {
+                      if (focused) {
+                        _pauseAutoScroll();
+                        _scrollHomeToTop(context);
+                      } else {
+                        _resumeAutoScroll();
+                      }
+                    },
+                    onSelect: () => widget.onPlay(items[_currentPage.value]),
+                    onDirection: (direction) =>
+                        _handleHeroDirection(context, direction, items.length),
+                    builder: (context, state, child) {
+                      final visual = RemoteFocus.visualOf(context, state);
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 140),
+                        decoration: visual.focused
+                            ? BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: AppColors.accent,
+                                  width: 2.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.accent.withValues(
+                                      alpha: 0.45,
+                                    ),
+                                    blurRadius: 16,
+                                    spreadRadius: 1.5,
+                                  ),
+                                ],
+                              )
+                            : null,
+                        child: child,
+                      );
+                    },
+                    child: const SizedBox.expand(),
+                  ),
                 ),
               ),
 

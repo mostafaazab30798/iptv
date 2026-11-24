@@ -1,3 +1,4 @@
+import 'package:dpad/dpad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,7 @@ import 'package:iptv/app/theme/app_spacing.dart';
 import 'package:iptv/core/commercial/commercial_api_config.dart';
 import 'package:iptv/core/constants/app_constants.dart';
 import 'package:iptv/core/constants/server_presets.dart';
+import 'package:iptv/core/platform/platform_service.dart';
 
 import 'package:iptv/core/utils/m3u_converter.dart';
 import 'package:iptv/features/auth/auth_controller.dart';
@@ -20,6 +22,8 @@ import 'package:iptv/features/onboarding/widgets/m3u_converter_dialog.dart';
 import 'package:iptv/features/onboarding/widgets/server_gateway_picker_dialog.dart';
 import 'package:iptv/player/handoff/presentation/companion_auth_dialog.dart';
 import 'package:iptv/shared/extensions/context_extensions.dart';
+import 'package:iptv/shared/focus/focusable_card.dart';
+import 'package:iptv/shared/focus/tv_focusable.dart';
 import 'package:iptv/shared/widgets/adaptive_glass.dart';
 import 'package:iptv/shared/widgets/language_picker.dart';
 
@@ -227,29 +231,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
           // Main Responsive Content
           SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide =
-                    constraints.maxWidth >= 960 && constraints.maxHeight >= 520;
-                final isMedium = constraints.maxWidth >= 600 && !isWide;
+            child: DpadRegion(
+              memoryKey: 'onboarding/form',
+              debugLabel: 'onboarding-form',
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide =
+                      constraints.maxWidth >= 960 &&
+                      constraints.maxHeight >= 520;
+                  final isMedium = constraints.maxWidth >= 600 && !isWide;
 
-                return Center(
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isWide
-                          ? AppSpacing.xl
-                          : (isMedium ? AppSpacing.xl : AppSpacing.md),
-                      vertical: AppSpacing.md,
+                  return Center(
+                    child: SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isWide
+                            ? AppSpacing.xl
+                            : (isMedium ? AppSpacing.xl : AppSpacing.md),
+                        vertical: AppSpacing.md,
+                      ),
+                      child: _buildCompactLayout(
+                        allPresets,
+                        isLoading,
+                        isMedium || isWide,
+                      ),
                     ),
-                    child: _buildCompactLayout(
-                      allPresets,
-                      isLoading,
-                      isMedium || isWide,
-                    ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
 
@@ -459,135 +468,123 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(height: 8),
 
           // Interactive Selected Server Tile (Opens Modular Picker Dialog)
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: isLoading
-                  ? null
-                  : () => _openServerPickerDialog(allPresets),
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.bg1,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(color: AppColors.border, width: 1),
+          FocusableCard(
+            onTap: isLoading
+                ? null
+                : () => _openServerPickerDialog(allPresets),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            backgroundColor: AppColors.bg1,
+            borderColor: AppColors.border,
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: HugeIcon(
+                      icon: isCustom ? AppIcons.tune : AppIcons.dns,
+                      color: AppColors.accent,
+                      size: 18,
+                    ),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _selectedPreset.name,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isCustom
+                                  ? AppColors.warning.withValues(alpha: 0.15)
+                                  : AppColors.success.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              isCustom
+                                  ? context.l10n.onboardingManual
+                                  : context.l10n.onboardingOnline,
+                              style: TextStyle(
+                                color: isCustom
+                                    ? AppColors.warning
+                                    : AppColors.success,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Center(
-                        child: HugeIcon(
-                          icon: isCustom ? AppIcons.tune : AppIcons.dns,
-                          color: AppColors.accent,
-                          size: 18,
+                      const SizedBox(height: 2),
+                      Text(
+                        isCustom
+                            ? context.l10n.onboardingCustomConfig
+                            : (_selectedPreset.description ??
+                                  _selectedPreset.url),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.bg2,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        context.l10n.actionChange,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  _selectedPreset.name,
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isCustom
-                                      ? AppColors.warning.withValues(
-                                          alpha: 0.15,
-                                        )
-                                      : AppColors.success.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  isCustom
-                                      ? context.l10n.onboardingManual
-                                      : context.l10n.onboardingOnline,
-                                  style: TextStyle(
-                                    color: isCustom
-                                        ? AppColors.warning
-                                        : AppColors.success,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isCustom
-                                ? context.l10n.onboardingCustomConfig
-                                : (_selectedPreset.description ??
-                                      _selectedPreset.url),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                      const SizedBox(width: 2),
+                      const HugeIcon(
+                        icon: AppIcons.chevronDown,
+                        size: 16,
+                        color: AppColors.textSecondary,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.bg2,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            context.l10n.actionChange,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          const HugeIcon(
-                            icon: AppIcons.chevronDown,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -806,89 +803,100 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(height: AppSpacing.xl),
 
           // Gradient Submit Button
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.accent, AppColors.accent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.button),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+          TvFocusable(
+            scale: 1.03,
+            enabled: !isLoading,
+            onSelect: isLoading ? null : _signIn,
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.accent, AppColors.accent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: isLoading ? null : _signIn,
                 borderRadius: BorderRadius.circular(AppRadius.button),
-                child: Center(
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: isLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            context.l10n.actionConnectStream,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
                             ),
                           ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              context.l10n.actionConnectStream,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            HugeIcon(
-                              icon:
-                                  Directionality.of(context) ==
-                                      TextDirection.rtl
-                                  ? AppIcons.arrowBack
-                                  : AppIcons.arrowForward,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ],
-                        ),
-                ),
+                          const SizedBox(width: 8),
+                          HugeIcon(
+                            icon:
+                                Directionality.of(context) == TextDirection.rtl
+                                ? AppIcons.arrowBack
+                                : AppIcons.arrowForward,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ],
+                      ),
               ),
             ),
           ),
           if (_hasSavedCredentials) ...[
             const SizedBox(height: AppSpacing.sm),
-            TextButton.icon(
-              onPressed: isLoading ? null : _clearSavedLogin,
-              icon: const HugeIcon(
-                icon: AppIcons.logout,
-                color: AppColors.textSecondary,
-                size: 18,
+            TvFocusable(
+              scale: 1.03,
+              enabled: !isLoading,
+              onSelect: isLoading ? null : _clearSavedLogin,
+              child: IgnorePointer(
+                child: TextButton.icon(
+                  onPressed: () {},
+                  icon: const HugeIcon(
+                    icon: AppIcons.logout,
+                    color: AppColors.textSecondary,
+                    size: 18,
+                  ),
+                  label: Text(context.l10n.settingsConfirmSignOut),
+                ),
               ),
-              label: Text(context.l10n.settingsConfirmSignOut),
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
-          TextButton.icon(
-            onPressed: isLoading ? null : _openM3uConverterDialog,
-            icon: const HugeIcon(
-              icon: AppIcons.swap,
-              color: AppColors.accent,
-              size: 18,
+          TvFocusable(
+            scale: 1.03,
+            enabled: !isLoading,
+            onSelect: isLoading ? null : _openM3uConverterDialog,
+            child: IgnorePointer(
+              child: TextButton.icon(
+                onPressed: () {},
+                icon: const HugeIcon(
+                  icon: AppIcons.swap,
+                  color: AppColors.accent,
+                  size: 18,
+                ),
+                label: Text(context.l10n.onboardingHaveM3u),
+              ),
             ),
-            label: Text(context.l10n.onboardingHaveM3u),
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(
@@ -910,51 +918,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // Sign in with Companion Device (QR & Handoff)
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF131C2E).withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(AppRadius.button),
-              border: Border.all(
-                color: AppColors.accent.withValues(alpha: 0.35),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: isLoading
-                    ? null
-                    : () => CompanionAuthDialog.show(context),
+          // Sign in with Companion Device (QR & Handoff) — autofocus on TV so remote users can pair with 1 click
+          TvFocusable(
+            scale: 1.03,
+            autofocus: PlatformService.instance.isAndroidTv,
+            entry: PlatformService.instance.isAndroidTv,
+            enabled: !isLoading,
+            onSelect: isLoading
+                ? null
+                : () => CompanionAuthDialog.show(context),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFF131C2E).withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(AppRadius.button),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const HugeIcon(
-                      icon: AppIcons.devices,
-                      color: AppColors.accent,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      context.l10n.companionSignInButton,
-                      style: const TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
+                border: Border.all(
+                  color: AppColors.accent.withValues(alpha: 0.35),
+                  width: 1.2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const HugeIcon(
+                    icon: AppIcons.devices,
+                    color: AppColors.accent,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    context.l10n.companionSignInButton,
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
