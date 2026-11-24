@@ -152,15 +152,24 @@ class FotmobMatchItem {
     final liveTime = status['liveTime'] as Map<String, dynamic>?;
     final reason = status['reason'] as Map<String, dynamic>?;
 
-    final homeScore = home['score'] is num ? (home['score'] as num).toInt() : null;
-    final awayScore = away['score'] is num ? (away['score'] as num).toInt() : null;
-    final homePen = home['penScore'] is num ? (home['penScore'] as num).toInt() : null;
-    final awayPen = away['penScore'] is num ? (away['penScore'] as num).toInt() : null;
-
     final started = status['started'] == true;
     final ongoing = status['ongoing'] == true;
     final finished = status['finished'] == true;
     final cancelled = status['cancelled'] == true;
+    final hasStartedOrFinished = started || ongoing || finished;
+
+    final homeScore = hasStartedOrFinished && home['score'] is num
+        ? (home['score'] as num).toInt()
+        : null;
+    final awayScore = hasStartedOrFinished && away['score'] is num
+        ? (away['score'] as num).toInt()
+        : null;
+    final homePen = hasStartedOrFinished && home['penScore'] is num
+        ? (home['penScore'] as num).toInt()
+        : null;
+    final awayPen = hasStartedOrFinished && away['penScore'] is num
+        ? (away['penScore'] as num).toInt()
+        : null;
 
     final ltShort = liveTime?['short']?.toString();
     final ltLong = liveTime?['long']?.toString();

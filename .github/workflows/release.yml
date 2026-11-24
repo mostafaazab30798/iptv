@@ -92,18 +92,17 @@ jobs:
           NOTES_AR="${{ github.event.inputs.release_notes_ar }}"
 
           IS_RELEASE="false"
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            if [ "${{ github.event.inputs.publish_release || 'true' }}" != "false" ]; then
-              IS_RELEASE="true"
-            fi
+          if [ "${{ github.event.inputs.publish_release || 'true' }}" != "false" ]; then
+            IS_RELEASE="true"
           fi
 
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            if [ "$IS_RELEASE" = "true" ]; then
+            if [ "${{ github.ref }}" = "refs/heads/main" ]; then
               echo "::error::Tag ${TAG_NAME} already exists. Bump pubspec build number before releasing."
               exit 1
             else
               echo "::warning::Tag ${TAG_NAME} already exists on remote. Non-main branch build will produce artifacts without publishing a release."
+              IS_RELEASE="false"
             fi
           fi
 

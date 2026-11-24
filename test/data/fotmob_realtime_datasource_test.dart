@@ -154,11 +154,11 @@ void main() {
       expect(item.resolveClock(), 'Pen (4-3)');
     });
 
-    test('parses upcoming match', () {
+    test('parses upcoming match and ignores placeholder 0-0 scores before kickoff', () {
       final json = {
         'id': 6666,
-        'home': {'name': 'Barcelona', 'longName': 'FC Barcelona'},
-        'away': {'name': 'Valencia', 'longName': 'Valencia CF'},
+        'home': {'name': 'Barcelona', 'longName': 'FC Barcelona', 'score': 0},
+        'away': {'name': 'Valencia', 'longName': 'Valencia CF', 'score': 0},
         'time': '22:00',
         'status': {
           'started': false,

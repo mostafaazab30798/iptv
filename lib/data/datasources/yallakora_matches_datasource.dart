@@ -147,9 +147,11 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
                           : m.scoreAway,
                       homePenScore: fm.homePenScore,
                       awayPenScore: fm.awayPenScore,
-                      status: fm.resolveClock(
-                        fallbackTime: m.localTimeLabel(now: now),
-                      ),
+                      status: (fm.ongoing || fm.finished)
+                          ? fm.resolveClock(
+                              fallbackTime: m.localTimeLabel(now: now),
+                            )
+                          : m.status,
                       homeGoals: homeGoals,
                       awayGoals: awayGoals,
                     );
