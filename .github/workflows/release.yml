@@ -2,7 +2,10 @@ name: Release Android & Windows
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - fix/production-audit-and-players
+      - "fix/**"
     paths-ignore:
       - "matches.json"
       - "services/matches_api/**"
@@ -30,6 +33,11 @@ on:
         description: "Arabic release notes (optional)"
         required: false
         type: string
+      publish_release:
+        description: "Publish to GitHub Releases & Supabase (only allowed on main)"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -54,6 +62,7 @@ jobs:
       mandatory: ${{ steps.meta.outputs.mandatory }}
       release_notes_en: ${{ steps.meta.outputs.release_notes_en }}
       release_notes_ar: ${{ steps.meta.outputs.release_notes_ar }}
+      is_release: ${{ steps.meta.outputs.is_release }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -82,9 +91,20 @@ jobs:
           NOTES_EN="${{ github.event.inputs.release_notes_en }}"
           NOTES_AR="${{ github.event.inputs.release_notes_ar }}"
 
+          IS_RELEASE="false"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            if [ "${{ github.event.inputs.publish_release || 'true' }}" != "false" ]; then
+              IS_RELEASE="true"
+            fi
+          fi
+
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "::error::Tag ${TAG_NAME} already exists. Bump pubspec build number before releasing."
-            exit 1
+            if [ "$IS_RELEASE" = "true" ]; then
+              echo "::error::Tag ${TAG_NAME} already exists. Bump pubspec build number before releasing."
+              exit 1
+            else
+              echo "::warning::Tag ${TAG_NAME} already exists on remote. Non-main branch build will produce artifacts without publishing a release."
+            fi
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -94,8 +114,9 @@ jobs:
           echo "mandatory=${MANDATORY}" >> "$GITHUB_OUTPUT"
           echo "release_notes_en=${NOTES_EN}" >> "$GITHUB_OUTPUT"
           echo "release_notes_ar=${NOTES_AR}" >> "$GITHUB_OUTPUT"
+          echo "is_release=${IS_RELEASE}" >> "$GITHUB_OUTPUT"
 
-          echo "Extracted: Version=${VERSION}, Build=${BUILD_NUM}, Tag=${TAG_NAME}, Channel=${CHANNEL}"
+          echo "Extracted: Version=${VERSION}, Build=${BUILD_NUM}, Tag=${TAG_NAME}, Channel=${CHANNEL}, IsRelease=${IS_RELEASE}"
 
   build-android:
     name: Build Android Release
@@ -373,6 +394,7 @@ jobs:
   publish:
     name: Publish Release & Register Metadata
     needs: [version, build-android, build-windows]
+    if: needs.version.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     environment: Production
     steps:
