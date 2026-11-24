@@ -773,10 +773,17 @@ abstract final class _HomePlayback {
         ? Duration(seconds: entry.positionSecs)
         : Duration.zero;
 
+    final catalogCache = ref.read(catalogMemoryCacheProvider);
+
     if (entry.type == WatchHistoryType.movie) {
+      final ext = catalogCache.resolveMovieExtension(entry.itemId) ?? 'mp4';
       final streamUrl = ref
           .read(streamUrlBuilderProvider)
-          .vodForSession(session, streamId: entry.itemId);
+          .vodForSession(
+            session,
+            streamId: entry.itemId,
+            extension: ext,
+          );
       ref
           .read(playerControllerProvider.notifier)
           .load(
@@ -789,9 +796,14 @@ abstract final class _HomePlayback {
             ),
           );
     } else if (entry.type == WatchHistoryType.episode) {
+      final ext = catalogCache.resolveEpisodeExtension(entry.itemId) ?? 'mp4';
       final streamUrl = ref
           .read(streamUrlBuilderProvider)
-          .seriesForSession(session, streamId: entry.itemId);
+          .seriesForSession(
+            session,
+            streamId: entry.itemId,
+            extension: ext,
+          );
       ref
           .read(playerControllerProvider.notifier)
           .load(

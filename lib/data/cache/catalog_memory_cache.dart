@@ -34,6 +34,30 @@ class CatalogMemoryCache {
   final Map<int, List<Series>> seriesCategoryItems = {};
   final Map<int, List<Season>> seriesSeasons = {};
 
+  String? resolveMovieExtension(int streamId) {
+    final ext = vodMovieMap[streamId]?.containerExtension?.trim();
+    if (ext != null && ext.isNotEmpty) return ext;
+    final fromList = vodMovies
+        ?.where((m) => m.streamId == streamId)
+        .map((m) => m.containerExtension?.trim())
+        .firstOrNull;
+    return (fromList != null && fromList.isNotEmpty) ? fromList : null;
+  }
+
+  String? resolveEpisodeExtension(int streamId) {
+    for (final seasons in seriesSeasons.values) {
+      for (final season in seasons) {
+        for (final ep in season.episodes) {
+          if (ep.streamId == streamId) {
+            final ext = ep.containerExtension?.trim();
+            if (ext != null && ext.isNotEmpty) return ext;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   void clear() {
     liveCategories = null;
     liveCategoriesFetchedAt = null;

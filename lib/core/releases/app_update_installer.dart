@@ -54,9 +54,13 @@ class AppUpdateInstaller {
     try {
       final tempDir = await getTemporaryDirectory();
       final isWindows = PlatformService.instance.isWindows;
+      final safeVersion = manifest.version.replaceAll(
+        RegExp(r'[^0-9A-Za-z._-]'),
+        '_',
+      );
       final baseFileName = isWindows
-          ? 'HOPE_IPTV_Setup_${manifest.version}_${manifest.buildNumber}.exe'
-          : 'HOPE_IPTV_${manifest.version}_${manifest.buildNumber}.apk';
+          ? 'HOPE_IPTV_Setup_${safeVersion}_${manifest.buildNumber}.exe'
+          : 'HOPE_IPTV_${safeVersion}_${manifest.buildNumber}.apk';
       var targetFile = File('${tempDir.path}/$baseFileName');
 
       if (await targetFile.exists()) {
@@ -65,7 +69,7 @@ class AppUpdateInstaller {
         } catch (_) {
           // If locked by another process or Defender, use a timestamped alternative
           targetFile = File(
-            '${tempDir.path}/HOPE_IPTV_Setup_${manifest.version}_${manifest.buildNumber}_${DateTime.now().millisecondsSinceEpoch}.exe',
+            '${tempDir.path}/HOPE_IPTV_Setup_${safeVersion}_${manifest.buildNumber}_${DateTime.now().millisecondsSinceEpoch}.exe',
           );
         }
       }

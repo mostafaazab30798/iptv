@@ -396,14 +396,19 @@ class _LiveScreenState extends ConsumerState<LiveScreen> {
                   TvFocusable(
                     key: const ValueKey('live_view_mode_toggle'),
                     onSelect: () => setState(() => _isGridView = !_isGridView),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: HugeIcon(
-                        icon: _isGridView
-                            ? AppIcons.listView
-                            : AppIcons.gridView,
-                        size: 20,
-                        color: AppColors.textSecondary,
+                    child: Tooltip(
+                      message: _isGridView
+                          ? 'Switch to List View'
+                          : 'Switch to Grid View',
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: HugeIcon(
+                          icon: _isGridView
+                              ? AppIcons.listView
+                              : AppIcons.gridView,
+                          size: 20,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                   ),

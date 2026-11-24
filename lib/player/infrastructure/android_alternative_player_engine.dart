@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:iptv/core/constants/api_constants.dart';
 import 'package:iptv/player/domain/entities/player_metrics.dart';
 import 'package:iptv/player/domain/entities/player_source.dart';
 import 'package:iptv/player/domain/entities/player_track.dart';
@@ -164,33 +165,77 @@ class AndroidAlternativePlayerEngine implements PlayerEngine {
     _setStatus(PlayerStatus.loading);
     _metrics.add(PlayerMetrics(bufferMode: _bufferMode));
     try {
+      final hasUserAgent = source.headers.keys.any(
+        (k) => k.toLowerCase() == 'user-agent',
+      );
+      final effectiveHeaders = <String, String>{
+        if (!hasUserAgent)
+          ApiConstants.userAgentHeader: ApiConstants.defaultUserAgent,
+        ...source.headers,
+      };
+
       if (backend == PlayerBackend.media3) {
-        final controller = VideoPlayerController.networkUrl(
-          Uri.parse(source.url),
-          httpHeaders: source.headers,
-        );
-        _media3 = controller;
-        controller.addListener(() => _onMedia3Value(controller, generation));
-        await controller.initialize();
+        Future<VideoPlayerController> initMedia3(String targetUrl) async {
+          final ctrl = VideoPlayerController.networkUrl(
+            Uri.parse(targetUrl),
+            httpHeaders: effectiveHeaders,
+          );
+          _media3 = ctrl;
+          ctrl.addListener(() => _onMedia3Value(ctrl, generation));
+          await ctrl.initialize();
+          return ctrl;
+        }
+
+        VideoPlayerController controller;
+        try {
+          controller = await initMedia3(source.url);
+        } catch (_) {
+          // ExoPlayer DefaultMediaSourceFactory can reject raw .ts live URLs
+          // when the panel redirects without an extension; retry as HLS (.m3u8).
+          if (source.isLive &&
+              source.url.toLowerCase().contains('.ts') &&
+              !source.url.toLowerCase().contains('.m3u8') &&
+              generation == _generation &&
+              !_closed) {
+            await _media3?.dispose();
+            _media3 = null;
+            final hlsUrl = source.url.replaceAllMapped(
+              RegExp(r'\.ts(\?|$)', caseSensitive: false),
+              (m) => '.m3u8${m.group(1) ?? ''}',
+            );
+            controller = await initMedia3(hlsUrl);
+          } else {
+            rethrow;
+          }
+        }
         if (generation != _generation) return;
         if (source.startAt case final start?) await controller.seekTo(start);
         await controller.setVolume(_muted ? 0 : _volumeLevel);
         await controller.play();
       } else {
+        const allowedOrIgnorableHeaders = {
+          'user-agent',
+          'referer',
+          'connection',
+          'accept',
+          'accept-encoding',
+          'range',
+          'cache-control',
+        };
         final unsupportedHeaders = source.headers.keys.where((key) {
           final normalized = key.toLowerCase();
-          return normalized != 'user-agent' && normalized != 'referer';
+          return !allowedOrIgnorableHeaders.contains(normalized);
         });
         if (unsupportedHeaders.isNotEmpty) {
           _setStatus(PlayerStatus.error);
           _errors.add(PlayerErrorType.invalidSource);
           return;
         }
-        final userAgent = source.headers.entries
+        final userAgent = effectiveHeaders.entries
             .where((entry) => entry.key.toLowerCase() == 'user-agent')
             .map((entry) => entry.value)
             .firstOrNull;
-        final referer = source.headers.entries
+        final referer = effectiveHeaders.entries
             .where((entry) => entry.key.toLowerCase() == 'referer')
             .map((entry) => entry.value)
             .firstOrNull;
@@ -246,8 +291,13 @@ class AndroidAlternativePlayerEngine implements PlayerEngine {
     _currentPosition = Duration.zero;
     _currentDuration = Duration.zero;
     await media3?.dispose();
-    // An unmounted VlcPlayerController has no native view id to dispose.
-    if (vlc?.isReadyToInitialize == true) await vlc?.dispose();
+    if (vlc != null) {
+      try {
+        if (vlc.isReadyToInitialize == true) {
+          await vlc.dispose();
+        }
+      } catch (_) {}
+    }
     _setStatus(PlayerStatus.stopped);
   }
 

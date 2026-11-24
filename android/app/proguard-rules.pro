@@ -24,3 +24,13 @@
 # Media Kit & Video
 -keep class com.alexmercerind.media_kit.** { *; }
 -keep class com.alexmercerind.media_kit_video.** { *; }
+
+# AndroidX Media3 (ExoPlayer) & video_player
+-keep class androidx.media3.** { *; }
+-keep class io.flutter.plugins.videoplayer.** { *; }
+-dontwarn androidx.media3.**
+
+# LibVLC & flutter_vlc_player
+-keep class org.videolan.libvlc.** { *; }
+-keep class software.solid.fluttervlcplayer.** { *; }
+-dontwarn org.videolan.libvlc.**

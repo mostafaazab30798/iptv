@@ -28,7 +28,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
-CloseApplicationsFilter=iptv.exe,HOPE IPTV.exe,*.exe
+CloseApplicationsFilter=iptv.exe,HOPE IPTV.exe
 RestartApplications=yes
 
 [Languages]

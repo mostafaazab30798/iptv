@@ -168,7 +168,7 @@ class YallakoraMatchesDataSource implements LiveScoreSource {
 
           _cachedModels = models;
           _cachedFixtures = null;
-          _cachedAt = now;
+          _cachedAt = currentTime;
 
           AppLogger.info(
             'Fetched ${models.length} matches from $url',

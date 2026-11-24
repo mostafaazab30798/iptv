@@ -54,7 +54,8 @@ class CompanionAuthServer {
 
     final localIp = await _findLocalIpAddress();
     final token = _generateRandomToken(16);
-    final pin = (1000 + Random().nextInt(9000)).toString();
+    final pin = (1000 + Random.secure().nextInt(9000)).toString();
+    final safeDeviceName = const HtmlEscape(HtmlEscapeMode.attribute).convert(_deviceName);
 
     final wsHandler = webSocketHandler((WebSocketChannel channel) {
       _wsClients.add(channel);
@@ -141,7 +142,7 @@ class CompanionAuthServer {
 <body>
   <div class="card">
     <div class="badge">IPTV Pairing Screen</div>
-    <h1>$_deviceName</h1>
+    <h1>$safeDeviceName</h1>
     <p>This TV / Screen is actively waiting for sign-in transfer from your companion device.</p>
     <div class="pin-box">PIN: $pin</div>
     <div class="hint">

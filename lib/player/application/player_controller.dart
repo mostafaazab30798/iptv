@@ -913,7 +913,17 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   void setPlayerRouteActive(bool active) {
     if (!mounted) return;
+    final changed = state.isPlayerRouteActive != active;
     state = state.copyWith(isPlayerRouteActive: active);
+    // flutter_vlc_player binds a VlcPlayerController to a single Android
+    // PlatformView id; switching between LiveMiniPreview and PlayerScreen
+    // requires a fresh VlcPlayerController for the newly mounted surface.
+    if (changed &&
+        state.backend == PlayerBackend.vlc &&
+        state.source != null &&
+        state.status != PlayerStatus.stopped) {
+      unawaited(_engine.open(state.source!));
+    }
   }
 
   void toggleFullscreen() {

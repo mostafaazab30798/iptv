@@ -60,6 +60,15 @@ Future<void> bootstrap() async {
   // Initialize logging before installing the global error handler so startup
   // platform-channel failures retain their originating stack trace.
   AppLogger.initialize(verbose: kDebugMode);
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    AppLogger.error(
+      'Unhandled Flutter framework error: ${details.exceptionAsString()}',
+      feature: 'app',
+      error: details.exception,
+      stackTrace: details.stack,
+    );
+  };
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
     AppLogger.error(
       'Unhandled asynchronous error',

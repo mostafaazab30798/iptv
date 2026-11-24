@@ -46,17 +46,17 @@ bool isIosSafariWeb() {
         ua.contains('macintosh') &&
         (html.window.navigator.maxTouchPoints ?? 0) > 1;
 
-    // Safari browser (excluding alternative iOS browsers and embedded WebViews).
-    final isSafariBrowser =
+    // macOS Safari also supports native AVPlayer HLS + HopeTvNativeVod MSE remuxing
+    final isMacSafari =
+        ua.contains('macintosh') &&
         ua.contains('safari') &&
         !ua.contains('chrome') &&
-        !ua.contains('crios') &&
-        !ua.contains('fxios') &&
-        !ua.contains('edgios') &&
-        !ua.contains('opios') &&
-        !ua.contains('android');
+        !ua.contains('edg') &&
+        !ua.contains('opr');
 
-    return (isIosDevice || isIpadOs) && isSafariBrowser;
+    // All iOS/iPadOS browsers (Safari, CriOS, FxiOS, EdgiOS, PWA) use WebKit
+    // AVPlayer under the hood and support native HLS + HopeTvNativeVod.
+    return isIosDevice || isIpadOs || isMacSafari;
   } catch (_) {
     return false;
   }

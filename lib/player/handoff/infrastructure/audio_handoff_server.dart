@@ -83,12 +83,33 @@ class AudioHandoffServer {
 
     final localIp = await _findLocalIpAddress();
     final token = _generateRandomToken(12);
-    final pin = (1000 + Random().nextInt(9000)).toString();
+    final pin = (1000 + Random.secure().nextInt(9000)).toString();
 
     final wsHandler = webSocketHandler(_handleNewClient);
 
     // Pre-fetch all LAN IPs once — used in the companion-info response
     final allLanIps = await getAllLanIps();
+
+    FutureOr<shelf.Response> authedWsHandler(shelf.Request request) {
+      final isWs =
+          request.headers['upgrade']?.toLowerCase() == 'websocket' ||
+          request.url.path == 'audio-handoff';
+      if (!isWs) {
+        return shelf.Response.notFound('Not a WebSocket endpoint');
+      }
+      final qToken =
+          request.url.queryParameters['token'] ??
+          request.url.queryParameters['tok'];
+      final qPin = request.url.queryParameters['pin'];
+      if (qToken != token && qPin != pin) {
+        AppLogger.warning(
+          'Rejected unauthenticated Audio Handoff WebSocket connection',
+          feature: 'audio_handoff',
+        );
+        return shelf.Response.forbidden('Invalid or missing handoff token');
+      }
+      return wsHandler(request);
+    }
 
     shelf.Response httpHandler(shelf.Request request) {
       if (request.headers['upgrade']?.toLowerCase() == 'websocket' ||
@@ -96,7 +117,7 @@ class AudioHandoffServer {
         return shelf.Response.notFound('WebSocket endpoint');
       }
 
-      // JSON metadata probe endpoint for direct subnet scanners
+      // JSON metadata probe endpoint for direct subnet scanners (never leak raw stream URL/credentials)
       if (request.url.path == 'companion-info' ||
           request.url.path == 'handoff-info') {
         return shelf.Response.ok(
@@ -110,9 +131,18 @@ class AudioHandoffServer {
             'pin': pin,
             'title': effectiveSource.title,
             'logo': effectiveSource.logoUrl,
-            'url': effectiveSource.url,
           }),
           headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+
+      final qToken =
+          request.url.queryParameters['tok'] ??
+          request.url.queryParameters['token'];
+      final qPin = request.url.queryParameters['pin'];
+      if (qToken != token && qPin != pin) {
+        return shelf.Response.forbidden(
+          'Scan the QR code on the TV screen to open the companion remote.',
         );
       }
 
@@ -121,14 +151,14 @@ class AudioHandoffServer {
           token: token,
           pin: pin,
           localIp: localIp,
-          port: _port,
+          port: _server?.port ?? _port,
           source: effectiveSource,
         ),
         headers: {'content-type': 'text/html; charset=utf-8'},
       );
     }
 
-    final cascade = shelf.Cascade().add(wsHandler).add(httpHandler);
+    final cascade = shelf.Cascade().add(authedWsHandler).add(httpHandler);
     final handler = const shelf.Pipeline().addHandler(cascade.handler);
 
     HttpServer? boundServer;
@@ -538,11 +568,15 @@ class AudioHandoffServer {
   String _generateRandomToken(int length) {
     const chars =
         'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final rnd = Random();
+    final rnd = Random.secure();
     return List.generate(
       length,
       (_) => chars[rnd.nextInt(chars.length)],
     ).join();
+  }
+
+  static String _escapeHtml(String input) {
+    return const HtmlEscape(HtmlEscapeMode.attribute).convert(input);
   }
 
   String _renderWebCompanionHtml({
@@ -552,8 +586,8 @@ class AudioHandoffServer {
     required int port,
     required PlayerSource source,
   }) {
-    final title = source.title.replaceAll('"', '&quot;');
-    final streamUrl = source.url;
+    final title = _escapeHtml(source.title);
+    final streamUrl = _escapeHtml(source.url);
 
     return '''
 <!DOCTYPE html>

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:iptv/core/cache/local_catalog_cache.dart';
 import 'package:iptv/core/logging/app_logger.dart';
 import 'package:iptv/core/network/api_client.dart';
 import 'package:iptv/core/network/api_config.dart';
@@ -82,6 +83,15 @@ class AuthRepositoryImpl implements AuthRepository {
       final serverExpiresAt = parseXtreamExpiry(userInfo['exp_date']);
 
       // Save verified credentials to secure storage
+      final previousCreds = await secureStorage.loadCredentials();
+      final isAccountSwitch =
+          previousCreds != null &&
+          (previousCreds.serverUrl != normalizedUrl ||
+              previousCreds.username != user);
+      if (isAccountSwitch) {
+        await LocalCatalogCache.instance.clearAll();
+      }
+
       await secureStorage.saveCredentials(
         serverUrl: normalizedUrl,
         username: user,
@@ -121,7 +131,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> signOut() => secureStorage.clearCredentials();
+  Future<void> signOut() async {
+    await LocalCatalogCache.instance.clearAll();
+    await secureStorage.clearCredentials();
+  }
 
   @override
   Future<bool> get isAuthenticated => secureStorage.hasCredentials;

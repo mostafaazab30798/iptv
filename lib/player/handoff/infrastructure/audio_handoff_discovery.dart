@@ -127,7 +127,6 @@ class AudioHandoffDiscoveryBroadcaster {
         'dev': _sessionInfo!.serverDeviceName,
         'title': _sessionInfo!.source.title,
         'logo': _sessionInfo!.source.logoUrl,
-        'url': _sessionInfo!.source.url,
       });
 
       final bytes = utf8.encode(payload);
@@ -173,7 +172,7 @@ class AudioHandoffDiscoveryBroadcaster {
     try {
       final text = utf8.decode(datagram.data);
       if (text.contains(kDiscoveryProbeType)) {
-        // Direct response to the probing client
+        // Direct response to the probing client (never include raw stream URL/credentials)
         final payload = jsonEncode({
           't': kDiscoveryBeaconType,
           'ip': _sessionInfo!.hostIp,
@@ -183,7 +182,6 @@ class AudioHandoffDiscoveryBroadcaster {
           'dev': _sessionInfo!.serverDeviceName,
           'title': _sessionInfo!.source.title,
           'logo': _sessionInfo!.source.logoUrl,
-          'url': _sessionInfo!.source.url,
         });
         final bytes = utf8.encode(payload);
         _socket?.send(bytes, datagram.address, datagram.port);

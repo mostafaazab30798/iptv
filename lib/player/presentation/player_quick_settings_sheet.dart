@@ -311,7 +311,8 @@ class _PlayerQuickSettingsSheetState extends State<PlayerQuickSettingsSheet> {
                     const SizedBox(height: 14),
                   ],
 
-                  if (PlatformService.instance.isAndroid) ...[
+                  if (PlatformService.instance.isAndroid ||
+                      PlatformService.instance.isAndroidTv) ...[
                     const _SectionLabel(title: 'PLAYER ENGINE'),
                     const SizedBox(height: 6),
                     _SegmentedTrack(

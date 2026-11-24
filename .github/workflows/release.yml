@@ -3,6 +3,9 @@ name: Release Android & Windows
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "matches.json"
+      - "services/matches_api/**"
   workflow_dispatch:
     inputs:
       channel:
@@ -120,8 +123,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run commercial validation tests
-        run: flutter test test/commercial/
+      - name: Run static analysis
+        run: flutter analyze
+
+      - name: Run test suite
+        run: flutter test
 
       - name: Decode Android release keystore
         env:

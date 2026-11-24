@@ -42,19 +42,31 @@ class TrustedTimeService {
       return wall;
     }
 
-    final elapsed = DateTime.now().millisecondsSinceEpoch - _monoAtTrustMs!;
+    final wallMs = wall.millisecondsSinceEpoch;
+    final elapsed = wallMs - _monoAtTrustMs!;
+
+    // If the device clock was rolled back prior to our reference timestamp,
+    // advance the reference baseline and re-anchor so future ticks still advance.
+    if (elapsed < 0) {
+      _monoAtTrustMs = wallMs;
+      await _storage.write(key: _keyMonoAtTrust, value: '$wallMs');
+    }
+
+    final safeElapsed = elapsed < 0 ? 0 : elapsed;
     final estimated = DateTime.fromMillisecondsSinceEpoch(
-      _lastTrustedMs! + (elapsed < 0 ? 0 : elapsed),
+      _lastTrustedMs! + safeElapsed,
       isUtc: true,
     );
+    if (safeElapsed > 0) {
+      _lastTrustedMs = estimated.millisecondsSinceEpoch;
+      _monoAtTrustMs = wallMs;
+    }
 
     // Device clock moving backward must not extend entitlement.
     if (wall.isBefore(estimated)) {
       return estimated;
     }
-    // Prefer the later of wall and estimated only when wall does not go backward
-    // relative to last trusted server observation.
-    if (wall.millisecondsSinceEpoch < _lastTrustedMs!) {
+    if (wallMs < _lastTrustedMs!) {
       return estimated;
     }
     return wall.isAfter(estimated) ? wall : estimated;
